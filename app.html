@@ -251,6 +251,13 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .export-mode-btn { flex: 1; padding: 0.6rem 0.4rem; border-radius: 8px; border: 0.5px solid var(--line); background: var(--white); cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.72rem; color: var(--muted); text-align: center; transition: all 0.15s; line-height: 1.4; }
 .export-mode-btn .em-icon { font-size: 1.2rem; display: block; margin-bottom: 0.2rem; }
 .export-mode-btn.active { border: 1.5px solid var(--teal); background: rgba(29,158,117,0.06); color: var(--ink); }
+.export-formats { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+.export-fmt-btn { flex: 1; padding: 0.55rem 0.4rem; border-radius: 8px; border: 0.5px solid var(--line); background: var(--white); cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.72rem; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 0.3rem; transition: all 0.15s; }
+.export-fmt-btn .ef-ratio { border: 1.5px solid currentColor; border-radius: 2px; opacity: 0.6; }
+.export-fmt-btn .ef-sub { font-size: 0.62rem; color: var(--muted); opacity: 0.75; }
+.export-fmt-btn.active { border: 1.5px solid var(--teal); background: rgba(29,158,117,0.06); color: var(--ink); }
+.export-fmt-btn.active .ef-ratio { color: var(--teal); opacity: 0.9; }
+.export-fmt-btn.active .ef-sub { color: var(--teal); }
 
 /* Preview canvas */
 .export-preview-wrap { background: var(--paper); border: 0.5px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 1rem; position: relative; min-height: 180px; display: flex; align-items: center; justify-content: center; }
@@ -674,14 +681,22 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
     </div>
     <div class="export-modal-body">
       <div class="export-modes">
-        <button class="export-mode-btn active" onclick="setExportMode('stats')" id="em-map">
+        <button class="export-mode-btn active" onclick="setExportMode('stats')" id="em-stats">
           <span class="em-icon">📊</span>Estadísticas
         </button>
-        <button class="export-mode-btn" onclick="setExportMode('books')" id="em-stats">
+        <button class="export-mode-btn" onclick="setExportMode('books')" id="em-books">
           <span class="em-icon">📚</span>Lecturas
         </button>
         <button class="export-mode-btn" onclick="setExportMode('wrapped')" id="em-wrapped">
           <span class="em-icon">✨</span>Wrapped
+        </button>
+      </div>
+      <div class="export-formats">
+        <button class="export-fmt-btn active" onclick="setExportFormat('story')" id="ef-story">
+          <span class="ef-ratio" style="width:15px;height:26px"></span>Historia<span class="ef-sub">9:16</span>
+        </button>
+        <button class="export-fmt-btn" onclick="setExportFormat('feed')" id="ef-feed">
+          <span class="ef-ratio" style="width:21px;height:26px"></span>Feed<span class="ef-sub">4:5</span>
         </button>
       </div>
       <div class="export-preview-wrap" id="export-preview-wrap">
@@ -1734,28 +1749,41 @@ function showBadgeUnlockToast(badge) {
 
 
 // ===================== EXPORT =====================
-let exportMode = 'map';
+let exportMode = 'stats';
+let exportFormat = 'story';
 let exportCanvas = null;
+const EXPORT_FORMATS = { story: { W: 1080, H: 1920 }, feed: { W: 1080, H: 1350 } };
 
 function openExportModal() {
   document.getElementById('export-overlay').classList.add('visible');
+  exportMode = 'stats';
+  exportFormat = 'story';
   // Pequeño delay para que el modal sea visible antes de medir dimensiones
-  setTimeout(() => setExportMode('map'), 50);
+  setTimeout(() => { syncExportButtons(); renderExportPreview(); }, 50);
 }
 function closeExportModal() {
   document.getElementById('export-overlay').classList.remove('visible');
 }
-function setExportMode(mode) {
-  exportMode = mode;
-  ['map','stats','wrapped'].forEach(m => {
-    document.getElementById('em-' + m).classList.toggle('active', m === mode);
-  });
+function syncExportButtons() {
+  ['stats','books','wrapped'].forEach(m =>
+    document.getElementById('em-' + m).classList.toggle('active', m === exportMode));
+  ['story','feed'].forEach(f =>
+    document.getElementById('ef-' + f).classList.toggle('active', f === exportFormat));
   const phraseWrap = document.getElementById('export-phrase-wrap');
-  phraseWrap.classList.toggle('visible', mode === 'wrapped');
-  if (mode === 'wrapped') {
+  phraseWrap.classList.toggle('visible', exportMode === 'wrapped');
+  if (exportMode === 'wrapped') {
     const phrase = document.getElementById('export-phrase');
     if (!phrase.value) phrase.value = generatePhrase();
   }
+}
+function setExportMode(mode) {
+  exportMode = mode;
+  syncExportButtons();
+  renderExportPreview();
+}
+function setExportFormat(fmt) {
+  exportFormat = fmt;
+  syncExportButtons();
   renderExportPreview();
 }
 
@@ -1809,17 +1837,22 @@ async function renderExportPreview() {
 }
 
 async function buildExportCanvas() {
-  // Dimensiones de la tarjeta según modo
-  const CONFIGS = {
-    stats:   { W: 1080, H: 1080 },
-    books:   { W: 1080, H: 1080 },
-    wrapped: { W: 1080, H: 1350 },
-  };
-  const { W, H } = CONFIGS[exportMode] || CONFIGS.stats;
+  // Dimensiones según el formato elegido (Historia 9:16 / Feed 4:5)
+  const { W, H } = EXPORT_FORMATS[exportFormat] || EXPORT_FORMATS.feed;
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
+
+  // ── Centra verticalmente un bloque [blockTop..blockBottom] dejando hueco
+  //    para el pie, y devuelve el desplazamiento a aplicar ───────────────
+  function centerOffset(blockTop, blockBottom) {
+    const availTop = 40, footerZone = 100;
+    const availBottom = H - footerZone;
+    const blockH = blockBottom - blockTop;
+    const desiredTop = availTop + (availBottom - availTop - blockH) / 2;
+    return desiredTop - blockTop;
+  }
 
   // ── Helpers ─────────────────────────────────────────────────────────
   function roundRect(x, y, w, h, r) {
@@ -1869,6 +1902,14 @@ async function buildExportCanvas() {
   const year = activeYear === 'all' ? new Date().getFullYear() : activeYear;
 
   if (exportMode === 'stats' || exportMode === 'books') {
+    // Altura natural del bloque para centrarlo verticalmente
+    const bookList = [...new Set(entries.map(e => e.book))].slice(0, 6);
+    const lastContentY = bookList.length ? (638 + (bookList.length - 1) * 28) : 495;
+    const offsetY = centerOffset(50, lastContentY + 20);
+
+    ctx.save();
+    ctx.translate(0, offsetY);
+
     // ── Logo arriba ────────────────────────────────────────────────────
     ctx.fillStyle = '#9fd9c0';
     ctx.font = 'italic 28px Georgia, serif';
@@ -1933,7 +1974,6 @@ async function buildExportCanvas() {
     });
 
     // ── Libros del año ─────────────────────────────────────────────────
-    const bookList = [...new Set(entries.map(e => e.book))].slice(0, 6);
     if (bookList.length) {
       ctx.fillStyle = 'rgba(159,217,192,0.35)';
       ctx.font = '400 12px Inter, sans-serif';
@@ -1943,13 +1983,14 @@ async function buildExportCanvas() {
       ctx.fillStyle = 'rgba(250,247,242,0.7)';
       ctx.font = 'italic 17px Georgia, serif';
       bookList.forEach((b, i) => {
-        const maxW = W - 160;
         const text = b.length > 42 ? b.slice(0,40)+'…' : b;
         ctx.fillText(text, W/2, 638 + i * 28);
       });
     }
 
-    // ── Frase final ────────────────────────────────────────────────────
+    ctx.restore();
+
+    // ── Pie (anclado abajo) ────────────────────────────────────────────
     const taglines = [
       '"Leer es la forma más barata de viajar."',
       '"Cada libro, un pasaporte."',
@@ -1962,10 +2003,35 @@ async function buildExportCanvas() {
 
     ctx.fillStyle = 'rgba(159,217,192,0.25)';
     ctx.font = '400 12px Inter, sans-serif';
-    ctx.fillText('leeresv iajar.app', W/2, H - 25);
+    ctx.fillText('leeresviajar.app', W/2, H - 25);
 
   } else {
     // ── MODO WRAPPED ───────────────────────────────────────────────────
+    // Pre-cálculo de líneas de la frase para centrar el bloque
+    const phrase = document.getElementById('export-phrase')?.value?.trim() || generatePhrase();
+    ctx.font = 'italic 30px Georgia, serif';
+    const words = phrase.split(' ');
+    const maxLineW = W - 140;
+    let lineArr = [], curLine = '';
+    words.forEach(w => {
+      const test = curLine ? curLine+' '+w : w;
+      if (ctx.measureText(test).width > maxLineW && curLine) {
+        lineArr.push(curLine); curLine = w;
+      } else curLine = test;
+    });
+    if (curLine) lineArr.push(curLine);
+    const lineH = 44;
+    const phraseStartY = 530;
+    const blist = [...new Set(entries.map(e=>e.book))].slice(0,5);
+    const listStartY = phraseStartY + lineArr.length*lineH + 60;
+    const lastContentY = blist.length
+      ? (listStartY + 28 + (blist.length-1)*28)
+      : (phraseStartY + lineArr.length*lineH);
+    const offsetY = centerOffset(55, lastContentY + 20);
+
+    ctx.save();
+    ctx.translate(0, offsetY);
+
     // Logo
     ctx.fillStyle = '#9fd9c0';
     ctx.font = 'italic 26px Georgia, serif';
@@ -2005,28 +2071,13 @@ async function buildExportCanvas() {
     });
 
     // Frase editable — centrada, con word-wrap
-    const phrase = document.getElementById('export-phrase')?.value?.trim() || generatePhrase();
     ctx.fillStyle = '#faf7f2';
     ctx.font = 'italic 30px Georgia, serif';
     ctx.textAlign = 'center';
-    const words = phrase.split(' ');
-    const maxLineW = W - 140;
-    let lineArr = [], curLine = '';
-    words.forEach(w => {
-      const test = curLine ? curLine+' '+w : w;
-      if (ctx.measureText(test).width > maxLineW && curLine) {
-        lineArr.push(curLine); curLine = w;
-      } else curLine = test;
-    });
-    if (curLine) lineArr.push(curLine);
-    const lineH = 44;
-    const phraseStartY = 530;
     lineArr.forEach((l,i) => ctx.fillText(l, W/2, phraseStartY + i*lineH));
 
     // Libros
-    const blist = [...new Set(entries.map(e=>e.book))].slice(0,5);
     if (blist.length) {
-      const listStartY = phraseStartY + lineArr.length*lineH + 60;
       ctx.fillStyle = 'rgba(159,217,192,0.35)';
       ctx.font = '400 12px Inter, sans-serif';
       ctx.fillText('ESTE AÑO LEÍSTE', W/2, listStartY);
@@ -2038,13 +2089,16 @@ async function buildExportCanvas() {
       });
     }
 
-    // Pie
+    ctx.restore();
+
+    // Pie (anclado abajo)
     ctx.fillStyle = 'rgba(29,158,117,0.5)';
     ctx.font = 'italic 14px Georgia, serif';
+    ctx.textAlign = 'center';
     ctx.fillText('"Leer es la forma más barata de viajar."', W/2, H-50);
     ctx.fillStyle = 'rgba(159,217,192,0.2)';
     ctx.font = '11px Inter, sans-serif';
-    ctx.fillText('leeresv iajar.app', W/2, H-25);
+    ctx.fillText('leeresviajar.app', W/2, H-25);
   }
 
   return canvas;
@@ -2139,8 +2193,9 @@ function downloadExport() {
   if (!exportCanvas) return;
   const link = document.createElement('a');
   const year = activeYear === 'all' ? new Date().getFullYear() : activeYear;
-  const modeLabel = { stats: 'stats', books: 'libros', wrapped: 'wrapped' }[exportMode] || exportMode;
-  link.download = `leer-es-viajar-${modeLabel}-${year}.png`;
+  const modeLabel = { stats: 'stats', books: 'lecturas', wrapped: 'wrapped' }[exportMode] || exportMode;
+  const fmtLabel = { story: 'historia', feed: 'feed' }[exportFormat] || exportFormat;
+  link.download = `leer-es-viajar-${modeLabel}-${fmtLabel}-${year}.png`;
   link.href = exportCanvas.toDataURL('image/png');
   link.click();
 }
