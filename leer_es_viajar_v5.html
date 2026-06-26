@@ -1,0 +1,2488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leer es viajar</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #1a1a18; --forest: #1a3a2a; --forest-mid: #0f6e56;
+  --teal: #1d9e75; --teal-light: #9fd9c0;
+  --cream: #f5f0e8; --cream-dark: #ede6d8; --parchment: #faf7f2;
+  --muted: #7a756e; --route: #e8593c;
+}
+html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--ink); }
+.app { display: grid; grid-template-columns: 420px 1fr; height: 100vh; }
+
+/* SIDEBAR */
+.sidebar { background: var(--parchment); display: flex; flex-direction: column; height: 100vh; border-right: 1px solid var(--cream-dark); overflow: hidden; z-index: 10; }
+.sidebar-header { background: var(--forest); padding: 1.5rem 1.75rem 1.25rem; flex-shrink: 0; }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--cream); letter-spacing: -0.01em; line-height: 1.1; margin-bottom: 0.2rem; }
+.logo em { color: var(--teal-light); font-style: italic; }
+.tagline { font-size: 0.72rem; color: var(--teal-light); opacity: 0.8; letter-spacing: 0.08em; text-transform: uppercase; }
+.stats-bar { background: var(--forest-mid); padding: 0.6rem 1.75rem; display: flex; gap: 1.25rem; flex-shrink: 0; }
+.stat-val { font-size: 1.1rem; font-weight: 600; color: var(--cream); font-family: 'Playfair Display', serif; }
+.stat-label { font-size: 0.65rem; color: var(--teal-light); text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.85; }
+.sidebar-body { display: none; }
+
+/* ORIGIN NARRATIVE */
+.origin-narrative { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+#origin-narrative-text { font-size: 0.78rem; color: var(--muted); font-style: italic; font-family: 'Playfair Display', serif; line-height: 1.5; }
+#origin-narrative-text strong { color: var(--ink); font-style: normal; font-family: 'Inter', sans-serif; font-weight: 500; }
+
+/* ORIGIN */
+.origin-section { margin-bottom: 1.25rem; padding: 1rem 1.1rem; background: var(--cream); border-radius: 8px; border: 1px solid var(--cream-dark); }
+.origin-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.5rem; font-weight: 500; }
+.origin-display { display: flex; align-items: center; gap: 0.5rem; }
+.origin-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--forest); flex-shrink: 0; border: 2px solid var(--teal); }
+.origin-name { font-size: 0.95rem; color: var(--ink); font-weight: 500; flex: 1; }
+.origin-change { font-size: 0.72rem; color: var(--teal); cursor: pointer; background: none; border: none; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
+.origin-input-wrap { display: none; margin-top: 0.5rem; gap: 0.5rem; }
+.origin-input-wrap.visible { display: flex; }
+
+/* FORM */
+.section-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.75rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--cream-dark); }
+input, textarea, select { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid var(--cream-dark); border-radius: 6px; background: white; font-family: 'Inter', sans-serif; font-size: 0.85rem; color: var(--ink); transition: border-color 0.15s; outline: none; margin-bottom: 0.55rem; }
+input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(29,158,117,0.1); }
+input::placeholder, textarea::placeholder { color: #bbb; }
+textarea { resize: none; line-height: 1.5; }
+input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; margin-bottom: 0; }
+
+/* AUTOCOMPLETE */
+.book-input-wrap { position: relative; margin-bottom: 0.55rem; }
+.book-input-wrap input { margin-bottom: 0; }
+.ac-dropdown { position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: white; border: 1px solid var(--cream-dark); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 9999; overflow: hidden; display: none; }
+.ac-dropdown.visible { display: block; }
+.ac-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.55rem 0.75rem; cursor: pointer; border-bottom: 1px solid var(--cream-dark); transition: background 0.1s; }
+.ac-item:last-child { border-bottom: none; }
+.ac-item:hover { background: var(--parchment); }
+.ac-cover { width: 32px; height: 44px; object-fit: cover; border-radius: 2px; flex-shrink: 0; background: var(--cream-dark); }
+.ac-cover-placeholder { width: 32px; height: 44px; flex-shrink: 0; background: var(--cream-dark); border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--muted); }
+.ac-title { font-family: 'Playfair Display', serif; font-size: 0.85rem; font-style: italic; color: var(--ink); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-author { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.ac-loading { padding: 0.75rem; text-align: center; font-size: 0.78rem; color: var(--muted); }
+
+/* DATE ROW */
+.date-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.55rem; }
+.date-label { font-size: 0.72rem; color: var(--muted); flex-shrink: 0; }
+.date-val { font-size: 0.78rem; color: var(--ink); font-weight: 500; }
+.date-change { font-size: 0.72rem; color: var(--teal); cursor: pointer; background: none; border: none; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
+
+/* DEPARTURE TOGGLE */
+.departure-toggle { display: flex; margin-bottom: 0.55rem; border: 1px solid var(--cream-dark); border-radius: 6px; overflow: hidden; background: white; }
+.dep-opt { flex: 1; padding: 0.5rem 0.4rem; font-size: 0.72rem; text-align: center; cursor: pointer; color: var(--muted); border: none; background: none; transition: all 0.15s; line-height: 1.3; font-family: 'Inter', sans-serif; }
+.dep-opt:not(:last-child) { border-right: 1px solid var(--cream-dark); }
+.dep-opt.active { background: var(--forest); color: var(--cream); }
+
+/* ADD BUTTON */
+.add-btn { width: 100%; padding: 0.7rem; background: var(--teal); color: white; border: none; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+.add-btn:hover { background: var(--forest-mid); }
+.add-btn:active { transform: scale(0.98); }
+
+/* YEAR FILTER */
+.year-filter { display: flex; margin-bottom: 0.75rem; border: 1px solid var(--cream-dark); border-radius: 6px; overflow: hidden; background: white; }
+.year-opt { flex: 1; padding: 0.4rem 0.3rem; font-size: 0.72rem; text-align: center; cursor: pointer; color: var(--muted); border: none; background: none; transition: all 0.15s; font-family: 'Inter', sans-serif; }
+.year-opt:not(:last-child) { border-right: 1px solid var(--cream-dark); }
+.year-opt.active { background: var(--forest); color: var(--cream); }
+
+/* JOURNEY LIST */
+.journey-list { display: flex; flex-direction: column; }
+.journey-entry { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--cream-dark); animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.entry-line { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding-top: 4px; }
+.entry-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--route); flex-shrink: 0; border: 2px solid white; box-shadow: 0 0 0 1.5px var(--route); }
+.entry-dot.origin { background: var(--forest); box-shadow: 0 0 0 1.5px var(--forest); }
+.entry-dot.fictional { background: #e8913c; box-shadow: 0 0 0 1.5px #e8913c; }
+.entry-connector { flex: 1; width: 1.5px; background: linear-gradient(to bottom, var(--route), transparent); margin: 3px 0; min-height: 16px; }
+.entry-content { flex: 1; min-width: 0; }
+.entry-book { font-family: 'Inter', sans-serif; font-size: 0.78rem; color: var(--muted); font-style: italic; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+.entry-route { font-size: 0.92rem; color: var(--ink); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-km { font-size: 0.7rem; color: var(--teal); font-weight: 500; margin-top: 2px; }
+.entry-date { font-size: 0.68rem; color: var(--muted); margin-top: 1px; }
+.entry-note { font-size: 0.72rem; color: var(--muted); font-style: italic; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-delete { background: none; border: none; cursor: pointer; color: #ccc; font-size: 0.75rem; padding: 2px 4px; align-self: flex-start; margin-top: 2px; transition: color 0.15s; flex-shrink: 0; }
+.entry-delete:hover { color: #e06060; }
+.entry-edit { background: none; border: none; cursor: pointer; color: #ccc; font-size: 0.75rem; padding: 2px 4px; align-self: flex-start; margin-top: 2px; transition: color 0.15s; flex-shrink: 0; }
+.entry-edit:hover { color: var(--teal); }
+
+/* EDICIÓN INLINE */
+.entry-edit-form { margin-top: 0.6rem; background: var(--cream); border: 1px solid var(--cream-dark); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.entry-edit-form input { border: 1px solid var(--cream-dark); border-radius: 5px; padding: 0.4rem 0.65rem; font-size: 0.78rem; font-family: 'Inter', sans-serif; color: var(--ink); background: white; outline: none; width: 100%; }
+.entry-edit-form input:focus { border-color: var(--teal); }
+.entry-edit-actions { display: flex; gap: 0.5rem; }
+.entry-edit-save { background: var(--teal); color: white; border: none; border-radius: 5px; padding: 0.4rem 0.85rem; font-size: 0.75rem; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
+.entry-edit-cancel { background: none; border: 1px solid var(--cream-dark); border-radius: 5px; padding: 0.4rem 0.75rem; font-size: 0.75rem; color: var(--muted); cursor: pointer; font-family: 'Inter', sans-serif; }
+.confirm-delete { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; background: var(--cream); border: 1px solid #e0d8cc; border-radius: 6px; padding: 0.2rem 0.5rem; margin-left: 0.5rem; }
+.confirm-delete span { color: var(--muted); }
+.confirm-delete button { background: none; border: none; cursor: pointer; font-size: 0.7rem; font-family: 'Inter', sans-serif; padding: 0 0.25rem; }
+.confirm-delete .confirm-yes { color: #c0392b; font-weight: 600; }
+.confirm-delete .confirm-no { color: var(--muted); }
+.empty-state { text-align: center; padding: 1.5rem 0.5rem; color: var(--muted); }
+.empty-state .compass { font-size: 1.8rem; margin-bottom: 0.5rem; opacity: 0.4; }
+.empty-state p { font-size: 0.8rem; line-height: 1.6; }
+.empty-state em { font-family: 'Playfair Display', serif; color: var(--teal); font-style: italic; }
+
+/* MAP */
+.map-wrap { position: relative; }
+#map { width: 100%; height: 100vh; padding-bottom: 38px; }
+.map-title { position: absolute; top: 1rem; right: 1rem; z-index: 1000; background: rgba(26,58,42,0.92); color: var(--cream); padding: 0.5rem 0.85rem; border-radius: 6px; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; pointer-events: none; }
+.leaflet-popup-content-wrapper { border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); font-family: 'Inter', sans-serif; }
+.leaflet-popup-content { margin: 0.75rem 1rem; }
+.popup-book { font-family: 'Playfair Display', serif; font-style: italic; font-size: 0.95rem; color: var(--ink); margin-bottom: 2px; }
+.popup-place { font-size: 0.78rem; color: var(--muted); }
+.popup-km { font-size: 0.72rem; color: var(--teal); margin-top: 3px; font-weight: 500; }
+
+/* FICTIONAL PLACE MODAL */
+.fictional-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.55); z-index: 9000; display: none; align-items: center; justify-content: center; }
+.fictional-overlay.visible { display: flex; }
+.fictional-modal { background: var(--parchment); border-radius: 12px; padding: 1.5rem 1.75rem; max-width: 400px; width: 92%; box-shadow: 0 8px 40px rgba(0,0,0,0.25); font-family: 'Inter', sans-serif; }
+.fictional-modal h3 { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--ink); margin-bottom: 0.9rem; }
+.fictional-modal h3 span { color: #e8913c; }
+.community-block { background: rgba(232,145,60,0.07); border-left: 3px solid #e8913c; border-radius: 0 6px 6px 0; padding: 0.65rem 0.85rem; margin-bottom: 1rem; }
+.community-block .c-votes { font-size: 0.82rem; color: #c4671e; font-weight: 500; margin-bottom: 0.2rem; }
+.community-block .c-place { font-size: 0.78rem; color: var(--muted); }
+.fictional-modal .divider { display: flex; align-items: center; gap: 0.6rem; margin: 1rem 0 0.75rem; }
+.fictional-modal .divider span { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; white-space: nowrap; }
+.fictional-modal .divider::before, .fictional-modal .divider::after { content: ''; flex: 1; height: 1px; background: var(--cream-dark); }
+.fictional-modal label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 500; display: block; margin-bottom: 0.35rem; }
+.fictional-modal input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--cream-dark); border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.85rem; color: var(--ink); outline: none; box-sizing: border-box; }
+.fictional-modal input:focus { border-color: #e8913c; box-shadow: 0 0 0 3px rgba(232,145,60,0.12); }
+.fictional-modal .input-hint { font-size: 0.71rem; color: var(--muted); margin-top: 0.3rem; font-style: italic; }
+.fictional-btns { display: flex; gap: 0.6rem; margin-top: 1.1rem; }
+.fictional-btns button { flex: 1; padding: 0.65rem; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 500; cursor: pointer; border: none; transition: background 0.15s; }
+.btn-use-community { background: var(--teal); color: white; }
+.btn-use-community:hover { background: var(--forest-mid); }
+.btn-use-custom { background: #e8913c; color: white; }
+.btn-use-custom:hover { background: #c4671e; }
+.btn-fictional-cancel { background: var(--cream-dark); color: var(--ink); flex: 0 0 auto; padding: 0.65rem 0.9rem; }
+.btn-fictional-cancel:hover { background: #ddd; }
+
+/* NAV TABS */
+.sidebar-nav { display: flex; background: var(--forest); border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0; }
+.nav-tab { flex: 1; padding: 0.6rem 0.5rem; font-size: 0.7rem; text-align: center; cursor: pointer; color: var(--teal-light); border: none; background: none; font-family: 'Inter', sans-serif; letter-spacing: 0.04em; transition: all 0.15s; border-bottom: 2px solid transparent; opacity: 0.7; }
+.nav-tab:hover { opacity: 1; }
+.nav-tab.active { color: var(--cream); border-bottom-color: var(--teal-light); opacity: 1; font-weight: 500; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; flex: 1; min-height: 0; overflow-y: auto; padding: 1rem 1.75rem 1.5rem; }
+.tab-panel::-webkit-scrollbar { width: 4px; }
+.tab-panel::-webkit-scrollbar-thumb { background: var(--cream-dark); border-radius: 2px; }
+
+/* DIARIO */
+.diary-empty { text-align: center; padding: 2rem 1rem; color: var(--muted); }
+.diary-empty .diary-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.35; }
+.diary-empty p { font-size: 0.8rem; line-height: 1.6; }
+.diary-entry { padding: 0.9rem 0; border-bottom: 1px solid var(--cream-dark); animation: fadeIn 0.3s ease; }
+.diary-entry:last-child { border-bottom: none; }
+.diary-date { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.3rem; }
+.diary-text { font-family: 'Playfair Display', serif; font-size: 0.92rem; color: var(--ink); line-height: 1.5; font-style: italic; }
+.diary-text .place { color: var(--teal); font-style: normal; font-weight: 600; }
+.diary-text .book-ref { color: var(--muted); font-size: 0.78rem; display: block; margin-top: 0.2rem; font-style: normal; font-family: 'Inter', sans-serif; }
+.diary-pioneer { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--teal); background: rgba(29,158,117,0.08); border: 1px solid rgba(29,158,117,0.25); border-radius: 20px; padding: 0.2rem 0.55rem; margin-top: 0.4rem; font-weight: 500; }
+
+/* LOGROS */
+.badges-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; }
+.badge-card { background: var(--cream); border: 1px solid var(--cream-dark); border-radius: 10px; padding: 0.9rem 0.75rem; text-align: center; transition: all 0.2s; }
+.badge-card.unlocked { background: linear-gradient(135deg, var(--cream) 0%, var(--cream-dark) 100%); border-color: var(--teal); box-shadow: 0 2px 8px rgba(29,158,117,0.15); }
+.badge-card.locked { opacity: 0.45; filter: grayscale(1); }
+.badge-icon { font-size: 1.8rem; margin-bottom: 0.4rem; display: block; }
+.badge-name { font-size: 0.75rem; font-weight: 600; color: var(--ink); margin-bottom: 0.2rem; }
+.badge-desc { font-size: 0.67rem; color: var(--muted); line-height: 1.4; }
+.badge-card.unlocked .badge-name { color: var(--forest); }
+.badge-progress { font-size: 0.65rem; color: var(--teal); margin-top: 0.3rem; font-weight: 500; }
+.badges-section-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 1rem 0 0.5rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
+.badges-section-title::after { content: ''; flex: 1; height: 1px; background: var(--cream-dark); }
+
+/* CELEBRACIÓN primer viajero */
+.pioneer-toast { position: fixed; top: 8rem; right: 1.5rem; z-index: 9999; background: linear-gradient(135deg, #1a3a2a, #0f6e56); color: white; border-radius: 12px; padding: 1rem 1.25rem; max-width: 300px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); display: flex; gap: 0.75rem; align-items: flex-start; transform: translateY(-20px); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: auto; cursor: pointer; }
+.pioneer-toast.show { transform: translateY(0); opacity: 1; }
+.pioneer-toast .p-icon { font-size: 1.6rem; flex-shrink: 0; }
+.pioneer-toast .p-title { font-size: 0.82rem; font-weight: 600; color: var(--teal-light); margin-bottom: 0.2rem; letter-spacing: 0.02em; }
+.pioneer-toast .p-text { font-size: 0.77rem; color: rgba(255,255,255,0.85); line-height: 1.4; }
+
+/* BADGE DESBLOQUEADO celebración */
+.badge-unlock-toast { position: fixed; top: 16rem; right: 1.5rem; z-index: 9998; background: linear-gradient(135deg, var(--forest), var(--forest-mid)); color: white; border-radius: 12px; padding: 1rem 1.5rem; text-align: center; box-shadow: 0 8px 32px rgba(29,158,117,0.3); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: none; min-width: 220px; transform: translateY(-20px); }
+.badge-unlock-toast.show { transform: translateY(0); opacity: 1; }
+.badge-unlock-toast .bu-icon { font-size: 2rem; display: block; margin-bottom: 0.3rem; }
+.badge-unlock-toast .bu-title { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; margin-bottom: 0.2rem; }
+.badge-unlock-toast .bu-name { font-size: 1rem; font-weight: 700; }
+
+/* EXPORT MODAL */
+.export-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.7); z-index: 9100; display: none; align-items: center; justify-content: center; }
+.export-overlay.visible { display: flex; }
+.export-modal { background: var(--parchment); border-radius: 14px; width: 92%; max-width: 520px; box-shadow: 0 12px 48px rgba(0,0,0,0.35); font-family: 'Inter', sans-serif; overflow: hidden; }
+.export-modal-header { background: var(--forest); padding: 1.1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+.export-modal-header h3 { font-family: 'Playfair Display', serif; color: var(--cream); font-size: 1.05rem; font-weight: 400; }
+.export-close { background: none; border: none; color: var(--teal-light); font-size: 1.2rem; cursor: pointer; padding: 0 0.25rem; }
+.export-modal-body { padding: 1.25rem 1.5rem; }
+
+/* Selector de modo */
+.export-modes { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+.export-mode-btn { flex: 1; padding: 0.6rem 0.4rem; border-radius: 8px; border: 1.5px solid var(--cream-dark); background: white; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.72rem; color: var(--muted); text-align: center; transition: all 0.15s; line-height: 1.4; }
+.export-mode-btn .em-icon { font-size: 1.2rem; display: block; margin-bottom: 0.2rem; }
+.export-mode-btn.active { border-color: var(--teal); background: rgba(29,158,117,0.06); color: var(--ink); }
+
+/* Preview canvas */
+.export-preview-wrap { background: #111; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; position: relative; min-height: 180px; display: flex; align-items: center; justify-content: center; }
+.export-preview-wrap canvas { max-width: 100%; display: block; border-radius: 6px; }
+.export-preview-loading { color: #888; font-size: 0.8rem; position: absolute; }
+
+/* Frase editable (solo modo wrapped) */
+.export-phrase-wrap { display: none; margin-bottom: 1rem; }
+.export-phrase-wrap.visible { display: block; }
+.export-phrase-wrap label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 500; display: block; margin-bottom: 0.35rem; }
+.export-phrase-wrap textarea { width: 100%; padding: 0.6rem 0.75rem; border: 1.5px solid var(--cream-dark); border-radius: 6px; font-family: 'Playfair Display', serif; font-size: 0.88rem; font-style: italic; color: var(--ink); resize: none; line-height: 1.5; outline: none; }
+.export-phrase-wrap textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(29,158,117,0.1); }
+.export-phrase-regen { font-size: 0.7rem; color: var(--teal); background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline; margin-top: 0.3rem; display: block; }
+
+/* Botones */
+.export-actions { display: flex; gap: 0.6rem; }
+.export-actions button { flex: 1; padding: 0.65rem; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 500; cursor: pointer; border: none; transition: background 0.15s; }
+.btn-export-download { background: var(--teal); color: white; }
+.btn-export-download:hover { background: var(--forest-mid); }
+.btn-export-cancel { background: var(--cream-dark); color: var(--ink); flex: 0 0 auto; padding: 0.65rem 1rem; }
+.btn-export-cancel:hover { background: #ddd; }
+
+/* Botón exportar en la UI */
+.export-trigger { position: absolute; top: 3.2rem; right: 1rem; z-index: 1000; background: rgba(26,58,42,0.9); color: var(--cream); border: none; border-radius: 6px; padding: 0.45rem 0.75rem; font-size: 0.72rem; font-family: 'Inter', sans-serif; cursor: pointer; letter-spacing: 0.04em; transition: background 0.15s; display: flex; align-items: center; gap: 0.4rem; }
+.export-trigger:hover { background: var(--forest-mid); }
+
+/* ONBOARDING */
+.onboarding-overlay {
+  position: fixed; inset: 0; z-index: 8000;
+  pointer-events: none;
+  display: none;
+}
+.onboarding-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(26,26,24,0.5);
+  transition: opacity 0.4s ease;
+}
+.onboarding-highlight {
+  position: absolute;
+  border-radius: 10px;
+  box-shadow: 0 0 0 4000px rgba(26,26,24,0.5);
+  border: 2px solid rgba(159,217,192,0.6);
+  transition: all 0.5s cubic-bezier(0.4,0,0.2,1);
+  pointer-events: none;
+}
+.onboarding-card {
+  position: absolute;
+  background: var(--forest);
+  border: 1px solid rgba(159,217,192,0.2);
+  border-radius: 12px;
+  padding: 1.1rem 1.3rem 1rem;
+  max-width: 300px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  pointer-events: auto;
+  transition: all 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
+  opacity: 0;
+  top: -999px; left: -999px;
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.onboarding-step {
+  font-size: 0.65rem; color: var(--teal-light); opacity: 0.7;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin-bottom: 0.4rem; font-family: 'Inter', sans-serif;
+}
+.onboarding-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.95rem; color: var(--cream);
+  line-height: 1.55; font-style: italic;
+  margin-bottom: 1rem;
+}
+.onboarding-text em {
+  color: var(--teal-light); font-style: normal;
+  font-family: 'Inter', sans-serif; font-weight: 500;
+}
+.onboarding-dots {
+  display: flex; gap: 0.35rem; margin-bottom: 0.9rem;
+}
+.onboarding-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(159,217,192,0.3); transition: background 0.2s;
+}
+.onboarding-dot.active { background: var(--teal-light); }
+.onboarding-actions {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.onboarding-next {
+  background: var(--teal); color: white; border: none;
+  border-radius: 6px; padding: 0.5rem 1rem;
+  font-family: 'Inter', sans-serif; font-size: 0.82rem;
+  font-weight: 500; cursor: pointer; transition: background 0.15s;
+}
+.onboarding-next:hover { background: var(--forest-mid); }
+.onboarding-skip {
+  background: none; border: none; color: rgba(159,217,192,0.45);
+  font-size: 0.72rem; cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: color 0.15s; padding: 0;
+}
+.onboarding-skip:hover { color: var(--teal-light); }
+
+/* FRANJA DE ACTIVIDAD */
+.activity-strip {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000;
+  background: rgba(26,58,42,0.92);
+  backdrop-filter: blur(4px);
+  padding: 0.55rem 1.25rem;
+  display: flex; align-items: center; gap: 0.75rem;
+  border-top: 1px solid rgba(159,217,192,0.15);
+  overflow: hidden;
+  height: 38px;
+}
+.activity-content {
+  position: absolute;
+  left: 420px; right: 0;
+  display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+  height: 38px; top: 0;
+}
+.activity-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--teal-light); flex-shrink: 0;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.7); }
+}
+.activity-msg {
+  font-size: 0.72rem; color: var(--teal-light);
+  font-family: 'Inter', sans-serif; letter-spacing: 0.02em;
+  white-space: nowrap; opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.activity-msg.visible { opacity: 1; }
+.activity-msg em {
+  font-style: italic;
+  font-family: 'Playfair Display', serif;
+  color: var(--cream);
+}
+.activity-sep {
+  font-size: 0.65rem; color: rgba(159,217,192,0.35);
+  flex-shrink: 0; margin: 0 0.25rem;
+}
+
+/* LEYENDA */
+.map-legend {
+  position: absolute; bottom: 52px; left: 1rem; z-index: 1000;
+  background: rgba(26,58,42,0.88); backdrop-filter: blur(4px);
+  border-radius: 8px; padding: 0.55rem 0.8rem;
+  display: flex; flex-direction: column; gap: 0.35rem;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.68rem; color: var(--teal-light);
+  font-family: 'Inter', sans-serif; letter-spacing: 0.02em; white-space: nowrap;
+}
+.legend-line {
+  width: 22px; height: 2px; flex-shrink: 0;
+}
+.legend-line.own {
+  background: #e8593c;
+}
+.legend-line.community {
+  background: none;
+  border-top: 2px dashed rgba(29,158,117,0.7);
+}
+.legend-line.fictional {
+  background: none;
+  border-top: 2px dashed rgba(232,145,60,0.7);
+}
+
+/* TOOLTIP BIENVENIDA */
+.welcome-tooltip {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 1001;
+  background: rgba(26,58,42,0.72); backdrop-filter: blur(6px);
+  border: 1px solid rgba(159,217,192,0.15);
+  border-radius: 10px; padding: 0.75rem 1.1rem;
+  max-width: 340px; width: max-content;
+  display: flex; align-items: flex-start; gap: 0.65rem;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+  animation: tooltip-in 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events: auto;
+}
+@keyframes tooltip-in {
+  from { opacity: 0; transform: translate(-50%, -48%); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+.welcome-tooltip .wt-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+.welcome-tooltip .wt-text {
+  font-size: 0.78rem; color: var(--cream);
+  font-family: 'Inter', sans-serif; line-height: 1.5;
+}
+.welcome-tooltip .wt-text em {
+  font-style: italic; font-family: 'Playfair Display', serif; color: var(--teal-light);
+}
+.welcome-tooltip .wt-close {
+  background: none; border: none; color: rgba(159,217,192,0.5);
+  font-size: 0.8rem; cursor: pointer; flex-shrink: 0;
+  margin-top: 1px; padding: 0; line-height: 1;
+  transition: color 0.15s;
+}
+.welcome-tooltip .wt-close:hover { color: var(--teal-light); }
+.popup-community { margin-top: 6px; padding-top: 6px; border-top: 1px solid #eee; font-size: 0.72rem; color: var(--muted); }
+.popup-community strong { color: var(--teal); font-weight: 600; }
+
+/* POSTAL MODAL */
+.postal-overlay { position: fixed; inset: 0; z-index: 9000; background: rgba(26,26,24,0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; }
+.postal-overlay.open { display: flex; }
+.postal-modal {
+  background: var(--parchment); border-radius: 16px; width: 680px; max-width: 95vw;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.3); overflow: hidden;
+  display: grid; grid-template-columns: 1fr 1fr;
+}
+.postal-left {
+  background: var(--forest); padding: 2rem;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.postal-left-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--teal-light); opacity: 0.7; }
+.postal-place-name {
+  font-family: 'Playfair Display', serif; font-size: 1.4rem;
+  color: var(--cream); line-height: 1.2;
+}
+.postal-place-name span { font-size: 0.9rem; opacity: 0.6; display: block; margin-top: 0.25rem; font-style: italic; }
+.postal-stamp {
+  margin-top: auto;
+  border: 2px dashed rgba(159,217,192,0.3);
+  border-radius: 8px; padding: 0.6rem 0.8rem;
+  display: inline-flex; flex-direction: column; align-self: flex-start;
+}
+.postal-stamp-name { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal-light); opacity: 0.6; }
+.postal-stamp-place { font-size: 0.85rem; font-family: 'Playfair Display', serif; color: var(--cream); font-style: italic; }
+.postal-stamp-date { font-size: 0.6rem; color: rgba(159,217,192,0.5); margin-top: 2px; }
+
+.postal-right { padding: 1.75rem; display: flex; flex-direction: column; gap: 1rem; }
+.postal-right h3 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--ink); }
+.postal-field label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); display: block; margin-bottom: 0.35rem; }
+.postal-field textarea, .postal-field input {
+  width: 100%; border: 1px solid var(--cream-dark); border-radius: 6px;
+  padding: 0.55rem 0.75rem; font-family: 'Playfair Display', serif;
+  font-size: 0.85rem; color: var(--ink); background: var(--cream);
+  resize: none; outline: none; transition: border-color 0.15s;
+}
+.postal-field textarea:focus, .postal-field input:focus { border-color: var(--teal); }
+.postal-field textarea { height: 90px; font-style: italic; }
+.postal-field input { font-family: 'Inter', sans-serif; font-size: 0.82rem; }
+.postal-actions { display: flex; gap: 0.75rem; margin-top: auto; }
+.postal-btn-send {
+  flex: 1; background: var(--teal); color: white; border: none;
+  border-radius: 8px; padding: 0.65rem; font-size: 0.82rem; font-weight: 500;
+  font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.15s;
+}
+.postal-btn-send:hover { background: var(--forest-mid); }
+.postal-btn-cancel {
+  background: none; border: 1px solid var(--cream-dark); border-radius: 8px;
+  padding: 0.65rem 1rem; font-size: 0.82rem; color: var(--muted);
+  font-family: 'Inter', sans-serif; cursor: pointer;
+}
+.postal-sent { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; text-align: center; padding: 2rem; }
+.postal-sent .sent-icon { font-size: 2.5rem; }
+.postal-sent p { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--ink); font-style: italic; line-height: 1.5; }
+.postal-sent small { font-size: 0.72rem; color: var(--muted); }
+
+/* BOTÓN POSTAL EN DIARIO */
+.diary-postal-btn {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  font-size: 0.7rem; color: var(--teal); background: rgba(29,158,117,0.08);
+  border: 1px solid rgba(29,158,117,0.25); border-radius: 20px;
+  padding: 0.2rem 0.6rem; margin-top: 0.5rem; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: background 0.15s;
+}
+.diary-postal-btn:hover { background: rgba(29,158,117,0.15); }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">Leer <em>es</em> viajar <span style="font-family:'Inter',sans-serif;font-size:0.55rem;font-weight:600;letter-spacing:0.12em;background:rgba(159,217,192,0.15);border:1px solid rgba(159,217,192,0.3);color:var(--teal-light);padding:0.15rem 0.4rem;border-radius:4px;vertical-align:middle;margin-left:0.35rem;font-style:normal">BETA</span></div>
+      <div class="tagline">Tu itinerario lector</div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-val" id="stat-places">0</div><div class="stat-label">destinos</div></div>
+      <div class="stat"><div class="stat-val" id="stat-countries">0</div><div class="stat-label">países</div></div>
+      <div class="stat"><div class="stat-val" id="stat-km">0</div><div class="stat-label">km leídos</div></div>
+      <div class="stat"><div class="stat-val" id="stat-books">0</div><div class="stat-label">lecturas</div></div>
+    </div>
+
+  <!-- NAV TABS -->
+  <nav class="sidebar-nav">
+    <button class="nav-tab active" onclick="switchTab('añadir')">Añadir</button>
+    <button class="nav-tab" onclick="switchTab('itinerario')">Viajes</button>
+    <button class="nav-tab" onclick="switchTab('diario')">Diario</button>
+    <button class="nav-tab" onclick="switchTab('logros')" id="tab-logros">Logros</button>
+  </nav>
+
+  <!-- PANEL AÑADIR -->
+  <div class="tab-panel active" id="panel-añadir">
+    <div class="origin-section" id="origin-section">
+      <div class="origin-label">Tu punto de partida</div>
+      <div class="origin-display">
+        <div class="origin-dot"></div>
+        <span class="origin-name" id="origin-name">¿Desde dónde partes?</span>
+        <button class="origin-change" onclick="toggleOriginEdit()">cambiar</button>
+      </div>
+      <div class="origin-input-wrap" id="origin-input-wrap">
+        <input type="text" id="origin-input" placeholder="Ciudad de origen…" style="margin:0; flex:1" onkeydown="if(event.key==='Enter') setOrigin()"/>
+        <button class="add-btn" style="width:auto;padding:0.5rem 0.85rem;font-size:0.8rem" onclick="setOrigin()">OK</button>
+      </div>
+    </div>
+    <div class="origin-narrative" id="origin-narrative" style="display:none">
+      <span id="origin-narrative-text"></span>
+      <button class="origin-change" onclick="toggleOriginEdit()">cambiar</button>
+    </div>
+    <div class="section-title">¿Cuál es tu destino?</div>
+    <input type="text" id="destination" placeholder="✦ Puede ser un lugar en este mundo… o en otro."/>
+    <div style="font-size:0.68rem;color:var(--muted);font-style:italic;margin-top:-0.35rem;margin-bottom:0.55rem;"></div>
+    <div class="book-input-wrap">
+      <input type="text" id="book-title" placeholder="Título del libro" autocomplete="off" oninput="onBookInput(this.value)" onkeydown="onBookKeydown(event)"/>
+      <input type="hidden" id="book-author"/>
+      <div class="ac-dropdown" id="ac-dropdown"></div>
+    </div>
+    
+    <textarea id="book-note" rows="2" placeholder="Notas de viaje (opcional)"></textarea>
+    <div class="date-row">
+      <span class="date-label">Fecha de visita:</span>
+      <span class="date-val" id="date-display"></span>
+      <button class="date-change" onclick="toggleDatePicker()">cambiar</button>
+      <input type="date" id="date-picker" style="display:none" onchange="onDateChange(this.value)"/>
+    </div>
+    <div class="departure-toggle">
+      <button class="dep-opt active" id="dep-last" onclick="setDep('last')">Desde último<br>destino</button>
+      <button class="dep-opt" id="dep-home" onclick="setDep('home')">Desde<br>casa</button>
+      <button class="dep-opt" id="dep-other" onclick="setDep('other')">Otro<br>lugar…</button>
+    </div>
+    <input type="text" id="dep-other-input" placeholder="Lugar de partida…" style="display:none"/>
+    <button class="add-btn" id="add-btn" onclick="addEntry()">+ Añadir al mapa</button>
+  </div>
+
+  <!-- PANEL ITINERARIO -->
+  <div class="tab-panel" id="panel-itinerario">
+    <div class="section-title">Mi itinerario</div>
+    <div class="year-filter" id="year-filter" style="display:none"></div>
+    <div class="journey-list" id="journey-list">
+      <div class="empty-state">
+        <div class="compass">🧭</div>
+        <p>Tu viaje lector empieza aquí.<br>Añade tu primera lectura<br>y traza tu ruta.<br><br><em>El mundo entero te espera.</em></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL DIARIO -->
+  <div class="tab-panel" id="panel-diario">
+    <div class="section-title">Diario del explorador</div>
+    <div id="diary-list">
+      <div class="diary-empty">
+        <div class="diary-icon">✍️</div>
+        <p>Aquí aparecerán los momentos en que llegues<br>a un lugar por primera vez.<br><br><em style="font-family:'Playfair Display',serif;color:var(--teal)">El diario espera tu primera entrada.</em></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL LOGROS -->
+  <div class="tab-panel" id="panel-logros">
+    <div class="section-title">Mis logros</div>
+    <div id="badges-container"></div>
+  </div>
+
+</aside>
+
+<!-- TOASTS -->
+<div class="pioneer-toast" id="pioneer-toast" onclick="this.classList.remove('show')" title="Clic para cerrar">
+  <div class="p-icon">🧭</div>
+  <div>
+    <div class="p-title">¡Primera llegada!</div>
+    <div class="p-text" id="pioneer-toast-text"></div>
+  </div>
+</div>
+<div class="badge-unlock-toast" id="badge-unlock-toast">
+  <span class="bu-icon" id="bu-icon"></span>
+  <div class="bu-title">Logro desbloqueado</div>
+  <div class="bu-name" id="bu-name"></div>
+</div>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-title">Mapa lector · 2026</div>
+    <button class="export-trigger" onclick="openExportModal()">⬇ Exportar</button>
+
+    <!-- LEYENDA -->
+    <div class="map-legend">
+      <div class="legend-item">
+        <div class="legend-line own"></div>
+        Tu ruta
+      </div>
+      <div class="legend-item">
+        <div class="legend-line community"></div>
+        Rutas de la comunidad
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="activity-strip">
+  <div class="activity-content">
+    <div class="activity-dot"></div>
+    <div class="activity-msg" id="activity-msg"></div>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="export-overlay" id="export-overlay">
+  <div class="export-modal">
+    <div class="export-modal-header">
+      <h3>Exportar mi viaje lector</h3>
+      <button class="export-close" onclick="closeExportModal()">✕</button>
+    </div>
+    <div class="export-modal-body">
+      <div class="export-modes">
+        <button class="export-mode-btn active" onclick="setExportMode('stats')" id="em-map">
+          <span class="em-icon">📊</span>Estadísticas
+        </button>
+        <button class="export-mode-btn" onclick="setExportMode('books')" id="em-stats">
+          <span class="em-icon">📚</span>Lecturas
+        </button>
+        <button class="export-mode-btn" onclick="setExportMode('wrapped')" id="em-wrapped">
+          <span class="em-icon">✨</span>Wrapped
+        </button>
+      </div>
+      <div class="export-preview-wrap" id="export-preview-wrap">
+        <div class="export-preview-loading" id="export-preview-loading">Generando vista previa…</div>
+      </div>
+      <div class="export-phrase-wrap" id="export-phrase-wrap">
+        <label>Tu frase</label>
+        <textarea id="export-phrase" rows="2"></textarea>
+        <button class="export-phrase-regen" onclick="regenPhrase()">↺ Generar otra frase</button>
+      </div>
+      <div class="export-actions">
+        <button class="btn-export-cancel" onclick="closeExportModal()">Cancelar</button>
+        <button class="btn-export-download" onclick="downloadExport()">⬇ Descargar PNG</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ===================== STATE =====================
+let origin = null;
+let entries = [];
+let departure = 'last';
+let activeYear = 'all';
+let selectedDate = todayStr();
+let markersLayer = null;
+
+// ===================== MAP =====================
+const map = L.map('map', { zoomControl: false, minZoom: 2, maxZoom: 18 }).setView([30, 10], 2);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19
+}).addTo(map);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+// Compensar altura de la franja de actividad
+const zoomStyle = document.createElement('style');
+zoomStyle.textContent = '.leaflet-bottom.leaflet-right { bottom: 42px; }';
+document.head.appendChild(zoomStyle);
+markersLayer = L.layerGroup().addTo(map);
+
+// ===================== GEOCODING =====================
+const FICTIONAL = {
+  'hobbiton':[52.7,-1.8],'la comarca':[52.7,-1.8],'the shire':[52.7,-1.8],
+  'mordor':[45.0,35.0],'gondor':[38.0,32.0],'rohan':[47.0,28.0],
+  'rivendell':[46.5,8.0],'rivendel':[46.5,8.0],'minas tirith':[37.9,32.8],
+  'lothlórien':[48.0,14.0],'lothloren':[48.0,14.0],'erebor':[41.0,44.0],
+  'isengard':[44.0,20.0],'moria':[42.0,18.0],
+  'hogwarts':[57.0,-4.0],'hogsmeade':[57.1,-4.1],'azkaban':[60.0,-1.0],
+  'diagon alley':[51.5,-0.1],'el callejón diagon':[51.5,-0.1],
+  'macondo':[10.4,-75.5],'comala':[19.5,-103.8],
+  'vetusta':[43.36,-5.84],'orbajosa':[37.5,-4.0],'región':[42.5,-6.0],
+  'marineda':[43.37,-8.39],'oleza':[38.1,-1.1],
+  'arrakis':[23.5,46.0],'dune':[23.5,46.0],'giedi prime':[15.0,60.0],'caladan':[48.0,-4.0],
+  'terramar':[37.9,-122.5],'earthsea':[37.9,-122.5],'anarres':[-30.0,140.0],'omelas':[47.6,-122.3],
+  'narnia':[51.5,-1.0],'cair paravel':[51.6,-1.1],
+  'westeros':[53.5,-7.5],'desembarco del rey':[43.7,16.0],'kings landing':[43.7,16.0],
+  'winterfell':[55.0,-2.0],'rocadragón':[38.7,26.9],'dragonstone':[38.7,26.9],
+  'oceania':[51.5,-0.1],'oceanía':[51.5,-0.1],'airstrip one':[51.5,-0.1],
+  'gilead':[42.3,-71.0],'panem':[38.9,-77.0],
+  'coketown':[53.7,-2.5],'wuthering heights':[53.9,-2.0],'thornfield':[53.8,-1.8],
+  'manderley':[50.4,-4.7],'mansfield park':[52.5,-0.9],
+  'tlön':[-30.0,-65.0],'uqbar':[-33.0,-70.0],
+  'neverwhere':[51.5,-0.12],'stardust':[54.0,-2.0],'american gods':[43.0,-89.0],
+  'ankh-morpork':[51.5,-0.1],'lancre':[54.0,-2.5],
+  'capricorno':[47.4,8.5],'ombra':[47.0,8.0],'tintamundo':[47.2,8.3],
+  'isla misteriosa':[-35.0,-110.0],'centro de la tierra':[64.0,-19.0],
+  'el castillo':[50.0,14.5],'the castle':[50.0,14.5],
+  'dorothea':[45.5,9.1],'anastasia':[45.3,9.3],'isidora':[45.6,9.0],'octavia':[44.0,8.5],
+  'trost':[54.0,13.0],'paradis':[54.5,13.5],
+  'konoha':[35.0,136.0],'konohagakure':[35.0,136.0],
+  'alabasta':[27.0,30.0],'dressrosa':[39.0,3.0],
+  'tarbean':[47.5,19.0],'imre':[48.0,20.0],
+  'luthadel':[40.0,45.0],'roshar':[30.0,50.0],
+  'bolvangar':[70.0,25.0],'cittàgazze':[44.0,8.0],
+  'mid-world':[40.0,-100.0],'la torre oscura':[40.0,-100.0],
+  'yoknapatawpha':[34.3,-89.5],'zenda':[48.2,17.0],
+  // Memorias de Idhún — Laura Gallego
+  // Reinos humanos de Nandelt (Europa central medieval)
+  'vanis':[50.0,14.4],'vanissar':[50.0,14.4],
+  'thalis':[50.06,19.94],'raheld':[50.5,20.0],
+  'nurgon':[46.0,14.5],'nandelt':[47.5,19.0],
+  'nanetten':[48.5,17.0],'dingra':[49.0,21.0],
+  'shia':[46.5,16.0],'arén':[49.2,20.5],
+  // Celestia (Mediterráneo oriental — celestes luminosos y serenos)
+  'celestia':[36.5,26.0],
+  'rhyrr':[36.4,25.4],'kelesban':[34.9,33.6],
+  'haai-sil':[37.9,27.3],'vaisel':[35.5,24.0],
+  // Nanhai — montañas de los gigantes (Himalaya)
+  'nanhai':[27.9,86.9],'gran oráculo':[27.5,86.0],
+  // Kash-Tar — desierto de los yan (Irán/Omán)
+  'kash-tar':[30.0,57.0],'kosh':[29.5,60.0],
+  'lumbak':[22.5,58.5],'nin':[28.0,55.0],
+  // Bosque de Awa y Derbhad — hadas y feéricos (Europa central boscosa)
+  'bosque de awa':[48.0,8.2],'awa':[48.0,8.2],
+  'derbhad':[49.5,13.5],'torre de derbhad':[49.5,13.5],
+  'alis lithban':[62.0,26.0],'bosque de alis lithban':[62.0,26.0],
+  // Awinor — tierras extintas de los dragones (Islandia volcánica)
+  'awinor':[64.9,-19.0],'torre de awinor':[64.5,-18.5],
+  // Drackwen — antiguo hogar de los unicornios (Finlandia boreal)
+  'drackwen':[62.0,26.0],'torre de drackwen':[62.5,26.5],
+  // Kazlunn — la torre de los magos (Escocia mágica)
+  'kazlunn':[57.2,-4.5],'torre de kazlunn':[57.2,-4.5],
+  'monte lunn':[57.0,-4.8],
+  // Shur-Ikail y el Anillo de Hielo (tierra de bárbaros y hielo)
+  'shur-ikail':[60.0,60.0],'anillo de hielo':[72.0,25.0],
+  // Raden — territorio szish (Mar Caspio, zona limítrofe)
+  'raden':[42.0,52.0],
+  // Colinas de Gantadd y oráculos
+  'gantadd':[32.0,50.0],'oráculo de gantadd':[32.0,50.0],
+  'oráculo de awa':[48.0,8.2],'oráculo de raden':[42.0,52.0],
+  // Otros lugares clave
+  'limbhad':[49.0,10.0],'umadhun':[20.0,65.0],
+};
+
+async function geocode(place, askUser = false) {
+  const key = place.toLowerCase().trim();
+  for (const [k, v] of Object.entries(FICTIONAL)) {
+    if (key === k || key.includes(k)) {
+      if (askUser) {
+        // Comprobar override personal ya guardado
+        const overrides = loadPersonalOverrides();
+        if (overrides[k]) {
+          return { lat: overrides[k].lat, lng: overrides[k].lng, fictional: true, country: '', countryCode: '' };
+        }
+        // Preguntar al usuario dónde colocarlo
+        return new Promise(resolve => {
+          openFictionalModal(k, (lat, lng) => {
+            resolve({ lat, lng, fictional: true, country: '', countryCode: '' });
+          });
+        });
+      }
+      // Sin preguntar (para geocodificar el origen u otros usos internos)
+      const overrides = loadPersonalOverrides();
+      if (overrides[k]) return { lat: overrides[k].lat, lng: overrides[k].lng, fictional: true, country: '', countryCode: '' };
+      return { lat: v[0], lng: v[1], fictional: true, country: '', countryCode: '' };
+    }
+  }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000); // 5 segundos máximo
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1&addressdetails=1`, {
+      headers: { 'Accept-Language': 'es' },
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    const d = await r.json();
+    if (d.length > 0) {
+      const country = d[0].address ? (d[0].address.country || '') : '';
+      const countryCode = d[0].address ? (d[0].address.country_code || '').toUpperCase() : '';
+      return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon), fictional: false, country, countryCode };
+    }
+  } catch(e) {}
+  return null;
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+function updateOriginNarrative() {
+  const section = document.getElementById('origin-section');
+  const narrative = document.getElementById('origin-narrative');
+  const el = document.getElementById('origin-narrative-text');
+  if (!origin) {
+    section.style.display = 'block';
+    narrative.style.display = 'none';
+    return;
+  }
+  section.style.display = 'none';
+  narrative.style.display = 'flex';
+  const last = entries.length > 0 ? entries[entries.length - 1] : null;
+  let text = `Saliste de <strong>${origin.name}</strong>`;
+  if (last) text += ` · Ahora estás en <strong>${last.dest}</strong>`;
+  el.innerHTML = text;
+}
+
+// ===================== ORIGIN =====================
+function toggleOriginEdit() {
+  if (!origin) {
+    const wrap = document.getElementById('origin-input-wrap');
+    wrap.classList.toggle('visible');
+    if (wrap.classList.contains('visible')) document.getElementById('origin-input').focus();
+  } else {
+    // Volver al bloque original para editar
+    document.getElementById('origin-section').style.display = 'block';
+    document.getElementById('origin-narrative').style.display = 'none';
+    document.getElementById('origin-name').textContent = origin.name;
+    const wrap = document.getElementById('origin-input-wrap');
+    wrap.classList.add('visible');
+    document.getElementById('origin-input').focus();
+  }
+}
+
+async function setOrigin() {
+  const val = document.getElementById('origin-input').value.trim();
+  if (!val) return;
+  const btn = document.querySelector('#origin-input-wrap .add-btn');
+  const prevText = btn.textContent;
+  btn.textContent = 'Buscando…'; btn.disabled = true;
+  const geo = await geocode(val);
+  btn.textContent = prevText; btn.disabled = false;
+  if (!geo) { alert('No encontré ese lugar. Prueba con otro nombre.'); return; }
+  origin = { name: val, lat: geo.lat, lng: geo.lng };
+  document.getElementById('origin-input-wrap').classList.remove('visible');
+  document.getElementById('origin-input').value = '';
+  addOriginMarker();
+  updateOriginNarrative();
+  map.setView([origin.lat, origin.lng], 4);
+  saveState();
+}
+
+function addOriginMarker() {
+  if (!origin) return;
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="width:14px;height:14px;background:#1a3a2a;border-radius:50%;border:3px solid #1d9e75;box-shadow:0 0 0 2px white"></div>`,
+    iconSize: [14,14], iconAnchor: [7,7]
+  });
+  L.marker([origin.lat, origin.lng], { icon }).addTo(markersLayer)
+    .bindPopup(`<div class="popup-book">Punto de partida</div><div class="popup-place">${origin.name}</div>`);
+}
+
+// ===================== DEPARTURE =====================
+function setDep(mode) {
+  departure = mode;
+  ['last','home','other'].forEach(m => document.getElementById('dep-'+m).classList.toggle('active', m === mode));
+  document.getElementById('dep-other-input').style.display = mode === 'other' ? 'block' : 'none';
+}
+
+// ===================== ADD ENTRY =====================
+async function addEntry() {
+  const book = document.getElementById('book-title').value.trim();
+  const author = document.getElementById('book-author').value.trim();
+  const dest = document.getElementById('destination').value.trim();
+  const note = document.getElementById('book-note').value.trim();
+  if (!book || !dest) { alert('Necesito al menos el título y el destino.'); return; }
+
+  const btn = document.getElementById('add-btn');
+  btn.textContent = 'Buscando…'; btn.disabled = true;
+
+  try {
+    let fromName, fromCoords;
+    if (departure === 'home' || entries.length === 0) {
+      if (!origin) { alert('Primero indica tu ciudad de origen.'); return; }
+      fromName = origin.name; fromCoords = { lat: origin.lat, lng: origin.lng };
+    } else if (departure === 'last') {
+      const last = entries[entries.length - 1];
+      fromName = last.dest; fromCoords = { lat: last.destLat, lng: last.destLng };
+    } else {
+      const other = document.getElementById('dep-other-input').value.trim();
+      if (!other) { alert('Indica el lugar de partida.'); return; }
+      const geo = await geocode(other);
+      if (!geo) { alert('No encontré ese lugar de partida.'); return; }
+      fromName = other; fromCoords = { lat: geo.lat, lng: geo.lng };
+    }
+
+    const destGeo = await geocode(dest, true);
+    if (!destGeo) { alert(`No encontré "${dest}". Prueba con otro nombre.`); return; }
+
+    const entry = {
+      book, author, dest, note, fromName,
+      fromLat: fromCoords.lat, fromLng: fromCoords.lng,
+      destLat: destGeo.lat, destLng: destGeo.lng,
+      km: haversineKm(fromCoords.lat, fromCoords.lng, destGeo.lat, destGeo.lng),
+      fictional: destGeo.fictional,
+      country: destGeo.country || '', countryCode: destGeo.countryCode || '',
+      date: selectedDate, year: new Date(selectedDate + 'T12:00:00').getFullYear()
+    };
+    // Comprobar si es primer viajero ANTES de push (push lo marcaría como propio)
+    const pioneer = isPioneer(dest);
+    if (pioneer) markDestinationKnown(dest);
+
+    entries.push(entry);
+    drawRoute(entry); addDestMarker(entry);
+
+    // Registrar en diario (siempre) y mostrar toast si es pionero
+    addDiaryEntry(entry, pioneer);
+    if (pioneer) showPioneerToast(dest);
+
+    // Comprobar badges
+    const stats = getBadgeStats();
+    checkNewBadges(stats);
+
+    updateList(); updateStats(); updateOriginNarrative(); saveState();
+
+    document.getElementById('book-title').value = '';
+    document.getElementById('book-author').value = '';
+    document.getElementById('destination').value = '';
+    document.getElementById('book-note').value = '';
+    document.getElementById('dep-other-input').value = '';
+    closeDropdown(); resetDate();
+    switchTab('itinerario');
+
+    const lats = [fromCoords.lat, destGeo.lat], lngs = [fromCoords.lng, destGeo.lng];
+    map.fitBounds([[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]], { padding: [80,80] });
+  } finally {
+    btn.textContent = '+ Añadir al mapa'; btn.disabled = false;
+  }
+}
+
+// ===================== MAP DRAWING =====================
+function drawRoute(entry) {
+  // Curva geodésica: interpolamos puntos intermedios con desviación perpendicular
+  const p1 = { lat: entry.fromLat, lng: entry.fromLng };
+  const p2 = { lat: entry.destLat, lng: entry.destLng };
+
+  // Calcular punto de control: mitad del segmento desviado perpendicularmente
+  const midLat = (p1.lat + p2.lat) / 2;
+  const midLng = (p1.lng + p2.lng) / 2;
+  const dLat = p2.lat - p1.lat;
+  const dLng = p2.lng - p1.lng;
+  const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+
+  // Curvatura proporcional a la distancia, máximo razonable para rutas largas
+  const curvature = Math.min(dist * 0.25, 15);
+  // Perpendicular normalizada
+  const perpLat = -dLng / (dist || 1) * curvature;
+  const perpLng =  dLat / (dist || 1) * curvature;
+
+  // Generar puntos a lo largo de la curva cuadrática de Bézier
+  const steps = 40;
+  const points = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const lat = (1-t)*(1-t)*p1.lat + 2*(1-t)*t*(midLat + perpLat) + t*t*p2.lat;
+    const lng = (1-t)*(1-t)*p1.lng + 2*(1-t)*t*(midLng + perpLng) + t*t*p2.lng;
+    points.push([lat, lng]);
+  }
+
+  const line = L.polyline(points, { color: '#e8593c', weight: 2, opacity: 0.7, dashArray: '6 4' }).addTo(map);
+  const el = line.getElement();
+  if (el) {
+    let offset = 0;
+    const animate = () => { offset -= 1; if (el) el.style.strokeDashoffset = offset; requestAnimationFrame(animate); };
+    requestAnimationFrame(animate);
+  }
+}
+
+function addDestMarker(entry) {
+  const color = entry.fictional ? '#e8913c' : '#e8593c';
+  const size = entry.fictional ? 12 : 10;
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="width:${size}px;height:${size}px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 0 0 1.5px ${color}"></div>`,
+    iconSize: [size,size], iconAnchor: [size/2,size/2]
+  });
+  L.marker([entry.destLat, entry.destLng], { icon }).addTo(markersLayer).bindPopup(`
+    <div class="popup-book">${entry.book}${entry.author ? ` <span style="font-weight:400;font-style:normal;font-size:0.8rem;color:#888">— ${entry.author}</span>` : ''}</div>
+    <div class="popup-place">${entry.fictional ? '✦ ' : ''}${entry.dest}</div>
+    <div class="popup-km">+${entry.km.toLocaleString()} km desde ${entry.fromName}</div>
+    ${entry.note ? `<div style="font-size:0.75rem;color:#888;font-style:italic;margin-top:4px;">"${entry.note}"</div>` : ''}
+    ${(() => {
+      const key = entry.dest.toLowerCase();
+      const vData = PLACE_VISITORS[key];
+      if (vData) {
+        const others = vData.books.filter(b => b !== entry.book).slice(0,2);
+        const nowCount = COMMUNITY_ROUTES.filter(r => r.toName.toLowerCase() === key && r.now >= 2).reduce((s,r) => s + r.now, 0);
+        return `<div class="popup-community">
+          <strong>${vData.count.toLocaleString()} lectores</strong> también han llegado hasta aquí leyendo:
+          ${others.length ? '<br>' + others.map(b => `<span style="font-size:0.7rem;color:#aaa;font-style:italic">· ${b}</span>`).join(' ') : ''}
+          ${nowCount >= 2 ? `<br><span style="color:var(--teal);font-weight:500">● ${nowCount} leyendo aquí ahora mismo</span>` : ''}
+        </div>`;
+      }
+      return '';
+    })()}
+    <div style="margin-top:8px;">
+      <button onclick="openPostal('${entry.dest.replace(/'/g,"\\'")}','${(entry.book||'').replace(/'/g,"\\'")}',${!!entry.fictional})" style="background:none;border:1px solid rgba(29,158,117,0.3);border-radius:12px;padding:3px 10px;font-size:0.68rem;color:var(--teal);cursor:pointer;font-family:'Inter',sans-serif;">✉ Enviar postal</button>
+    </div>
+  `);
+}
+
+function redrawMap() {
+  markersLayer.clearLayers();
+  map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+  if (origin) addOriginMarker();
+  sortedFiltered().forEach(e => { drawRoute(e); addDestMarker(e); });
+  drawCommunityRoutes(); // redibujar para respetar marcadores propios actualizados
+}
+
+function sortedFiltered() {
+  return (activeYear === 'all' ? entries : entries.filter(e => e.year === activeYear))
+    .slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
+}
+
+// ===================== LIST =====================
+function updateList() {
+  const list = document.getElementById('journey-list');
+  const filtered = sortedFiltered();
+  if (filtered.length === 0) {
+    list.innerHTML = entries.length === 0
+      ? `<div class="empty-state"><div class="compass">🧭</div><p>Tu viaje lector empieza aquí.<br>Añade 2 o 3 libros que estés leyendo<br>o hayas leído recientemente.<br><br><em>El mundo entero te espera.</em></p></div>`
+      : `<div class="empty-state"><p>Sin lecturas en ${activeYear}.</p></div>`;
+    return;
+  }
+  list.innerHTML = '';
+  filtered.forEach((e, i) => {
+    const realIndex = entries.indexOf(e);
+    const div = document.createElement('div');
+    div.className = 'journey-entry';
+    const connector = i < filtered.length - 1 ? '<div class="entry-connector"></div>' : '';
+    const dotClass = i === 0 ? 'entry-dot origin' : (e.fictional ? 'entry-dot fictional' : 'entry-dot');
+    div.innerHTML = `
+      <div class="entry-line"><div class="${dotClass}"></div>${connector}</div>
+      <div class="entry-content">
+        <div class="entry-route">${e.fromName} → ${e.dest}${e.fictional ? ' ✦' : ''}${e.country && !e.fictional ? ` <span style="opacity:0.7">· ${e.country}</span>` : ''}</div>
+        <div class="entry-book">${e.book}${e.author ? ` <span style="font-size:0.78rem;color:#aaa;font-style:normal">— ${e.author}</span>` : ''}</div>
+        <div class="entry-km">+${e.km.toLocaleString()} km</div>
+        ${e.date ? `<div class="entry-date">${formatDate(e.date)}</div>` : ''}
+        ${e.note ? `<div class="entry-note">"${e.note}"</div>` : ''}
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:0.25rem" id="delete-wrap-${realIndex}">
+        <button class="entry-edit" onclick="editEntry(${realIndex})" title="Editar">✏️</button>
+        <button class="entry-delete" onclick="askDeleteEntry(${realIndex})" title="Eliminar">✕</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+  updateYearFilter();
+}
+
+function editEntry(i) {
+  // Cerrar cualquier edición abierta
+  document.querySelectorAll('.entry-edit-form').forEach(el => el.remove());
+  document.querySelectorAll('.confirm-delete').forEach(el => el.remove());
+
+  const entry = entries[i];
+  if (!entry) return;
+
+  const wrap = document.getElementById(`delete-wrap-${i}`);
+  const entryDiv = wrap.closest('.entry-item');
+  if (!entryDiv) return;
+
+  const form = document.createElement('div');
+  form.className = 'entry-edit-form';
+  form.innerHTML = `
+    <input type="text" id="edit-book-${i}" value="${entry.book.replace(/"/g,'&quot;')}" placeholder="Título del libro…">
+    <input type="text" id="edit-author-${i}" value="${(entry.author||'').replace(/"/g,'&quot;')}" placeholder="Autor (opcional)…">
+    <input type="text" id="edit-note-${i}" value="${(entry.note||'').replace(/"/g,'&quot;')}" placeholder="Nota personal (opcional)…">
+    <div class="entry-edit-actions">
+      <button class="entry-edit-save" onclick="saveEditEntry(${i})">Guardar</button>
+      <button class="entry-edit-cancel" onclick="cancelEdit(${i})">Cancelar</button>
+    </div>
+  `;
+  entryDiv.appendChild(form);
+  document.getElementById(`edit-book-${i}`).focus();
+}
+
+function saveEditEntry(i) {
+  const book = document.getElementById(`edit-book-${i}`).value.trim();
+  const author = document.getElementById(`edit-author-${i}`).value.trim();
+  const note = document.getElementById(`edit-note-${i}`).value.trim();
+  if (!book) return;
+  entries[i].book = book;
+  entries[i].author = author;
+  entries[i].note = note;
+  updateList(); updateStats(); saveState();
+}
+
+function cancelEdit(i) {
+  document.querySelectorAll('.entry-edit-form').forEach(el => el.remove());
+}
+
+function askDeleteEntry(i) {
+  // Cerrar cualquier confirmación abierta
+  document.querySelectorAll('.confirm-delete').forEach(el => el.remove());
+  document.querySelectorAll('.entry-delete').forEach(el => el.style.color = '');
+
+  const wrap = document.getElementById(`delete-wrap-${i}`);
+  if (!wrap) return;
+  const btn = wrap.querySelector('.entry-delete');
+  btn.style.color = '#e06060';
+
+  const confirm = document.createElement('div');
+  confirm.className = 'confirm-delete';
+  confirm.innerHTML = `
+    <span>¿Borrar?</span>
+    <button class="confirm-yes" onclick="removeEntry(${i})">Sí</button>
+    <button class="confirm-no" onclick="cancelDelete(${i})">No</button>
+  `;
+  wrap.appendChild(confirm);
+}
+
+function cancelDelete(i) {
+  const wrap = document.getElementById(`delete-wrap-${i}`);
+  if (!wrap) return;
+  wrap.querySelector('.confirm-delete')?.remove();
+  const btn = wrap.querySelector('.entry-delete');
+  if (btn) btn.style.color = '';
+}
+
+function removeEntry(i) {
+  const removed = entries[i];
+  entries.splice(i, 1);
+  // Borrar también del diario si existe una entrada con el mismo destino y libro
+  if (removed) {
+    const diary = loadDiary();
+    let found = false;
+    const newDiary = diary.filter(d => {
+      if (!found && d.dest === removed.dest && d.book === removed.book) {
+        found = true;
+        return false;
+      }
+      return true;
+    });
+    saveDiary(newDiary);
+    renderDiary();
+  }
+  redrawMap(); updateList(); updateStats(); updateOriginNarrative(); saveState();
+}
+
+// ===================== STATS =====================
+function updateStats() {
+  const filtered = sortedFiltered();
+  const books = new Set(filtered.map(e => e.book.toLowerCase().trim())).size;
+  const km = filtered.reduce((s,e) => s+e.km, 0);
+  const places = new Set(filtered.map(e => e.dest.toLowerCase())).size;
+  const countries = new Set(
+    filtered
+      .filter(e => !e.fictional)
+      .map(e => e.countryCode || e.country || '')
+      .filter(c => c.length > 0)
+  ).size;
+
+  document.getElementById('stat-books').textContent = books;
+  document.getElementById('stat-km').textContent = km >= 1000 ? (km/1000).toFixed(1)+'k' : km;
+  document.getElementById('stat-places').textContent = places;
+  document.getElementById('stat-countries').textContent = countries;
+
+  // Labels en singular/plural
+  document.querySelector('#stat-places + .stat-label, [id="stat-places"] ~ .stat-label') &&
+    (document.querySelector('[id="stat-places"]').nextElementSibling.textContent = places === 1 ? 'destino' : 'destinos');
+  document.querySelector('[id="stat-countries"]').nextElementSibling.textContent = countries === 1 ? 'país' : 'países';
+  document.querySelector('[id="stat-countries"]').closest('.stat').style.display = countries === 0 ? 'none' : '';
+  document.querySelector('[id="stat-books"]').nextElementSibling.textContent = books === 1 ? 'lectura' : 'lecturas';
+}
+
+// ===================== YEAR FILTER =====================
+function updateYearFilter() {
+  const filter = document.getElementById('year-filter');
+  const years = [...new Set(entries.map(e => e.year).filter(Boolean))].sort();
+  if (years.length < 2) { filter.style.display = 'none'; return; }
+  filter.style.display = 'flex';
+  filter.innerHTML = '';
+  [['all','Todos'], ...years.map(y => [y, y])].forEach(([val, label]) => {
+    const btn = document.createElement('button');
+    btn.className = 'year-opt' + (activeYear === val ? ' active' : '');
+    btn.textContent = label;
+    btn.onclick = () => { activeYear = val; redrawMap(); updateList(); };
+    filter.appendChild(btn);
+  });
+}
+
+// ===================== DATE =====================
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function formatDate(str) {
+  if (!str) return '';
+  return new Date(str + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function initDate() {
+  selectedDate = todayStr();
+  document.getElementById('date-display').textContent = formatDate(selectedDate);
+  document.getElementById('date-picker').value = selectedDate;
+}
+function resetDate() { initDate(); document.getElementById('date-picker').style.display = 'none'; }
+function toggleDatePicker() {
+  const p = document.getElementById('date-picker');
+  p.style.display = p.style.display === 'none' ? 'inline-block' : 'none';
+  if (p.style.display !== 'none') p.focus();
+}
+function onDateChange(val) {
+  selectedDate = val;
+  document.getElementById('date-display').textContent = formatDate(val);
+  document.getElementById('date-picker').style.display = 'none';
+}
+
+// ===================== LOCALSTORAGE =====================
+function saveState() {
+  localStorage.setItem('lev_origin', JSON.stringify(origin));
+  localStorage.setItem('lev_entries', JSON.stringify(entries));
+}
+function loadState() {
+  try {
+    const o = localStorage.getItem('lev_origin');
+    const e = localStorage.getItem('lev_entries');
+    if (o) { origin = JSON.parse(o); document.getElementById('origin-name').textContent = origin.name; addOriginMarker(); map.setView([origin.lat, origin.lng], 4); }
+    if (e) {
+      entries = JSON.parse(e);
+      sortedFiltered().forEach(en => { drawRoute(en); addDestMarker(en); });
+      migrateDiary();
+      updateList(); updateStats();
+    }
+    updateOriginNarrative();
+  } catch(e) { console.warn('Error cargando estado:', e); }
+}
+
+function migrateDiary() {
+  const diary = loadDiary();
+  if (diary.length > 0) return; // ya tiene diario, no migrar
+  if (entries.length === 0) return;
+  // Crear entradas de diario para todas las entradas existentes
+  // Marcar como pioneras las que no están en KNOWN_DESTINATIONS
+  const seen = new Set();
+  const newDiary = [];
+  sortedFiltered().forEach(entry => {
+    const key = entry.dest.toLowerCase().trim();
+    const pioneer = !KNOWN_DESTINATIONS.has(key) && !seen.has(key);
+    seen.add(key);
+    if (pioneer) markDestinationKnown(entry.dest);
+    newDiary.push({
+      date: entry.date,
+      dest: entry.dest,
+      book: entry.book,
+      author: entry.author,
+      fromName: entry.fromName,
+      km: entry.km,
+      fictional: entry.fictional,
+      pioneer,
+      id: Date.now() + Math.random()
+    });
+  });
+  saveDiary(newDiary.reverse()); // más reciente primero
+  // Comprobar badges con el estado migrado
+  checkNewBadges(getBadgeStats());
+}
+
+// ===================== AUTOCOMPLETE =====================
+let acResults = [], acIndex = -1, acTimer = null;
+
+function onBookInput(val) {
+  clearTimeout(acTimer);
+  if (val.length < 3) { closeDropdown(); return; }
+  acTimer = setTimeout(() => searchBooks(val), 350);
+}
+async function searchBooks(q) {
+  const dd = document.getElementById('ac-dropdown');
+  dd.innerHTML = '<div class="ac-loading">Buscando…</div>'; dd.classList.add('visible');
+  try {
+    const r = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=6&fields=title,author_name,cover_i`);
+    const d = await r.json();
+    acResults = (d.docs || []).slice(0, 6); acIndex = -1; renderDropdown();
+  } catch(e) { dd.innerHTML = '<div class="ac-loading">Sin conexión a Open Library</div>'; }
+}
+function renderDropdown() {
+  const dd = document.getElementById('ac-dropdown');
+  if (!acResults.length) { dd.innerHTML = '<div class="ac-loading">Sin resultados</div>'; return; }
+  dd.innerHTML = '';
+  acResults.forEach((book, i) => {
+    const div = document.createElement('div'); div.className = 'ac-item';
+    const author = book.author_name ? book.author_name[0] : '';
+    const coverUrl = book.cover_i ? `https://covers.openlibrary.org/b/id/${book.cover_i}-S.jpg` : null;
+    div.innerHTML = `
+      ${coverUrl ? `<img class="ac-cover" src="${coverUrl}" alt="" loading="lazy" onerror="this.style.display='none'">` : `<div class="ac-cover-placeholder">📖</div>`}
+      <div><div class="ac-title">${book.title}</div>${author ? `<div class="ac-author">${author}</div>` : ''}</div>
+    `;
+    div.addEventListener('mousedown', e => { e.preventDefault(); selectBook(i); });
+    dd.appendChild(div);
+  });
+}
+function selectBook(i) {
+  const b = acResults[i]; if (!b) return;
+  document.getElementById('book-title').value = b.title;
+  document.getElementById('book-author').value = b.author_name ? b.author_name[0] : '';
+  closeDropdown(); document.getElementById('destination').focus();
+}
+function onBookKeydown(e) {
+  const dd = document.getElementById('ac-dropdown');
+  if (!dd.classList.contains('visible')) return;
+  const items = dd.querySelectorAll('.ac-item');
+  if (e.key === 'ArrowDown') { e.preventDefault(); acIndex = Math.min(acIndex+1, items.length-1); items.forEach((el,i) => el.style.background = i===acIndex ? 'var(--parchment)' : ''); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acIndex = Math.max(acIndex-1, -1); items.forEach((el,i) => el.style.background = i===acIndex ? 'var(--parchment)' : ''); }
+  else if (e.key === 'Enter' && acIndex >= 0) { e.preventDefault(); selectBook(acIndex); }
+  else if (e.key === 'Escape') closeDropdown();
+}
+function closeDropdown() { document.getElementById('ac-dropdown').classList.remove('visible'); acIndex = -1; }
+document.addEventListener('click', e => { if (!e.target.closest('.book-input-wrap')) closeDropdown(); });
+
+
+// ===================== FICTIONAL COMMUNITY DATA =====================
+// Estructura preparada para API real: GET /api/fictional-positions/{placeKey}
+const COMMUNITY_POSITIONS = {
+  'hobbiton':        { votes: 1842, regionName: 'Midlands inglesas (Inglaterra)' },
+  'la comarca':      { votes: 1842, regionName: 'Midlands inglesas (Inglaterra)' },
+  'mordor':          { votes: 2103, regionName: 'costa norte del Mar Negro' },
+  'hogwarts':        { votes: 3471, regionName: 'Highlands escocesas' },
+  'macondo':         { votes: 987,  regionName: 'Caribe colombiano' },
+  'arrakis':         { votes: 1654, regionName: 'Península Arábiga' },
+  'vanis':           { votes: 312,  regionName: 'Bohemia (Rep. Checa)' },
+  'rhyrr':           { votes: 289,  regionName: 'islas griegas del Egeo' },
+  'kazlunn':         { votes: 201,  regionName: 'Highlands escocesas' },
+  'bosque de awa':   { votes: 178,  regionName: 'Selva Negra, Alemania' },
+  'awinor':          { votes: 143,  regionName: 'Islandia' },
+  'westeros':        { votes: 2891, regionName: 'Islas Británicas e Irlanda' },
+  'narnia':          { votes: 1203, regionName: 'Inglaterra rural' },
+  'comala':          { votes: 445,  regionName: 'Jalisco, México' },
+  'rivendell':       { votes: 1102, regionName: 'Alpes suizos' },
+  'gondor':          { votes: 934,  regionName: 'Anatolia occidental (Turquía)' },
+  'giedi prime':     { votes: 421,  regionName: 'Yemen / Mar Arábigo' },
+};
+
+function getCommunityData(placeKey) {
+  const key = placeKey.toLowerCase().trim();
+  for (const [k, v] of Object.entries(COMMUNITY_POSITIONS)) {
+    if (key === k || key.includes(k) || k.includes(key)) return { key: k, ...v };
+  }
+  const genericVotes = Math.floor(Math.random() * 150) + 30;
+  return { key, votes: genericVotes, regionName: 'la posición predeterminada del mapa' };
+}
+
+// Overrides personales (localStorage → preparado para sincronizar con API)
+function loadPersonalOverrides() {
+  try { return JSON.parse(localStorage.getItem('lev_fictional_overrides') || '{}'); } catch(e) { return {}; }
+}
+function savePersonalOverride(key, lat, lng) {
+  const overrides = loadPersonalOverrides();
+  overrides[key] = { lat, lng };
+  localStorage.setItem('lev_fictional_overrides', JSON.stringify(overrides));
+}
+
+// ===================== FICTIONAL PLACE MODAL =====================
+// Se abre ANTES de añadir la entrada, cuando se detecta destino ficticio
+let fictionalPending = null; // guarda el contexto hasta que el usuario decide
+
+function openFictionalModal(placeKey, onResolve) {
+  // onResolve(lat, lng) se llama cuando el usuario elige
+  const community = getCommunityData(placeKey);
+  fictionalPending = { placeKey, onResolve, communityLat: null, communityLng: null };
+
+  // Buscar coords en FICTIONAL para tenerlas disponibles
+  for (const [k, v] of Object.entries(FICTIONAL)) {
+    if (placeKey === k || placeKey.includes(k)) {
+      fictionalPending.communityLat = v[0];
+      fictionalPending.communityLng = v[1];
+      break;
+    }
+  }
+
+  document.getElementById('fic-place-name').textContent =
+    placeKey.charAt(0).toUpperCase() + placeKey.slice(1);
+  document.getElementById('fic-votes').textContent =
+    `${community.votes.toLocaleString()} viajeros lo han colocado en:`;
+  document.getElementById('fic-community-place').textContent =
+    community.regionName;
+  document.getElementById('fic-custom-input').value = '';
+  document.getElementById('fictional-overlay').classList.add('visible');
+  setTimeout(() => document.getElementById('fic-custom-input').focus(), 100);
+}
+
+function closeFictionalModal() {
+  document.getElementById('fictional-overlay').classList.remove('visible');
+  fictionalPending = null;
+}
+
+function useCommunityPosition() {
+  if (!fictionalPending) return;
+  const { communityLat, communityLng, onResolve } = fictionalPending;
+  closeFictionalModal();
+  onResolve(communityLat, communityLng);
+}
+
+async function useCustomPosition() {
+  if (!fictionalPending) return;
+  const input = document.getElementById('fic-custom-input').value.trim();
+  if (!input) { document.getElementById('fic-custom-input').focus(); return; }
+
+  const btn = document.querySelector('.btn-use-custom');
+  btn.textContent = 'Buscando…'; btn.disabled = true;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input)}&format=json&limit=1`,
+      { headers: { 'Accept-Language': 'es' }, signal: controller.signal }
+    );
+    clearTimeout(timeout);
+    const d = await r.json();
+    if (!d.length) { alert('No encontré ese lugar. Prueba con otro nombre.'); return; }
+    const lat = parseFloat(d[0].lat), lng = parseFloat(d[0].lon);
+    savePersonalOverride(fictionalPending.placeKey, lat, lng);
+    const { onResolve } = fictionalPending;
+    closeFictionalModal();
+    onResolve(lat, lng);
+  } catch(e) {
+    alert('Error de conexión. Inténtalo de nuevo.');
+  } finally {
+    btn.textContent = 'Usar mi ubicación'; btn.disabled = false;
+  }
+}
+
+
+// ===================== TABS =====================
+function switchTab(name) {
+  document.querySelectorAll('.nav-tab').forEach((t,i) => {
+    const names = ['añadir','itinerario','diario','logros'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'panel-' + name);
+  });
+  if (name === 'logros') renderBadges();
+  if (name === 'diario') renderDiary();
+}
+
+// ===================== PRIMERAS LLEGADAS =====================
+// Estructura preparada para API: GET /api/pioneer/{destKey}
+// Simula que un destino ya fue visitado si está en KNOWN_DESTINATIONS
+const KNOWN_DESTINATIONS = new Set([
+  'paris','london','roma','madrid','barcelona','berlin','amsterdam','lisboa',
+  'tokyo','new york','buenos aires','ciudad de mexico','bogotá','lima',
+  'cairo','istanbul','beijing','mumbai','sydney','toronto',
+  // Ficticios populares — ya tienen "viajeros previos"
+  'mordor','hogwarts','macondo','arrakis','westeros','narnia','la comarca','hobbiton',
+  'rivendell','gondor','minas tirith','desembarco del rey','winterfell',
+]);
+
+function isPioneer(destName) {
+  // Simula llamada a API: en producción sería async fetch('/api/pioneer/' + key)
+  const key = destName.toLowerCase().trim();
+  // No es pionero si el destino está en los conocidos
+  if (KNOWN_DESTINATIONS.has(key)) return false;
+  // Tampoco si el propio usuario ya lo visitó antes
+  if (entries.some(e => e.dest.toLowerCase() === key)) return false;
+  return true;
+}
+
+function markDestinationKnown(destName) {
+  KNOWN_DESTINATIONS.add(destName.toLowerCase().trim());
+}
+
+// ===================== DIARIO =====================
+function loadDiary() {
+  try { return JSON.parse(localStorage.getItem('lev_diary') || '[]'); } catch(e) { return []; }
+}
+function saveDiary(diary) {
+  localStorage.setItem('lev_diary', JSON.stringify(diary));
+}
+function addDiaryEntry(entry, pioneer) {
+  const diary = loadDiary();
+  diary.unshift({ // más reciente primero
+    date: entry.date,
+    dest: entry.dest,
+    book: entry.book,
+    author: entry.author,
+    fromName: entry.fromName,
+    km: entry.km,
+    fictional: entry.fictional,
+    pioneer,
+    id: Date.now()
+  });
+  saveDiary(diary);
+}
+function renderDiary() {
+  const diary = loadDiary();
+  const container = document.getElementById('diary-list');
+  if (!diary.length) {
+    container.innerHTML = `<div class="diary-empty"><div class="diary-icon">✍️</div><p>Aquí se escribe tu viaje.<br>Cada vez que una lectura te lleve a algún sitio,<br>quedará registrado.<br><br><em style="font-family:'Playfair Display',serif;color:var(--teal)">El diario espera tu primera entrada.</em></p></div>`;
+    return;
+  }
+  container.innerHTML = diary.map((e, idx) => {
+    const dateStr = e.date ? new Date(e.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const pioneerBadge = e.pioneer ? `<div><span class="diary-pioneer">🧭 Primera persona en llegar aquí</span></div>` : '';
+    const fictionalTag = e.fictional ? '✦ ' : '';
+    const isFirst = idx === 0; // índice 0 = más reciente (unshift)
+    const postalBtn = isFirst
+      ? `<button class="diary-postal-btn" onclick="openPostal('${e.dest.replace(/'/g,"\\'")}','${(e.book||'').replace(/'/g,"\\'")}',${!!e.fictional})">✉ Enviar postal desde aquí</button>`
+      : '';
+    return `<div class="diary-entry">
+      <div class="diary-date">${dateStr}</div>
+      <div class="diary-text">
+        Llegada a <span class="place">${fictionalTag}${e.dest}</span>
+        <span class="book-ref">📖 ${e.book}${e.author ? ' — ' + e.author : ''} · +${e.km.toLocaleString()} km desde ${e.fromName}</span>
+      </div>
+      ${pioneerBadge}
+      ${postalBtn}
+    </div>`;
+  }).join('');
+}
+
+// ===================== BADGES =====================
+const BADGES_DEF = [
+  {
+    id: 'explorer_1',
+    icon: '🧭',
+    name: 'He llegado antes que nadie',
+    desc: 'Registraste un destino que nadie había visitado.',
+    unlockFn: (stats) => stats.pioneersCount >= 1,
+    progress: (stats) => `${Math.min(stats.pioneersCount,1)}/1 primera llegada`,
+  },
+  {
+    id: 'explorer_3',
+    icon: '🗺️',
+    name: 'He cartografiado 3 destinos',
+    desc: 'Has sido el primero en llegar a 3 destinos distintos.',
+    unlockFn: (stats) => stats.pioneersCount >= 3,
+    progress: (stats) => `${stats.pioneersCount}/3 primeras llegadas`,
+  },
+  {
+    id: 'explorer_10',
+    icon: '⚓',
+    name: 'Estuve antes que nadie en 10 destinos',
+    desc: '10 destinos donde pusiste el pie antes que nadie.',
+    unlockFn: (stats) => stats.pioneersCount >= 10,
+    progress: (stats) => `${stats.pioneersCount}/10 primeras llegadas`,
+  },
+  {
+    id: 'books_5',
+    icon: '📚',
+    name: 'He añadido 5 lecturas a mi itinerario',
+    desc: 'Tu mapa lector ya tiene 5 viajes trazados.',
+    unlockFn: (stats) => stats.booksCount >= 5,
+    progress: (stats) => `${stats.booksCount}/5 libros`,
+  },
+  {
+    id: 'books_20',
+    icon: '🌍',
+    name: 'He viajado a 20 destinos leyendo',
+    desc: '20 libros y 20 destinos marcados en el mapa.',
+    unlockFn: (stats) => stats.booksCount >= 20,
+    progress: (stats) => `${stats.booksCount}/20 libros`,
+  },
+  {
+    id: 'fictional',
+    icon: '✨',
+    name: 'He viajado a un lugar imaginario',
+    desc: 'Has visitado un lugar que solo existe en la ficción.',
+    unlockFn: (stats) => stats.fictionalCount >= 1,
+    progress: (stats) => `${Math.min(stats.fictionalCount,1)}/1 lugar ficticio`,
+  },
+  {
+    id: 'km_10k',
+    icon: '🌐',
+    name: 'He recorrido más de 10.000 km leyendo',
+    desc: 'Una vuelta al mundo en páginas.',
+    unlockFn: (stats) => stats.totalKm >= 10000,
+    progress: (stats) => `${Math.round(stats.totalKm).toLocaleString()}/10.000 km`,
+  },
+  {
+    id: 'countries_5',
+    icon: '🛂',
+    name: 'He viajado a 5 países distintos',
+    desc: 'Tus lecturas te han llevado por medio mundo.',
+    unlockFn: (stats) => stats.countriesCount >= 5,
+    progress: (stats) => `${stats.countriesCount}/5 países`,
+  },
+];
+
+function getBadgeStats() {
+  const diary = loadDiary();
+  const pioneersCount = diary.filter(e => e.pioneer).length;
+  const booksCount = entries.length;
+  const fictionalCount = entries.filter(e => e.fictional).length;
+  const totalKm = entries.reduce((s,e) => s + e.km, 0);
+  const countries = new Set(entries.filter(e => !e.fictional).map(e => e.countryCode || e.country || '').filter(Boolean));
+  return { pioneersCount, booksCount, fictionalCount, totalKm, countriesCount: countries.size };
+}
+
+function loadUnlocked() {
+  try { return JSON.parse(localStorage.getItem('lev_badges') || '[]'); } catch(e) { return []; }
+}
+function saveUnlocked(arr) { localStorage.setItem('lev_badges', JSON.stringify(arr)); }
+
+function checkNewBadges(stats) {
+  const unlocked = loadUnlocked();
+  const newOnes = [];
+  for (const badge of BADGES_DEF) {
+    if (!unlocked.includes(badge.id) && badge.unlockFn(stats)) {
+      unlocked.push(badge.id);
+      newOnes.push(badge);
+    }
+  }
+  if (newOnes.length) {
+    saveUnlocked(unlocked);
+    // Actualizar indicador en pestaña
+    const tab = document.getElementById('tab-logros');
+    tab.textContent = 'Logros ✦';
+    // Mostrar toast del primer badge nuevo (secuencial si hay varios)
+    showBadgeUnlockToast(newOnes[0]);
+  }
+}
+
+function renderBadges() {
+  const stats = getBadgeStats();
+  const unlocked = loadUnlocked();
+  const container = document.getElementById('badges-container');
+
+  const unlockedBadges = BADGES_DEF.filter(b => unlocked.includes(b.id));
+  const lockedBadges   = BADGES_DEF.filter(b => !unlocked.includes(b.id));
+
+  let html = '';
+  if (unlockedBadges.length) {
+    html += `<div class="badges-section-title">Conseguidos</div><div class="badges-grid">`;
+    html += unlockedBadges.map(b => `
+      <div class="badge-card unlocked">
+        <span class="badge-icon">${b.icon}</span>
+        <div class="badge-name">${b.name}</div>
+        <div class="badge-desc">${b.desc}</div>
+      </div>`).join('');
+    html += `</div>`;
+  }
+  if (lockedBadges.length) {
+    html += `<div class="badges-section-title">Por conseguir</div><div class="badges-grid">`;
+    html += lockedBadges.map(b => `
+      <div class="badge-card locked">
+        <span class="badge-icon">${b.icon}</span>
+        <div class="badge-name">${b.name}</div>
+        <div class="badge-desc">${b.desc}</div>
+        <div class="badge-progress">${b.progress(stats)}</div>
+      </div>`).join('');
+    html += `</div>`;
+  }
+  if (!html) html = `<div class="diary-empty"><div class="diary-icon">🏅</div><p>Añade lecturas para desbloquear logros.</p></div>`;
+  container.innerHTML = html;
+}
+
+// ===================== TOASTS =====================
+function showPioneerToast(destName) {
+  const toast = document.getElementById('pioneer-toast');
+  document.getElementById('pioneer-toast-text').textContent =
+    `Eres la primera persona en llegar a ${destName}. ¡Queda registrado en tu diario!`;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 8000);
+}
+
+function showBadgeUnlockToast(badge) {
+  const toast = document.getElementById('badge-unlock-toast');
+  document.getElementById('bu-icon').textContent = badge.icon;
+  document.getElementById('bu-name').textContent = badge.name;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 7000);
+}
+
+
+// ===================== EXPORT =====================
+let exportMode = 'map';
+let exportCanvas = null;
+
+function openExportModal() {
+  document.getElementById('export-overlay').classList.add('visible');
+  // Pequeño delay para que el modal sea visible antes de medir dimensiones
+  setTimeout(() => setExportMode('map'), 50);
+}
+function closeExportModal() {
+  document.getElementById('export-overlay').classList.remove('visible');
+}
+function setExportMode(mode) {
+  exportMode = mode;
+  ['map','stats','wrapped'].forEach(m => {
+    document.getElementById('em-' + m).classList.toggle('active', m === mode);
+  });
+  const phraseWrap = document.getElementById('export-phrase-wrap');
+  phraseWrap.classList.toggle('visible', mode === 'wrapped');
+  if (mode === 'wrapped') {
+    const phrase = document.getElementById('export-phrase');
+    if (!phrase.value) phrase.value = generatePhrase();
+  }
+  renderExportPreview();
+}
+
+function generatePhrase() {
+  const stats = getBadgeStats();
+  const diary = loadDiary();
+  const km = Math.round(entries.reduce((s,e) => s+e.km, 0));
+  const books = new Set(entries.map(e => e.book.toLowerCase().trim())).size;
+  const dests = [...new Set(entries.map(e => e.dest))];
+  const fictional = entries.filter(e => e.fictional);
+
+  const firstDest = entries.length ? entries[0].dest : null;
+  const lastDest  = entries.length ? entries[entries.length-1].dest : null;
+
+  const phrases = [
+    `Este año viajé ${km.toLocaleString()} km gracias a ${books} libro${books !== 1 ? 's' : ''}, sin moverme de casa.`,
+    `De ${firstDest} a ${lastDest} en ${books} lectura${books !== 1 ? 's' : ''}. ${km.toLocaleString()} km recorridos.`,
+    `${books} libro${books !== 1 ? 's' : ''}, ${dests.length} destino${dests.length !== 1 ? 's' : ''}, ${km.toLocaleString()} km. La lectura es el mejor viaje.`,
+    fictional.length
+      ? `Este año viajé hasta ${fictional[0].dest} y otros ${dests.length - 1} destinos. ${km.toLocaleString()} km en total.`
+      : `${km.toLocaleString()} km recorridos en ${books} libro${books !== 1 ? 's' : ''}. Leer es viajar.`,
+  ].filter(Boolean);
+
+  return phrases[Math.floor(Math.random() * phrases.length)];
+}
+function regenPhrase() {
+  document.getElementById('export-phrase').value = generatePhrase();
+  renderExportPreview();
+}
+
+async function renderExportPreview() {
+  const wrap = document.getElementById('export-preview-wrap');
+  const loading = document.getElementById('export-preview-loading');
+  loading.style.display = 'block';
+  // Limpiar canvas anterior
+  const old = wrap.querySelector('canvas');
+  if (old) old.remove();
+
+  const c = await buildExportCanvas();
+  exportCanvas = c;
+
+  // Escalar para preview
+  const previewCanvas = document.createElement('canvas');
+  const scale = Math.min(wrap.clientWidth / c.width, 220 / c.height);
+  previewCanvas.width  = c.width  * scale;
+  previewCanvas.height = c.height * scale;
+  const pctx = previewCanvas.getContext('2d');
+  pctx.drawImage(c, 0, 0, previewCanvas.width, previewCanvas.height);
+  wrap.appendChild(previewCanvas);
+  loading.style.display = 'none';
+}
+
+async function buildExportCanvas() {
+  // Dimensiones de la tarjeta según modo
+  const CONFIGS = {
+    stats:   { W: 1080, H: 1080 },
+    books:   { W: 1080, H: 1080 },
+    wrapped: { W: 1080, H: 1350 },
+  };
+  const { W, H } = CONFIGS[exportMode] || CONFIGS.stats;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // ── Helpers ─────────────────────────────────────────────────────────
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+    ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+    ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+    ctx.closePath();
+  }
+
+  // ── Fondo: gradiente forestal oscuro ────────────────────────────────
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0,   '#0d2318');
+  bg.addColorStop(0.5, '#1a3a2a');
+  bg.addColorStop(1,   '#0f2a1e');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Textura sutil: líneas de latitud/longitud fantasma
+  ctx.strokeStyle = 'rgba(159,217,192,0.05)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= W; x += W/8) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y <= H; y += H/8) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Círculo decorativo central fantasma
+  ctx.strokeStyle = 'rgba(29,158,117,0.07)';
+  ctx.lineWidth = 1.5;
+  for (const r of [180, 300, 420]) {
+    ctx.beginPath(); ctx.arc(W/2, H*0.42, r, 0, Math.PI*2); ctx.stroke();
+  }
+
+  // ── Stats ────────────────────────────────────────────────────────────
+  const km      = Math.round(entries.reduce((s,e) => s+e.km, 0));
+  const books   = entries.length;
+  const places  = new Set(entries.map(e => e.dest)).size;
+  const countries = new Set(entries.filter(e=>!e.fictional)
+    .map(e=>e.countryCode||e.country||'').filter(Boolean)).size;
+  const pioneers = loadDiary().filter(e=>e.pioneer).length;
+  const fictional = entries.filter(e=>e.fictional).length;
+
+  const year = activeYear === 'all' ? new Date().getFullYear() : activeYear;
+
+  if (exportMode === 'stats' || exportMode === 'books') {
+    // ── Logo arriba ────────────────────────────────────────────────────
+    ctx.fillStyle = '#9fd9c0';
+    ctx.font = 'italic 28px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Leer es viajar', W/2, 72);
+
+    ctx.fillStyle = 'rgba(159,217,192,0.4)';
+    ctx.font = '500 13px Inter, sans-serif';
+    ctx.letterSpacing = '0.12em';
+    ctx.fillText(('MI AÑO LECTOR ' + year).toUpperCase(), W/2, 100);
+
+    // ── Número grande: km ──────────────────────────────────────────────
+    ctx.fillStyle = '#faf7f2';
+    ctx.font = 'bold 110px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(km.toLocaleString(), W/2, 260);
+
+    ctx.fillStyle = 'rgba(159,217,192,0.7)';
+    ctx.font = '400 20px Inter, sans-serif';
+    ctx.fillText('KILÓMETROS LEÍDOS', W/2, 298);
+
+    // ── Separador ─────────────────────────────────────────────────────
+    const sepG = ctx.createLinearGradient(120, 0, W-120, 0);
+    sepG.addColorStop(0, 'transparent');
+    sepG.addColorStop(0.3, '#1d9e75');
+    sepG.addColorStop(0.7, '#1d9e75');
+    sepG.addColorStop(1, 'transparent');
+    ctx.strokeStyle = sepG;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(120, 330); ctx.lineTo(W-120, 330); ctx.stroke();
+
+    // ── Grid de stats secundarias ──────────────────────────────────────
+    const stats = [
+      { val: books,    label: books === 1 ? 'libro' : 'libros' },
+      { val: places,   label: places === 1 ? 'destino' : 'destinos' },
+      { val: countries,label: countries === 1 ? 'país' : 'países' },
+      { val: fictional,label: 'lugares imaginarios' },
+      { val: pioneers, label: pioneers === 1 ? 'primera llegada' : 'primeras llegadas' },
+    ];
+
+    const colW = W / stats.length;
+    const statY = 420;
+    stats.forEach((s, i) => {
+      const x = colW * i + colW / 2;
+      // Tarjetita
+      roundRect(colW*i + 20, statY - 55, colW - 40, 130, 10);
+      ctx.fillStyle = 'rgba(29,158,117,0.08)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(29,158,117,0.2)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = '#9fd9c0';
+      ctx.font = 'bold 44px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(s.val), x, statY + 8);
+
+      ctx.fillStyle = 'rgba(159,217,192,0.55)';
+      ctx.font = '400 12px Inter, sans-serif';
+      const labelLines = s.label.split('\n');
+      labelLines.forEach((l, li) => ctx.fillText(l.toUpperCase(), x, statY + 30 + li*16));
+    });
+
+    // ── Libros del año ─────────────────────────────────────────────────
+    const bookList = [...new Set(entries.map(e => e.book))].slice(0, 6);
+    if (bookList.length) {
+      ctx.fillStyle = 'rgba(159,217,192,0.35)';
+      ctx.font = '400 12px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('LECTURAS', W/2, 610);
+
+      ctx.fillStyle = 'rgba(250,247,242,0.7)';
+      ctx.font = 'italic 17px Georgia, serif';
+      bookList.forEach((b, i) => {
+        const maxW = W - 160;
+        const text = b.length > 42 ? b.slice(0,40)+'…' : b;
+        ctx.fillText(text, W/2, 638 + i * 28);
+      });
+    }
+
+    // ── Frase final ────────────────────────────────────────────────────
+    const taglines = [
+      '"Leer es la forma más barata de viajar."',
+      '"Cada libro, un pasaporte."',
+      '"Sin maletas. Sin límites."',
+    ];
+    ctx.fillStyle = 'rgba(29,158,117,0.6)';
+    ctx.font = 'italic 15px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(taglines[books % taglines.length], W/2, H - 50);
+
+    ctx.fillStyle = 'rgba(159,217,192,0.25)';
+    ctx.font = '400 12px Inter, sans-serif';
+    ctx.fillText('leeresv iajar.app', W/2, H - 25);
+
+  } else {
+    // ── MODO WRAPPED ───────────────────────────────────────────────────
+    // Logo
+    ctx.fillStyle = '#9fd9c0';
+    ctx.font = 'italic 26px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Leer es viajar', W/2, 80);
+
+    ctx.fillStyle = 'rgba(159,217,192,0.4)';
+    ctx.font = '500 12px Inter, sans-serif';
+    ctx.fillText(('Wrapped ' + year).toUpperCase(), W/2, 108);
+
+    // Km grande
+    ctx.fillStyle = '#faf7f2';
+    ctx.font = 'bold 96px Georgia, serif';
+    ctx.fillText(km.toLocaleString() + ' km', W/2, 270);
+
+    // Separador
+    const sg = ctx.createLinearGradient(120,0,W-120,0);
+    sg.addColorStop(0,'transparent'); sg.addColorStop(0.5,'#1d9e75'); sg.addColorStop(1,'transparent');
+    ctx.strokeStyle = sg; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(120,310); ctx.lineTo(W-120,310); ctx.stroke();
+
+    // Stats en fila
+    const ws = [
+      {val: books, label: books===1?'libro':'libros'},
+      {val: places, label: places===1?'destino':'destinos'},
+      {val: countries, label: countries===1?'país':'países'},
+    ];
+    const cww = W / ws.length;
+    ws.forEach((s,i) => {
+      const x = cww*i + cww/2;
+      ctx.fillStyle = '#9fd9c0';
+      ctx.font = 'bold 52px Georgia, serif';
+      ctx.fillText(String(s.val), x, 400);
+      ctx.fillStyle = 'rgba(159,217,192,0.5)';
+      ctx.font = '400 13px Inter, sans-serif';
+      ctx.fillText(s.label.toUpperCase(), x, 428);
+    });
+
+    // Frase editable — centrada, con word-wrap
+    const phrase = document.getElementById('export-phrase')?.value?.trim() || generatePhrase();
+    ctx.fillStyle = '#faf7f2';
+    ctx.font = 'italic 30px Georgia, serif';
+    ctx.textAlign = 'center';
+    const words = phrase.split(' ');
+    const maxLineW = W - 140;
+    let lineArr = [], curLine = '';
+    words.forEach(w => {
+      const test = curLine ? curLine+' '+w : w;
+      if (ctx.measureText(test).width > maxLineW && curLine) {
+        lineArr.push(curLine); curLine = w;
+      } else curLine = test;
+    });
+    if (curLine) lineArr.push(curLine);
+    const lineH = 44;
+    const phraseStartY = 530;
+    lineArr.forEach((l,i) => ctx.fillText(l, W/2, phraseStartY + i*lineH));
+
+    // Libros
+    const blist = [...new Set(entries.map(e=>e.book))].slice(0,5);
+    if (blist.length) {
+      const listStartY = phraseStartY + lineArr.length*lineH + 60;
+      ctx.fillStyle = 'rgba(159,217,192,0.35)';
+      ctx.font = '400 12px Inter, sans-serif';
+      ctx.fillText('ESTE AÑO LEÍSTE', W/2, listStartY);
+      ctx.fillStyle = 'rgba(250,247,242,0.65)';
+      ctx.font = 'italic 18px Georgia, serif';
+      blist.forEach((b,i) => {
+        const t = b.length>40 ? b.slice(0,38)+'…' : b;
+        ctx.fillText(t, W/2, listStartY+28+i*28);
+      });
+    }
+
+    // Pie
+    ctx.fillStyle = 'rgba(29,158,117,0.5)';
+    ctx.font = 'italic 14px Georgia, serif';
+    ctx.fillText('"Leer es la forma más barata de viajar."', W/2, H-50);
+    ctx.fillStyle = 'rgba(159,217,192,0.2)';
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillText('leeresv iajar.app', W/2, H-25);
+  }
+
+  return canvas;
+}
+
+function drawStats(ctx, W, H, stripY) {
+  const km    = Math.round(entries.reduce((s,e) => s+e.km, 0));
+  const books = new Set(entries.map(e => e.book.toLowerCase().trim())).size;
+  const places = new Set(entries.map(e => e.dest)).size;
+  const countries = new Set(entries.filter(e=>!e.fictional).map(e=>e.countryCode||e.country||'').filter(Boolean)).size;
+  const pioneers = loadDiary().filter(e=>e.pioneer).length;
+  const fictional = entries.filter(e=>e.fictional).length;
+
+  const allStats = [
+    { val: books,                  label: books === 1 ? 'lectura' : 'lecturas' },
+    { val: km.toLocaleString(),    label: 'km leídos' },
+    { val: places,                 label: places === 1 ? 'destino' : 'destinos' },
+    { val: countries,              label: countries === 1 ? 'país' : 'países' },
+    { val: pioneers,               label: pioneers === 1 ? 'primera llegada' : 'primeras llegadas' },
+    { val: fictional,              label: fictional === 1 ? 'lugar imaginario' : 'lugares imaginarios' },
+  ].filter(s => Number(String(s.val).replace(/[^0-9]/g,'')) > 0);
+
+  const cols = allStats.length;
+  const colW = W / cols;
+
+  allStats.forEach((s, i) => {
+    const x = colW * i + colW / 2;
+    const yVal = stripY + 62;
+
+    ctx.fillStyle = '#9fd9c0';
+    ctx.font = 'bold 38px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(s.val), x, yVal);
+
+    ctx.fillStyle = 'rgba(159,217,192,0.6)';
+    ctx.font = '13px Inter, sans-serif';
+    ctx.fillText(s.label.toUpperCase(), x, yVal + 26);
+  });
+
+  // Logo
+  ctx.fillStyle = 'rgba(159,217,192,0.35)';
+  ctx.font = 'italic 15px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Leer es viajar', W/2, H - 20);
+}
+
+function drawWrapped(ctx, W, H, stripY) {
+  const phrase = document.getElementById('export-phrase').value.trim() || generatePhrase();
+
+  // Frase principal
+  ctx.fillStyle = '#faf7f2';
+  ctx.textAlign = 'center';
+
+  // Word-wrap manual
+  const maxWidth = W - 120;
+  const words = phrase.split(' ');
+  const lines = [];
+  let line = '';
+  ctx.font = 'italic 26px Georgia, serif';
+  words.forEach(w => {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line); line = w;
+    } else { line = test; }
+  });
+  if (line) lines.push(line);
+
+  const lineH = 36;
+  const totalH = lines.length * lineH;
+  const startY = stripY + (160 - totalH) / 2 + lineH * 0.6;
+
+  ctx.fillStyle = '#faf7f2';
+  lines.forEach((l, i) => ctx.fillText(l, W/2, startY + i * lineH));
+
+  // Logo pequeño
+  ctx.fillStyle = 'rgba(159,217,192,0.4)';
+  ctx.font = 'italic 13px Georgia, serif';
+  ctx.fillText('Leer es viajar', W/2, H - 18);
+}
+
+function drawWatermark(ctx, W, H) {
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = '#9fd9c0';
+  ctx.font = 'italic 12px Georgia, serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('leeresv iajar.app', W - 20, H - 12);
+  ctx.restore();
+}
+
+function downloadExport() {
+  if (!exportCanvas) return;
+  const link = document.createElement('a');
+  const year = activeYear === 'all' ? new Date().getFullYear() : activeYear;
+  const modeLabel = { stats: 'stats', books: 'libros', wrapped: 'wrapped' }[exportMode] || exportMode;
+  link.download = `leer-es-viajar-${modeLabel}-${year}.png`;
+  link.href = exportCanvas.toDataURL('image/png');
+  link.click();
+}
+
+// ===================== POSTAL =====================
+function openPostal(dest, book, fictional) {
+  const overlay = document.getElementById('postal-overlay');
+  const today = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  document.getElementById('postal-place-display').childNodes[0].textContent = (fictional ? '✦ ' : '') + dest;
+  document.getElementById('postal-book-display').textContent = book ? `Leyendo: ${book}` : '';
+  document.getElementById('postal-stamp-place').textContent = dest;
+  document.getElementById('postal-stamp-date').textContent = today;
+  document.getElementById('postal-quote').value = '';
+  document.getElementById('postal-to-name').value = '';
+  document.getElementById('postal-to-email').value = '';
+  document.getElementById('postal-form-side').style.display = 'flex';
+  document.getElementById('postal-sent-side').style.display = 'none';
+  overlay.classList.add('open');
+}
+
+function closePostal() {
+  document.getElementById('postal-overlay').classList.remove('open');
+}
+
+function sendPostal() {
+  const name = document.getElementById('postal-to-name').value.trim();
+  const place = document.getElementById('postal-stamp-place').textContent;
+  document.getElementById('postal-form-side').style.display = 'none';
+  document.getElementById('postal-sent-side').style.display = 'flex';
+  document.getElementById('postal-sent-msg').textContent =
+    name ? `Tu postal a ${name} ha salido de ${place}.` : `Tu postal ha salido de ${place}.`;
+}
+
+// ===================== ONBOARDING =====================
+const ONBOARDING_STEPS = [
+  {
+    label: 'Paso 1 de 3',
+    icon: '🗺',
+    text: 'Cada línea es un viaje lector. <em>El mapa se construye entre todos.</em>',
+  },
+  {
+    label: 'Paso 2 de 3',
+    icon: '📖',
+    text: '¿Adónde te lleva tu lectura? <em>Puede ser un lugar real… o uno que solo existe en los libros.</em>',
+  },
+  {
+    label: 'Paso 3 de 3',
+    icon: '✦',
+    text: 'Elige desde dónde partes en cada viaje — <em>no tiene por qué ser siempre desde casa.</em>',
+  }
+];
+
+let onboardingStep = 0;
+
+function initOnboarding() {
+  if (localStorage.getItem('lev_onboarding_done')) return;
+  showOnboardingStep(0);
+}
+
+function showOnboardingStep(i) {
+  const overlay = document.getElementById('onboarding-overlay');
+  const highlight = document.getElementById('onboarding-highlight');
+  const card = document.getElementById('onboarding-card');
+  const step = ONBOARDING_STEPS[i];
+
+  overlay.style.display = 'block';
+  overlay.style.pointerEvents = 'auto';
+
+  // Sin highlight
+  highlight.style.display = 'none';
+
+  // Card centrada en la zona del mapa
+  card.style.top = '50%';
+  card.style.left = 'calc(436px + ((100vw - 436px) / 2) - 150px)';
+  card.style.right = 'auto';
+  card.style.bottom = 'auto';
+  card.style.transform = 'translateY(-50%)';
+  card.style.opacity = '1';
+
+  // Contenido
+  document.getElementById('onboarding-step').textContent = step.label;
+  document.getElementById('onboarding-text').innerHTML =
+    '<span style="font-size:1.4rem;display:block;margin-bottom:0.5rem;font-style:normal">' + step.icon + '</span>' + step.text;
+  document.getElementById('onboarding-next').textContent =
+    i === ONBOARDING_STEPS.length - 1 ? '¡Empezar! →' : 'Siguiente →';
+
+  // Dots
+  const dots = document.getElementById('onboarding-dots');
+  dots.innerHTML = ONBOARDING_STEPS.map((_, j) =>
+    '<div class="onboarding-dot' + (j === i ? ' active' : '') + '"></div>'
+  ).join('');
+
+  onboardingStep = i;
+}
+
+function nextOnboardingStep() {
+  if (onboardingStep < ONBOARDING_STEPS.length - 1) {
+    showOnboardingStep(onboardingStep + 1);
+  } else {
+    finishOnboarding();
+  }
+}
+
+function finishOnboarding() {
+  const overlay = document.getElementById('onboarding-overlay');
+  overlay.style.opacity = '0';
+  overlay.style.transition = 'opacity 0.4s ease';
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    overlay.style.opacity = '1';
+    overlay.style.pointerEvents = 'none';
+  }, 400);
+  localStorage.setItem('lev_onboarding_done', '1');
+}
+
+// ===================== TOOLTIP BIENVENIDA =====================
+function initWelcomeTooltip() {
+  const seen = localStorage.getItem('lev_welcome_seen');
+  const el = document.getElementById('welcome-tooltip');
+  if (seen) { el.style.display = 'none'; return; }
+  // Se oculta solo tras 8 segundos o al cerrar
+  setTimeout(() => dismissWelcome(), 8000);
+}
+function dismissWelcome() {
+  const el = document.getElementById('welcome-tooltip');
+  el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+  el.style.opacity = '0';
+  el.style.transform = 'translate(-50%, -48%)';
+  setTimeout(() => el.style.display = 'none', 400);
+  localStorage.setItem('lev_welcome_seen', '1');
+}
+
+// ===================== RUTAS DE COMUNIDAD =====================
+const COMMUNITY_ROUTES = [
+  { from: [40.4,-3.7],  to: [41.4,2.17],  book: 'La sombra del viento',              reader: 'Elena',    fromName: 'Madrid',      toName: 'Barcelona',    fictional: false, visitors: 312,  now: 4  },
+  { from: [51.5,-0.1],  to: [53.3,-6.26], book: 'Ulises',                             reader: 'Carlos',   fromName: 'Londres',     toName: 'Dublín',       fictional: false, visitors: 429,  now: 6  },
+  { from: [48.8,2.35],  to: [55.7,12.6],  book: 'La señorita Smilla',                 reader: 'Marc',     fromName: 'París',       toName: 'Copenhague',   fictional: false, visitors: 203,  now: 2  },
+  { from: [52.5,13.4],  to: [48.2,16.4],  book: 'El proceso',                         reader: 'Nina',     fromName: 'Berlín',      toName: 'Viena',        fictional: false, visitors: 387,  now: 5  },
+  { from: [48.8,2.35],  to: [43.8,11.2],  book: 'Inferno',                            reader: 'Laura',    fromName: 'París',       toName: 'Florencia',    fictional: false, visitors: 521,  now: 8  },
+  { from: [41.4,2.17],  to: [38.7,-9.1],  book: 'Sostiene Pereira',                   reader: 'Tomás',    fromName: 'Barcelona',   toName: 'Lisboa',       fictional: false, visitors: 298,  now: 3  },
+  { from: [59.9,10.7],  to: [60.2,24.9],  book: 'Los juegos del hambre',              reader: 'Ingrid',   fromName: 'Oslo',        toName: 'Helsinki',     fictional: false, visitors: 167,  now: 2  },
+  { from: [51.5,-0.1],  to: [57.0,-4.0],  book: 'Harry Potter y la piedra filosofal', reader: 'Marcos',   fromName: 'Londres',     toName: 'Hogwarts',     fictional: true,  visitors: 1847, now: 23 },
+  { from: [52.5,13.4],  to: [52.7,-1.8],  book: 'El Señor de los Anillos',            reader: 'Nina',     fromName: 'Berlín',      toName: 'La Comarca',   fictional: true,  visitors: 1842, now: 19 },
+  { from: [43.3,-1.9],  to: [55.0,-2.0],  book: 'Canción de hielo y fuego',           reader: 'Iker',     fromName: 'San Sebastián', toName: 'Winterfell', fictional: true,  visitors: 2891, now: 39 },
+  { from: [59.9,10.7],  to: [46.5,8.0],   book: 'El Señor de los Anillos',            reader: 'Ingrid',   fromName: 'Oslo',        toName: 'Rivendell',    fictional: true,  visitors: 1102, now: 12 },
+  { from: [53.3,-6.26], to: [48.5,17.0],  book: 'Memorias de Idhún',                  reader: 'Rían',     fromName: 'Dublín',      toName: 'Nanetten',     fictional: true,  visitors: 143,  now: 2  },
+];
+
+const communityLayer = L.layerGroup().addTo(map);
+
+// Mapa de visitantes por destino (para los popups)
+const PLACE_VISITORS = {};
+COMMUNITY_ROUTES.forEach(r => {
+  const key = r.toName.toLowerCase();
+  if (!PLACE_VISITORS[key]) PLACE_VISITORS[key] = { count: 0, books: [] };
+  PLACE_VISITORS[key].count += r.visitors;
+  if (!PLACE_VISITORS[key].books.includes(r.book)) PLACE_VISITORS[key].books.push(r.book);
+});
+
+function drawCommunityRoutes() {
+  communityLayer.clearLayers();
+  const drawnDestinations = new Set();
+  const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const userDestinations = new Set(entries.map(e => normalize(e.dest)));
+  COMMUNITY_ROUTES.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize));
+}
+
+function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
+  normalize = normalize || (s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+  const fromKey = normalize(r.fromName);
+  const destKey = normalize(r.toName);
+    const p1 = { lat: r.from[0], lng: r.from[1] };
+    const p2 = { lat: r.to[0], lng: r.to[1] };
+    const midLat = (p1.lat + p2.lat) / 2;
+    const midLng = (p1.lng + p2.lng) / 2;
+    const dLat = p2.lat - p1.lat, dLng = p2.lng - p1.lng;
+    const dist = Math.sqrt(dLat*dLat + dLng*dLng);
+    const curvature = Math.min(dist * 0.2, 10);
+    const perpLat = -dLng/(dist||1)*curvature, perpLng = dLat/(dist||1)*curvature;
+    const steps = 30, points = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      points.push([
+        (1-t)*(1-t)*p1.lat + 2*(1-t)*t*(midLat+perpLat) + t*t*p2.lat,
+        (1-t)*(1-t)*p1.lng + 2*(1-t)*t*(midLng+perpLng) + t*t*p2.lng
+      ]);
+    }
+    const color = 'rgba(29,158,117,0.55)';
+    // Línea invisible ancha para facilitar el clic
+    L.polyline(points, { color: 'transparent', weight: 12, opacity: 1 })
+      .addTo(communityLayer)
+      .bindPopup(`
+        <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
+        <div class="popup-place" style="font-size:0.75rem;color:#888">${r.fromName} → ${r.toName} · <em>${r.book}</em></div>
+        <div class="popup-community">
+          <strong>${r.visitors.toLocaleString()} lectores</strong> han llegado hasta aquí leyendo:
+          ${r.now >= 2 ? `<br><span style="color:var(--teal);font-weight:500">● ${r.now} leyendo aquí ahora mismo</span>` : ''}
+        </div>
+      `);
+    L.polyline(points, { color, weight: 2, opacity: 1, dashArray: '5 5' }).addTo(communityLayer);
+
+    // Marcador origen comunidad
+    if (!drawnDestinations.has(fromKey) && !userDestinations.has(fromKey)) {
+      drawnDestinations.add(fromKey);
+      const fromIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
+        iconSize: [7,7], iconAnchor: [3.5,3.5]
+      });
+      L.marker(r.from, { icon: fromIcon }).addTo(communityLayer).bindPopup(`
+        <div class="popup-book" style="font-size:0.85rem">${r.fromName}</div>
+        <div class="popup-place" style="font-size:0.75rem;color:#888">Punto de partida de lectores de la comunidad</div>
+      `);
+    }
+
+    // Marcador destino comunidad
+    const vData = PLACE_VISITORS[destKey];
+    const booksHtml = vData && vData.books.length
+      ? vData.books.slice(0,3).map(b => `<div style="font-size:0.7rem;color:#888;font-style:italic">· ${b}</div>`).join('')
+      : '';
+
+    // Solo dibujar marcador si no está ya dibujado y no coincide con un destino propio
+    if (!drawnDestinations.has(destKey) && !userDestinations.has(destKey)) {
+      drawnDestinations.add(destKey);
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
+        iconSize: [7,7], iconAnchor: [3.5,3.5]
+      });
+      L.marker(r.to, { icon }).addTo(communityLayer).bindPopup(`
+        <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
+        <div class="popup-community">
+          <strong>${vData ? vData.count.toLocaleString() : r.visitors} lectores</strong> han llegado hasta aquí leyendo:
+          ${booksHtml}
+          ${r.now >= 2 ? `<br><span style="color:var(--teal);font-weight:500">● ${r.now} leyendo aquí ahora mismo</span>` : ''}
+        </div>
+      `);
+    }
+}
+
+// Redibujar rutas de comunidad al mover/zoom el mapa
+map.on('moveend zoomend', drawCommunityRoutes);
+
+// ===================== FRANJA DE ACTIVIDAD =====================
+const ACTIVITY_MESSAGES = [
+  { text: () => `<em>Lucía</em> acaba de llegar a <em>Estambul</em> leyendo a Orhan Pamuk` },
+  { text: () => `<em>3 lectores</em> visitaron <em>Macondo</em> esta semana` },
+  { text: () => `<em>Marcos</em> ha cruzado <em>5 países</em> en sus últimas lecturas` },
+  { text: () => `<em>Hogwarts</em> tiene hoy <em>1.847 viajeros</em> en el mapa` },
+  { text: () => `<em>Elena</em> llegó por primera vez a <em>Praga</em> con Kafka` },
+  { text: () => `<em>Sofía</em> lleva <em>23.000 km</em> leídos este año` },
+  { text: () => `<em>Mordor</em> suma ya <em>2.103 exploradores</em> en la comunidad` },
+  { text: () => `<em>Iker</em> acaba de descubrir <em>Winterfell</em> leyendo a George R.R. Martin` },
+  { text: () => `<em>847 lectores</em> han recorrido juntos más de <em>2,3 millones de km</em>` },
+  { text: () => `<em>Carlos</em> llegó a <em>Dublín</em> — ¡primera llegada registrada desde Murcia!` },
+  { text: () => `<em>Nina</em> ha visitado <em>4 lugares ficticios</em> este mes` },
+  { text: () => `<em>La Comarca</em> fue el destino más visitado de la semana` },
+  { text: () => `<em>Amaia</em> está viajando ahora mismo por el <em>Caribe colombiano</em>` },
+  { text: () => `<em>12 lectores</em> llegaron a <em>Tokio</em> esta semana` },
+  { text: () => `<em>Arrakis</em> acaba de recibir su viajero número <em>1.654</em>` },
+];
+
+let activityIndex = 0;
+function startActivityStrip() {
+  const el = document.getElementById('activity-msg');
+  function showNext() {
+    el.classList.remove('visible');
+    setTimeout(() => {
+      el.innerHTML = ACTIVITY_MESSAGES[activityIndex % ACTIVITY_MESSAGES.length].text();
+      activityIndex++;
+      el.classList.add('visible');
+    }, 600);
+  }
+  showNext();
+  setInterval(showNext, 5000);
+}
+
+// ===================== INIT =====================
+window.addEventListener('load', () => {
+  initDate();
+  loadState();
+  drawCommunityRoutes();
+  startActivityStrip();
+  initOnboarding();
+  if (!origin) {
+    document.getElementById('origin-input-wrap').classList.add('visible');
+    document.getElementById('origin-input').focus();
+  }
+});
+</script>
+
+<!-- ONBOARDING -->
+<div class="onboarding-overlay" id="onboarding-overlay" style="display:none; pointer-events:none;" onclick="if(event.target===this) finishOnboarding()">
+  <div class="onboarding-highlight" id="onboarding-highlight"></div>
+  <div class="onboarding-card" id="onboarding-card">
+    <div class="onboarding-step" id="onboarding-step"></div>
+    <div class="onboarding-text" id="onboarding-text"></div>
+    <div class="onboarding-dots" id="onboarding-dots"></div>
+    <div class="onboarding-actions">
+      <button class="onboarding-skip" onclick="finishOnboarding()">Saltar tour</button>
+      <button class="onboarding-next" id="onboarding-next" onclick="nextOnboardingStep()">Siguiente →</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="fictional-overlay" id="fictional-overlay">
+  <div class="fictional-modal">
+    <h3>✦ <span id="fic-place-name"></span></h3>
+    <div class="community-block">
+      <div class="c-votes" id="fic-votes"></div>
+      <div class="c-place" id="fic-community-place"></div>
+    </div>
+    <button class="fictional-btns" style="display:flex;width:100%;margin:0">
+      <button class="btn-use-community" style="flex:1;padding:0.65rem;border-radius:6px;font-family:inherit;font-size:0.85rem;font-weight:500;cursor:pointer;border:none;background:var(--teal);color:white" onclick="useCommunityPosition()">Colocarlo ahí también</button>
+    </button>
+    <div class="divider"><span>o</span></div>
+    <label>Definir mi propia ubicación</label>
+    <input type="text" id="fic-custom-input" placeholder="Ej: norte de Noruega, desierto de Namibia…" onkeydown="if(event.key==='Enter') useCustomPosition()"/>
+    <div class="input-hint">Se geocodificará y quedará guardada solo en tu mapa.</div>
+    <div class="fictional-btns" style="margin-top:0.9rem">
+      <button class="btn-fictional-cancel" onclick="closeFictionalModal()">Cancelar</button>
+      <button class="btn-use-custom" onclick="useCustomPosition()">Usar mi ubicación</button>
+    </div>
+  </div>
+</div>
+<!-- POSTAL MODAL -->
+<div class="postal-overlay" id="postal-overlay" onclick="if(event.target===this) closePostal()">
+  <div class="postal-modal" id="postal-modal">
+    <div class="postal-left">
+      <div class="postal-left-title">✉ Postal desde</div>
+      <div class="postal-place-name" id="postal-place-display">
+        —<span id="postal-book-display"></span>
+      </div>
+      <div class="postal-stamp">
+        <div class="postal-stamp-name">Matasellos</div>
+        <div class="postal-stamp-place" id="postal-stamp-place">—</div>
+        <div class="postal-stamp-date" id="postal-stamp-date"></div>
+      </div>
+    </div>
+    <div class="postal-right" id="postal-form-side">
+      <h3>Escribe tu postal</h3>
+      <div class="postal-field">
+        <label>Una cita o pensamiento</label>
+        <textarea id="postal-quote" placeholder=""Una cita del libro que te trajo hasta aquí…""></textarea>
+      </div>
+      <div class="postal-field">
+        <label>Para</label>
+        <input type="text" id="postal-to-name" placeholder="Nombre del destinatario"/>
+      </div>
+      <div class="postal-field">
+        <label>Email</label>
+        <input type="email" id="postal-to-email" placeholder="correo@ejemplo.com"/>
+      </div>
+      <div class="postal-actions">
+        <button class="postal-btn-cancel" onclick="closePostal()">Cancelar</button>
+        <button class="postal-btn-send" onclick="sendPostal()">✉ Enviar postal</button>
+      </div>
+    </div>
+    <div class="postal-sent" id="postal-sent-side">
+      <div class="sent-icon">✉️</div>
+      <p id="postal-sent-msg">Tu postal ha salido de camino.</p>
+      <small>En cuanto tengamos backend, llegará de verdad.</small>
+      <button class="postal-btn-cancel" onclick="closePostal()" style="margin-top:0.5rem">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- AVISO MÓVIL -->
+<div id="mobile-warning" style="display:none; position:fixed; inset:0; z-index:99999; background:var(--forest); flex-direction:column; align-items:center; justify-content:center; padding:2rem; text-align:center;">
+  <div style="font-size:2.5rem; margin-bottom:1.5rem;">📖</div>
+  <div style="font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--cream); line-height:1.5; margin-bottom:1rem;">
+    Cierra el móvil<br>y abre un buen libro.
+  </div>
+  <div style="font-size:0.82rem; color:var(--teal-light); font-family:'Inter',sans-serif; line-height:1.6; max-width:280px;">
+    <em>Leer es viajar</em> está pensado para pantallas grandes por ahora.<br><br>
+    Vuelve desde un ordenador para trazar tu itinerario lector.
+  </div>
+</div>
+
+<script>
+  if (window.innerWidth < 768) {
+    const w = document.getElementById('mobile-warning');
+    w.style.display = 'flex';
+  }
+</script>
+
+</body>
+</html>

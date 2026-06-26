@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leer es viajar · Feedback</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --paper: #f8f6f1;
+  --white: #ffffff;
+  --ink: #1c1c1a;
+  --soft: #e8e4dc;
+  --muted: #9a9690;
+  --teal: #2a8c6e;
+  --teal-light: #e8f5f0;
+  --route: #c84020;
+  --border: #e0dcd4;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  padding: 0;
+}
+
+/* HEADER */
+.site-header {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.wordmark {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.2rem;
+  color: var(--ink);
+}
+.wordmark em { font-style: italic; color: var(--teal); }
+.header-meta { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.06em; }
+
+/* HERO */
+.hero {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 3rem 2rem 2.5rem;
+  max-width: 680px;
+  margin: 0 auto;
+}
+.hero-eyebrow {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--teal);
+  margin-bottom: 0.75rem;
+}
+.hero-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 2rem;
+  color: var(--ink);
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+.hero-title em { font-style: italic; color: var(--teal); }
+.hero-body {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 520px;
+}
+.hero-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1.25rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0.3rem 0.75rem;
+}
+
+/* FORM */
+.form-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 2rem 4rem;
+}
+
+/* SECTION */
+.section {
+  padding: 2.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.section:last-of-type { border-bottom: none; }
+
+.section-header { margin-bottom: 1.75rem; }
+.section-num {
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--teal);
+  margin-bottom: 0.4rem;
+}
+.section-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.3rem;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.section-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+  line-height: 1.6;
+}
+
+/* QUESTION */
+.question { margin-bottom: 1.75rem; }
+.q-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 0.5rem;
+  display: block;
+  line-height: 1.4;
+}
+.q-hint {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-bottom: 0.6rem;
+  font-style: italic;
+}
+
+/* INPUTS */
+textarea, input[type="text"], input[type="email"] {
+  width: 100%;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+  resize: vertical;
+}
+textarea:focus, input[type="text"]:focus, input[type="email"]:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(42,140,110,0.08);
+}
+textarea { min-height: 90px; line-height: 1.6; }
+
+/* SCALE */
+.scale-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
+.scale-row { display: flex; align-items: center; gap: 0.75rem; }
+.scale-labels { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--muted); padding: 0 2px; }
+.scale-btns { display: flex; gap: 0.4rem; }
+.scale-btn {
+  width: 38px; height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.12s;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Inter', sans-serif;
+}
+.scale-btn:hover { border-color: var(--teal); color: var(--teal); }
+.scale-btn.selected { background: var(--teal); border-color: var(--teal); color: white; }
+
+/* RADIO / CHECKBOX */
+.options { display: flex; flex-direction: column; gap: 0.5rem; }
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.option:hover { border-color: var(--teal); }
+.option input { margin-top: 1px; accent-color: var(--teal); flex-shrink: 0; }
+.option-text { font-size: 0.82rem; color: var(--ink); line-height: 1.4; }
+.option-sub { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+/* CHECKLIST */
+.checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+@media (max-width: 520px) { .checklist { grid-template-columns: 1fr; } }
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.check-item:hover { border-color: var(--teal); }
+.check-item input { margin-top: 1px; accent-color: var(--teal); flex-shrink: 0; }
+.check-item-text { font-size: 0.78rem; color: var(--ink); line-height: 1.4; }
+.check-item-sub { font-size: 0.65rem; color: var(--muted); margin-top: 1px; }
+.check-item.checked { border-color: var(--teal); background: var(--teal-light); }
+
+/* INLINE OPTIONS */
+.inline-opts { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.inline-opt {
+  padding: 0.45rem 0.9rem;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.inline-opt:hover { border-color: var(--teal); color: var(--teal); }
+.inline-opt.selected { background: var(--teal); border-color: var(--teal); color: white; }
+
+/* SUBMIT */
+.submit-section {
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  padding: 2rem;
+  text-align: center;
+  position: sticky;
+  bottom: 0;
+}
+.submit-btn {
+  background: var(--teal);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.85rem 2.5rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.submit-btn:hover { background: #226b55; }
+.submit-note { font-size: 0.65rem; color: var(--muted); margin-top: 0.6rem; }
+
+/* GRACIAS */
+.gracias {
+  display: none;
+  text-align: center;
+  padding: 4rem 2rem;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.gracias-icon { font-size: 2.5rem; margin-bottom: 1.25rem; }
+.gracias-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.75rem;
+  color: var(--ink);
+  margin-bottom: 0.75rem;
+}
+.gracias-body { font-size: 0.88rem; color: var(--muted); line-height: 1.7; }
+
+/* DIVIDER */
+.q-divider { height: 1px; background: var(--border); margin: 1.75rem 0; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wordmark">Leer <em>es</em> viajar</div>
+  <div class="header-meta">Formulario de feedback · Beta</div>
+</header>
+
+<div id="form-container">
+  <div class="hero">
+    <div class="hero-eyebrow">Beta · Formulario de feedback</div>
+    <h1 class="hero-title">Gracias por explorar<br><em>el mapa</em> con nosotros.</h1>
+    <p class="hero-body">Tus respuestas nos ayudan a entender qué funciona, qué falta y qué sobra. No hay respuestas correctas — lo que importa es tu experiencia real.</p>
+    <div class="hero-time">⏱ Unos 10 minutos</div>
+  </div>
+
+  <form class="form-wrap" id="feedback-form" action="https://formspree.io/f/mqevpabl" method="POST" onsubmit="submitForm(event)">
+
+    <!-- SECCIÓN 1: PRIMER CONTACTO -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">01 · Primer contacto</div>
+        <div class="section-title">¿Qué entendiste?</div>
+        <div class="section-desc">Antes de cualquier explicación nuestra, queremos saber qué captaste tú.</div>
+      </div>
+
+      <div class="question">
+        <label class="q-label">En una o dos frases, ¿qué es Leer es viajar?</label>
+        <div class="q-hint">Cuéntanoslo como si se lo explicaras a un amigo.</div>
+        <textarea name="que_es" placeholder="En mis palabras, esto es…"></textarea>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Qué fue lo primero que captó tu atención al entrar?</label>
+        <textarea name="primer_impacto" placeholder="Lo primero que vi/hice fue…" style="min-height:70px"></textarea>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Hubo algo que no entendieras al principio?</label>
+        <textarea name="no_entendi" placeholder="Me costó entender…" style="min-height:70px"></textarea>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 2: USO -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">02 · Uso</div>
+        <div class="section-title">¿Qué hiciste?</div>
+        <div class="section-desc">Cuéntanos cómo fue tu experiencia explorando la aplicación.</div>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Cuántos libros o lecturas añadiste al mapa?</label>
+        <div class="inline-opts">
+          <div class="inline-opt" onclick="selectOpt(this, 'n-libros')">Ninguno</div>
+          <div class="inline-opt" onclick="selectOpt(this, 'n-libros')">1</div>
+          <div class="inline-opt" onclick="selectOpt(this, 'n-libros')">2–3</div>
+          <div class="inline-opt" onclick="selectOpt(this, 'n-libros')">4 o más</div>
+        </div>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Añadiste algún lugar ficticio (Hogwarts, Macondo, Arrakis…)?</label>
+        <div class="options">
+          <label class="option"><input type="radio" name="ficticio"> <div class="option-text">Sí, lo probé<div class="option-sub">Y funcionó / y no lo encontré</div></div></label>
+          <label class="option"><input type="radio" name="ficticio"> <div class="option-text">No, no se me ocurrió</div></label>
+          <label class="option"><input type="radio" name="ficticio"> <div class="option-text">No sabía que se podía</div></label>
+        </div>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Qué fue lo que más te gustó de la experiencia?</label>
+        <textarea name="lo_mejor" placeholder="Lo que más me gustó fue…"></textarea>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Hubo algo que te frustrara o que no funcionara como esperabas?</label>
+        <textarea name="frustracion" placeholder="Me frustró cuando…"></textarea>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3: DESCUBRIBILIDAD -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">03 · Qué descubriste</div>
+        <div class="section-title">¿Viste todo lo que hay?</div>
+        <div class="section-desc">Marca todo lo que usaste o viste durante tu exploración. No pasa nada si son pocas cosas — esto nos ayuda a saber qué está escondido.</div>
+      </div>
+
+      <div class="question">
+        <div class="checklist">
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox">
+            <div><div class="check-item-text">🗺 Rutas de comunidad</div><div class="check-item-sub">Las líneas verdes de otros lectores</div></div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox">
+            <div><div class="check-item-text">✦ Lugares ficticios</div><div class="check-item-sub">Hogwarts, Macondo, Arrakis…</div></div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox">
+            <div><div class="check-item-text">🔄 Toggle de partida</div><div class="check-item-sub">Desde último destino / desde casa / otro lugar</div></div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox">
+            <div><div class="check-item-text">📍 Popups del mapa</div><div class="check-item-sub">Al pinchar en un marcador o ruta</div></div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox">
+            <div><div class="check-item-text">✍️ Diario</div><div class="check-item-sub">El registro de llegadas</div></div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox">
+            <div><div class="check-item-text">🏅 Logros</div><div class="check-item-sub">Los retos desbloqueables</div></div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox">
+            <div><div class="check-item-text">✉ Postal</div><div class="check-item-sub">Enviar una postal desde tu destino</div></div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox">
+            <div><div class="check-item-text">⬇ Exportar</div><div class="check-item-sub">Descargar tu mapa como imagen</div></div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox">
+            <div><div class="check-item-text">📊 Estadísticas</div><div class="check-item-sub">Km leídos, destinos, países…</div></div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox">
+            <div><div class="check-item-text">🔴 Primera llegada</div><div class="check-item-sub">El aviso de ser el primero en llegar a un lugar</div></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Hay algo que intentaste hacer y no pudiste?</label>
+        <textarea name="no_pude" placeholder="Intenté… pero no encontré cómo…" style="min-height:70px"></textarea>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 4: VALORACIÓN -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">04 · Valoración</div>
+        <div class="section-title">¿Qué te parece?</div>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Cuánto lo recomendarías a alguien que lee?</label>
+        <div class="q-hint">1 = para nada · 10 = sin dudarlo</div>
+        <div class="scale-wrap">
+          <div class="scale-btns" id="nps-scale">
+            <div class="scale-btn" onclick="selectScale(this, 'nps')">1</div>
+            <div class="scale-btn" onclick="selectScale(this, 'nps')">2</div>
+            <div class="scale-btn" onclick="selectScale(this, 'nps')">3</div>
+            <div class="scale-btn" onclick="selectScale(this, 'nps')">4</div>
+            <div class="scale-btn" onclick="selectScale(this, 'nps')">5</div>
+            <div class="scale-btn" onclick="selectScale(this, 'nps')">6</div>
+            <div class="scale-btn" onclick="selectScale(this, 'nps')">7</div>
+            <div class="scale-btn" onclick="selectScale(this, 'nps')">8</div>
+            <div class="scale-btn" onclick="selectScale(this, 'nps')">9</div>
+            <div class="scale-btn" onclick="selectScale(this, 'nps')">10</div>
+          </div>
+          <div class="scale-labels"><span>Para nada</span><span>Sin dudarlo</span></div>
+        </div>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Crees que lo usarías habitualmente si estuviera disponible?</label>
+        <div class="options">
+          <label class="option"><input type="radio" name="uso-habitual"> <div class="option-text">Sí, lo usaría regularmente</div></label>
+          <label class="option"><input type="radio" name="uso-habitual"> <div class="option-text">Quizás, dependería de cómo evolucione</div></label>
+          <label class="option"><input type="radio" name="uso-habitual"> <div class="option-text">Probablemente no</div></label>
+          <label class="option"><input type="radio" name="uso-habitual"> <div class="option-text">No, no es para mí</div></label>
+        </div>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Qué funcionalidad te parece más valiosa?</label>
+        <textarea name="mas_valor" placeholder="Lo que más valor me aporta es…" style="min-height:70px"></textarea>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Qué echarías de menos si esto desapareciera mañana?</label>
+        <textarea name="echaria_menos" placeholder="Lo que más echaría de menos es…" style="min-height:70px"></textarea>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 5: ABIERTO -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">05 · Espacio libre</div>
+        <div class="section-title">Lo que quieras añadir</div>
+        <div class="section-desc">Cualquier cosa que no hayamos preguntado y que creas que deberíamos saber.</div>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Qué cambiarías, qué añadirías, o qué quitarías?</label>
+        <textarea name="cambios" placeholder="Yo cambiaría… / Añadiría… / Quitaría…" style="min-height:120px"></textarea>
+      </div>
+
+      <div class="question">
+        <label class="q-label">¿Hay algún lector o comunidad lectora a la que crees que esto le encantaría?</label>
+        <div class="q-hint">Opcional — nos ayuda a saber a quién dirigirnos.</div>
+        <textarea name="audiencia" placeholder="Creo que esto le gustaría especialmente a…" style="min-height:70px"></textarea>
+      </div>
+
+      <div class="q-divider"></div>
+
+      <div class="question">
+        <label class="q-label">Tu nombre <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+        <input type="text" name="nombre" placeholder="Para poder agradecértelo personalmente">
+      </div>
+      <div class="question">
+        <label class="q-label">Tu email <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+        <div class="q-hint">Solo si quieres que te avisemos cuando lancemos.</div>
+        <input type="email" name="email" placeholder="correo@ejemplo.com">
+      </div>
+    </div>
+
+    <div style="padding: 2rem 0 1rem; text-align:center;">
+      <button type="submit" class="submit-btn">Enviar feedback →</button>
+      <div class="submit-note">Tus respuestas son confidenciales y solo se usarán para mejorar el producto.</div>
+    </div>
+
+  </form>
+</div>
+
+<!-- GRACIAS -->
+<div class="gracias" id="gracias">
+  <div class="gracias-icon">✉️</div>
+  <div class="gracias-title">Gracias por el viaje.</div>
+  <p class="gracias-body">Tu feedback ya está con nosotros. Cada respuesta cuenta — y esta en especial.<br><br>Te avisaremos cuando <em>Leer es viajar</em> esté listo para todo el mundo.</p>
+</div>
+
+<script>
+function selectOpt(el, group) {
+  el.closest('.inline-opts').querySelectorAll('.inline-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectScale(el, group) {
+  el.closest('.scale-btns').querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function toggleCheck(el) {
+  const cb = el.querySelector('input[type="checkbox"]');
+  // Prevent double-toggle since label click already toggles checkbox
+  setTimeout(() => {
+    if (cb.checked) el.classList.add('checked');
+    else el.classList.remove('checked');
+  }, 0);
+}
+
+async function submitForm(e) {
+  e.preventDefault();
+  const form = document.getElementById('feedback-form');
+  const btn = form.querySelector('.submit-btn');
+  btn.textContent = 'Enviando…';
+  btn.disabled = true;
+
+  try {
+    const response = await fetch('https://formspree.io/f/mqevpabl', {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { 'Accept': 'application/json' }
+    });
+    if (response.ok) {
+      document.getElementById('form-container').style.display = 'none';
+      document.getElementById('gracias').style.display = 'block';
+      window.scrollTo(0, 0);
+    } else {
+      btn.textContent = 'Error al enviar. Inténtalo de nuevo.';
+      btn.disabled = false;
+    }
+  } catch(err) {
+    btn.textContent = 'Error al enviar. Inténtalo de nuevo.';
+    btn.disabled = false;
+  }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leer es viajar · Beta</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --paper: #f8f6f1;
+  --white: #ffffff;
+  --ink: #1c1c1a;
+  --soft: #e8e4dc;
+  --muted: #9a9690;
+  --teal: #2a8c6e;
+  --border: #e0dcd4;
+  --route: #c84020;
+}
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 3rem 2.5rem;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+}
+
+.wordmark {
+  font-family: 'Instrument Serif', serif;
+  font-size: 2rem;
+  color: var(--ink);
+  margin-bottom: 0.25rem;
+}
+.wordmark em { font-style: italic; color: var(--teal); }
+
+.beta {
+  display: inline-block;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  margin-bottom: 1.5rem;
+}
+
+.desc {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 2rem;
+}
+.desc em {
+  font-style: italic;
+  font-family: 'Instrument Serif', serif;
+  color: var(--ink);
+}
+
+.steps {
+  text-align: left;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.step-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--muted);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.step-text { color: var(--ink); }
+.step-text span { color: var(--muted); }
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 1.75rem 0;
+}
+
+.btn-primary {
+  display: block;
+  width: 100%;
+  background: var(--teal);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  margin-bottom: 0.75rem;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: #226b55; }
+
+.btn-secondary {
+  display: block;
+  width: 100%;
+  background: none;
+  color: var(--teal);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.15s;
+}
+.btn-secondary:hover { border-color: var(--teal); }
+
+.footer-note {
+  margin-top: 1.5rem;
+  font-size: 0.65rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="wordmark">Leer <em>es</em> viajar</div>
+  <div class="beta">Beta privada</div>
+
+  <p class="desc">Gracias por ser de las primeras personas en explorar esto. <em>Leer es viajar</em> convierte cada lectura en un viaje en el mapa — real o imaginario.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Abre el prototipo y explóralo libremente. <span>Añade 2 o 3 lecturas y observa cómo se construye tu mapa.</span></div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Dedica unos 10–15 minutos. <span>No hay forma de hacerlo mal.</span></div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Cuando termines, rellena el formulario de feedback. <span>Tu opinión es lo más valioso que puedes darnos ahora mismo.</span></div>
+    </div>
+  </div>
+
+  <a href="leer_es_viajar_v5.html" class="btn-primary" target="_blank">🗺 Abrir el prototipo</a>
+  <a href="feedback_leer_es_viajar.html" class="btn-secondary">✍️ Formulario de feedback</a>
+
+  <div class="footer-note">
+    Esto es una beta privada — puede tener errores y funcionalidades incompletas.<br>Solo funciona en ordenador de momento.
+  </div>
+</div>
+</body>
+</html>
