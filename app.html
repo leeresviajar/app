@@ -2166,20 +2166,24 @@ const ONBOARDING_STEPS = [
     label: 'Paso 1 de 3',
     icon: '🗺',
     text: 'Cada línea es un viaje lector. <em>El mapa se construye entre todos.</em>',
+    target: '#map', placement: 'center', pad: -28
   },
   {
     label: 'Paso 2 de 3',
     icon: '📖',
     text: '¿Adónde te lleva tu lectura? <em>Puede ser un lugar real… o uno que solo existe en los libros.</em>',
+    target: '#destination', placement: 'right', pad: 8
   },
   {
     label: 'Paso 3 de 3',
-    icon: '✦',
+    icon: '🧭',
     text: 'Elige desde dónde partes en cada viaje — <em>no tiene por qué ser siempre desde casa.</em>',
+    target: '.departure-toggle', placement: 'right', pad: 8
   }
 ];
 
 let onboardingStep = 0;
+let onboardingActive = false;
 
 function initOnboarding() {
   if (localStorage.getItem('lev_onboarding_done')) return;
@@ -2188,23 +2192,10 @@ function initOnboarding() {
 
 function showOnboardingStep(i) {
   const overlay = document.getElementById('onboarding-overlay');
-  const highlight = document.getElementById('onboarding-highlight');
-  const card = document.getElementById('onboarding-card');
   const step = ONBOARDING_STEPS[i];
 
   overlay.style.display = 'block';
   overlay.style.pointerEvents = 'auto';
-
-  // Sin highlight
-  highlight.style.display = 'none';
-
-  // Card centrada en la zona del mapa
-  card.style.top = '50%';
-  card.style.left = 'calc(436px + ((100vw - 436px) / 2) - 150px)';
-  card.style.right = 'auto';
-  card.style.bottom = 'auto';
-  card.style.transform = 'translateY(-50%)';
-  card.style.opacity = '1';
 
   // Contenido
   document.getElementById('onboarding-step').textContent = step.label;
@@ -2213,14 +2204,97 @@ function showOnboardingStep(i) {
   document.getElementById('onboarding-next').textContent =
     i === ONBOARDING_STEPS.length - 1 ? '¡Empezar! →' : 'Siguiente →';
 
-  // Dots
   const dots = document.getElementById('onboarding-dots');
   dots.innerHTML = ONBOARDING_STEPS.map((_, j) =>
     '<div class="onboarding-dot' + (j === i ? ' active' : '') + '"></div>'
   ).join('');
 
+  const animate = onboardingActive;
   onboardingStep = i;
+  onboardingActive = true;
+
+  // Posicionar tras el layout para medir bien
+  requestAnimationFrame(() => positionOnboarding(i, animate));
 }
+
+function positionOnboarding(i, animate) {
+  const step = ONBOARDING_STEPS[i];
+  const highlight = document.getElementById('onboarding-highlight');
+  const card = document.getElementById('onboarding-card');
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const m = 16;
+
+  // Rectángulo del elemento a iluminar (medido en el momento)
+  let hRect = null;
+  const target = step.target ? document.querySelector(step.target) : null;
+  if (target) {
+    const r = target.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) {
+      const pad = (step.pad != null) ? step.pad : 8;
+      hRect = { top: r.top - pad, left: r.left - pad, width: r.width + pad * 2, height: r.height + pad * 2 };
+    }
+  }
+
+  if (hRect) {
+    highlight.style.transition = animate ? 'all 0.45s cubic-bezier(0.4,0,0.2,1)' : 'none';
+    highlight.style.display = 'block';
+    highlight.style.top = hRect.top + 'px';
+    highlight.style.left = hRect.left + 'px';
+    highlight.style.width = hRect.width + 'px';
+    highlight.style.height = hRect.height + 'px';
+  } else {
+    highlight.style.display = 'none';
+  }
+
+  // Medir la tarjeta (contenido ya puesto), invisible para no ver el salto
+  card.style.transition = 'none';
+  card.style.opacity = '0';
+  card.style.transform = 'none';
+  card.style.right = 'auto';
+  card.style.bottom = 'auto';
+  const cw = card.offsetWidth, ch = card.offsetHeight;
+
+  // Zona del mapa (a la derecha de la sidebar, medida en el momento)
+  const sb = document.querySelector('.sidebar');
+  const sbRight = sb ? sb.getBoundingClientRect().right : 380;
+
+  let left, top;
+  if (!hRect || step.placement === 'center') {
+    // Centrada en la zona del mapa
+    left = sbRight + (vw - sbRight) / 2 - cw / 2;
+    top = vh / 2 - ch / 2;
+  } else if (step.placement === 'right') {
+    // A la derecha del elemento iluminado, alineada verticalmente
+    left = hRect.left + hRect.width + m;
+    top = hRect.top + hRect.height / 2 - ch / 2;
+    if (left + cw > vw - m) { // si no cabe, al centro del mapa
+      left = sbRight + (vw - sbRight) / 2 - cw / 2;
+    }
+  } else {
+    left = vw / 2 - cw / 2;
+    top = vh / 2 - ch / 2;
+  }
+
+  // No salirse de la pantalla
+  left = Math.max(m, Math.min(left, vw - cw - m));
+  top = Math.max(m, Math.min(top, vh - ch - m));
+
+  card.style.left = left + 'px';
+  card.style.top = top + 'px';
+
+  // Reflow y aparición
+  void card.offsetWidth;
+  card.style.transition = (animate ? 'top 0.4s cubic-bezier(0.4,0,0.2,1), left 0.4s cubic-bezier(0.4,0,0.2,1), ' : '') + 'opacity 0.3s ease';
+  card.style.opacity = '1';
+}
+
+// Reposicionar si cambia el tamaño de la ventana durante el tour
+window.addEventListener('resize', () => {
+  const overlay = document.getElementById('onboarding-overlay');
+  if (overlay && overlay.style.display === 'block') {
+    positionOnboarding(onboardingStep, false);
+  }
+});
 
 function nextOnboardingStep() {
   if (onboardingStep < ONBOARDING_STEPS.length - 1) {
@@ -2239,6 +2313,7 @@ function finishOnboarding() {
     overlay.style.opacity = '1';
     overlay.style.pointerEvents = 'none';
   }, 400);
+  onboardingActive = false;
   localStorage.setItem('lev_onboarding_done', '1');
 }
 
