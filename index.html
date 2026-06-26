@@ -8,14 +8,15 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
-  --paper: #f8f6f1;
+  --paper: #f7f5f1;
   --white: #ffffff;
-  --ink: #1c1c1a;
+  --ink: #1a1a18;
   --soft: #e8e4dc;
-  --muted: #9a9690;
-  --teal: #2a8c6e;
-  --border: #e0dcd4;
-  --route: #c84020;
+  --muted: #9a948d;
+  --teal: #1d9e75;
+  --forest-mid: #0f6e56;
+  --border: #ece8e1;
+  --route: #e8593c;
 }
 body {
   font-family: 'Inter', sans-serif;
@@ -27,37 +28,65 @@ body {
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.bg-routes {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  opacity: 0.06;
+  pointer-events: none;
 }
 
 .card {
   background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 3rem 2.5rem;
+  border: 0.5px solid var(--border);
+  border-radius: 16px;
+  padding: 3.25rem 2.75rem;
   max-width: 480px;
   width: 100%;
   text-align: center;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 12px 48px rgba(26,26,24,0.04);
 }
 
 .wordmark {
   font-family: 'Instrument Serif', serif;
-  font-size: 2rem;
+  font-size: 2.25rem;
   color: var(--ink);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
 }
 .wordmark em { font-style: italic; color: var(--teal); }
 
 .beta {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.58rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--muted);
-  border: 1px solid var(--border);
-  padding: 0.2rem 0.5rem;
-  border-radius: 3px;
-  margin-bottom: 1.5rem;
+  color: var(--teal);
+  background: rgba(29,158,117,0.07);
+  border: 0.5px solid rgba(29,158,117,0.3);
+  padding: 0.25rem 0.6rem;
+  border-radius: 5px;
+  margin-bottom: 1.75rem;
+}
+.beta-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--teal);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
 }
 
 .desc {
@@ -91,7 +120,7 @@ body {
   width: 22px; height: 22px;
   border-radius: 50%;
   background: var(--paper);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   font-size: 0.65rem;
   font-weight: 600;
@@ -103,7 +132,7 @@ body {
 .step-text span { color: var(--muted); }
 
 .divider {
-  height: 1px;
+  height: 0.5px;
   background: var(--border);
   margin: 1.75rem 0;
 }
@@ -115,7 +144,7 @@ body {
   color: white;
   border: none;
   border-radius: 8px;
-  padding: 0.85rem;
+  padding: 0.9rem;
   font-size: 0.88rem;
   font-weight: 500;
   font-family: 'Inter', sans-serif;
@@ -124,16 +153,16 @@ body {
   margin-bottom: 0.75rem;
   transition: background 0.15s;
 }
-.btn-primary:hover { background: #226b55; }
+.btn-primary:hover { background: var(--forest-mid); }
 
 .btn-secondary {
   display: block;
   width: 100%;
   background: none;
   color: var(--teal);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: 8px;
-  padding: 0.85rem;
+  padding: 0.9rem;
   font-size: 0.88rem;
   font-weight: 500;
   font-family: 'Inter', sans-serif;
@@ -152,11 +181,21 @@ body {
 </style>
 </head>
 <body>
+<svg class="bg-routes" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <path d="M120 620 Q 360 420 520 460 T 980 220" stroke="var(--route)" stroke-width="2" stroke-linecap="round"/>
+  <path d="M200 180 Q 420 320 640 280 T 1080 520" stroke="var(--teal)" stroke-width="2" stroke-dasharray="2 10" stroke-linecap="round"/>
+  <path d="M80 380 Q 300 340 480 600 T 1020 660" stroke="var(--route)" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="120" cy="620" r="5" fill="var(--route)"/>
+  <circle cx="980" cy="220" r="5" fill="var(--route)"/>
+  <circle cx="200" cy="180" r="5" fill="var(--teal)"/>
+  <circle cx="1080" cy="520" r="5" fill="var(--teal)"/>
+  <circle cx="1020" cy="660" r="5" fill="var(--route)"/>
+</svg>
 <div class="card">
   <div class="wordmark">Leer <em>es</em> viajar</div>
-  <div class="beta">Beta privada</div>
+  <div class="beta"><span class="beta-dot"></span>Beta privada</div>
 
-  <p class="desc">Gracias por ser de las primeras personas en explorar esto. <em>Leer es viajar</em> convierte cada lectura en un viaje en el mapa — real o imaginario.</p>
+  <p class="desc">Gracias por ser de las primeras personas en explorar esto. <em>Leer es viajar</em> convierte cada lectura en un viaje.</p>
 
   <div class="steps">
     <div class="step">
@@ -173,8 +212,8 @@ body {
     </div>
   </div>
 
-  <a href="app.html" class="btn-primary" target="_blank">🗺 Abrir el prototipo</a>
-  <a href="feedback_leer_es_viajar.html" class="btn-secondary">✍️ Formulario de feedback</a>
+  <a href="app.html" class="btn-primary" target="_blank">Abrir el prototipo</a>
+  <a href="feedback_leer_es_viajar.html" class="btn-secondary">Formulario de feedback</a>
 
   <div class="footer-note">
     Esto es una beta privada — puede tener errores y funcionalidades incompletas.<br>Solo funciona en ordenador de momento.
