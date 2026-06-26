@@ -1389,10 +1389,9 @@ const COMMUNITY_POSITIONS = {
 function getCommunityData(placeKey) {
   const key = placeKey.toLowerCase().trim();
   for (const [k, v] of Object.entries(COMMUNITY_POSITIONS)) {
-    if (key === k || key.includes(k) || k.includes(key)) return { key: k, ...v };
+    if (key === k || key.includes(k) || k.includes(key)) return { key: k, known: true, ...v };
   }
-  const genericVotes = Math.floor(Math.random() * 150) + 30;
-  return { key, votes: genericVotes, regionName: 'la posición predeterminada del mapa' };
+  return { key, known: false, votes: 0, regionName: null };
 }
 
 // Overrides personales (localStorage → preparado para sincronizar con API)
@@ -1423,12 +1422,27 @@ function openFictionalModal(placeKey, onResolve) {
     }
   }
 
-  document.getElementById('fic-place-name').textContent =
-    placeKey.charAt(0).toUpperCase() + placeKey.slice(1);
-  document.getElementById('fic-votes').textContent =
-    `${community.votes.toLocaleString()} viajeros lo han colocado en:`;
-  document.getElementById('fic-community-place').textContent =
-    community.regionName;
+  const niceName = placeKey.charAt(0).toUpperCase() + placeKey.slice(1);
+  document.getElementById('fic-place-name').textContent = niceName;
+
+  const hasCoords = fictionalPending.communityLat != null;
+  const section = document.getElementById('fic-community-section');
+  const intro = document.getElementById('fic-first-intro');
+
+  if (community.known && hasCoords) {
+    // Hay consenso real de comunidad
+    section.style.display = '';
+    intro.style.display = 'none';
+    document.getElementById('fic-votes').textContent =
+      `${community.votes.toLocaleString()} viajeros lo han colocado en:`;
+    document.getElementById('fic-community-place').textContent = community.regionName;
+  } else {
+    // Nadie lo ha situado todavía: invitar a ser quien lo coloque
+    section.style.display = 'none';
+    intro.style.display = 'block';
+    intro.innerHTML = `Todavía nadie ha situado <strong style="color:var(--ink)">${niceName}</strong> en el mapa. Colócalo donde tú lo imaginas — será tu rincón.`;
+  }
+
   document.getElementById('fic-custom-input').value = '';
   document.getElementById('fictional-overlay').classList.add('visible');
   setTimeout(() => document.getElementById('fic-custom-input').focus(), 100);
@@ -2163,21 +2177,33 @@ function sendPostal() {
 // ===================== ONBOARDING =====================
 const ONBOARDING_STEPS = [
   {
-    label: 'Paso 1 de 3',
+    label: 'Paso 1 de 5',
     icon: '🗺',
     text: 'Cada línea es un viaje lector. <em>El mapa se construye entre todos.</em>',
     target: '#map', placement: 'center', pad: -28
   },
   {
-    label: 'Paso 2 de 3',
-    icon: '📖',
+    label: 'Paso 2 de 5',
+    icon: '🏠',
+    text: 'Este es tu punto de partida. <em>Desde aquí arranca tu viaje — tu ciudad, tu casa.</em>',
+    target: ['.origin-section', '.origin-narrative'], placement: 'right', pad: 8
+  },
+  {
+    label: 'Paso 3 de 5',
+    icon: '📍',
     text: '¿Adónde te lleva tu lectura? <em>Puede ser un lugar real… o uno que solo existe en los libros.</em>',
     target: '#destination', placement: 'right', pad: 8
   },
   {
-    label: 'Paso 3 de 3',
+    label: 'Paso 4 de 5',
+    icon: '📖',
+    text: '¿Qué estás leyendo? <em>Cada destino queda unido al libro que te llevó hasta él.</em>',
+    target: '#book-title', placement: 'right', pad: 8
+  },
+  {
+    label: 'Paso 5 de 5',
     icon: '🧭',
-    text: 'Elige desde dónde partes en cada viaje — <em>no tiene por qué ser siempre desde casa.</em>',
+    text: 'Cada nuevo viaje puede salir desde donde quieras — <em>no tiene por qué ser siempre desde casa.</em>',
     target: '.departure-toggle', placement: 'right', pad: 8
   }
 ];
@@ -2224,15 +2250,21 @@ function positionOnboarding(i, animate) {
   const vw = window.innerWidth, vh = window.innerHeight;
   const m = 16;
 
-  // Rectángulo del elemento a iluminar (medido en el momento)
+  // Rectángulo del elemento a iluminar (primer candidato visible)
   let hRect = null;
-  const target = step.target ? document.querySelector(step.target) : null;
+  const selectors = Array.isArray(step.target) ? step.target : (step.target ? [step.target] : []);
+  let target = null;
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) { target = el; break; }
+    }
+  }
   if (target) {
     const r = target.getBoundingClientRect();
-    if (r.width > 0 && r.height > 0) {
-      const pad = (step.pad != null) ? step.pad : 8;
-      hRect = { top: r.top - pad, left: r.left - pad, width: r.width + pad * 2, height: r.height + pad * 2 };
-    }
+    const pad = (step.pad != null) ? step.pad : 8;
+    hRect = { top: r.top - pad, left: r.left - pad, width: r.width + pad * 2, height: r.height + pad * 2 };
   }
 
   if (hRect) {
@@ -2511,14 +2543,17 @@ window.addEventListener('load', () => {
 <div class="fictional-overlay" id="fictional-overlay">
   <div class="fictional-modal">
     <h3>✦ <span id="fic-place-name"></span></h3>
-    <div class="community-block">
-      <div class="c-votes" id="fic-votes"></div>
-      <div class="c-place" id="fic-community-place"></div>
+    <div id="fic-community-section">
+      <div class="community-block">
+        <div class="c-votes" id="fic-votes"></div>
+        <div class="c-place" id="fic-community-place"></div>
+      </div>
+      <div class="fictional-btns" style="display:flex;width:100%;margin:0">
+        <button class="btn-use-community" style="flex:1;padding:0.6rem;border-radius:8px;font-family:inherit;font-size:0.82rem;font-weight:500;cursor:pointer;border:none;background:var(--teal);color:white" onclick="useCommunityPosition()">Colocarlo ahí también</button>
+      </div>
+      <div class="divider"><span>o</span></div>
     </div>
-    <div class="fictional-btns" style="display:flex;width:100%;margin:0">
-      <button class="btn-use-community" style="flex:1;padding:0.6rem;border-radius:8px;font-family:inherit;font-size:0.82rem;font-weight:500;cursor:pointer;border:none;background:var(--teal);color:white" onclick="useCommunityPosition()">Colocarlo ahí también</button>
-    </div>
-    <div class="divider"><span>o</span></div>
+    <p id="fic-first-intro" style="display:none; font-size:0.82rem; color:var(--muted); line-height:1.55; margin-bottom:1rem;"></p>
     <label>Definir mi propia ubicación</label>
     <input type="text" id="fic-custom-input" placeholder="Ej: norte de Noruega, desierto de Namibia…" onkeydown="if(event.key==='Enter') useCustomPosition()"/>
     <div class="input-hint">Se geocodificará y quedará guardada solo en tu mapa.</div>
