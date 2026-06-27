@@ -258,6 +258,12 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .export-fmt-btn.active { border: 1.5px solid var(--teal); background: rgba(29,158,117,0.06); color: var(--ink); }
 .export-fmt-btn.active .ef-ratio { color: var(--teal); opacity: 0.9; }
 .export-fmt-btn.active .ef-sub { color: var(--teal); }
+.export-group-label { font-family: 'Inter', sans-serif; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; margin-bottom: 0.4rem; }
+.export-periods { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+.export-period-btn { flex: 1; padding: 0.5rem 0.4rem; border-radius: 8px; border: 0.5px solid var(--line); background: var(--white); cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.72rem; color: var(--muted); text-align: center; transition: all 0.15s; }
+.export-period-btn.active { border: 1.5px solid var(--teal); background: rgba(29,158,117,0.06); color: var(--ink); }
+.export-period-select { width: 100%; padding: 0.5rem 0.6rem; border: 0.5px solid var(--line); border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 0.78rem; color: var(--ink); background: var(--white); margin-bottom: 1rem; outline: none; cursor: pointer; }
+.export-period-select:focus { border-color: var(--teal); }
 
 /* Preview canvas */
 .export-preview-wrap { background: var(--paper); border: 0.5px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 1rem; position: relative; min-height: 180px; display: flex; align-items: center; justify-content: center; }
@@ -680,6 +686,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
       <button class="export-close" onclick="closeExportModal()">✕</button>
     </div>
     <div class="export-modal-body">
+      <div class="export-group-label">Qué mostrar</div>
       <div class="export-modes">
         <button class="export-mode-btn active" onclick="setExportMode('stats')" id="em-stats">
           <span class="em-icon">📊</span>Estadísticas
@@ -691,6 +698,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
           <span class="em-icon">✨</span>Wrapped
         </button>
       </div>
+      <div class="export-group-label">Formato</div>
       <div class="export-formats">
         <button class="export-fmt-btn active" onclick="setExportFormat('story')" id="ef-story">
           <span class="ef-ratio" style="width:15px;height:26px"></span>Historia<span class="ef-sub">9:16</span>
@@ -699,6 +707,13 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
           <span class="ef-ratio" style="width:21px;height:26px"></span>Feed<span class="ef-sub">4:5</span>
         </button>
       </div>
+      <div class="export-group-label">Periodo</div>
+      <div class="export-periods">
+        <button class="export-period-btn active" onclick="setExportPeriod('total')" id="ep-total">Total</button>
+        <button class="export-period-btn" onclick="setExportPeriod('year')" id="ep-year">Año</button>
+        <button class="export-period-btn" onclick="setExportPeriod('month')" id="ep-month">Mes</button>
+      </div>
+      <select class="export-period-select" id="export-period-select" onchange="onExportPeriodChange()" style="display:none"></select>
       <div class="export-preview-wrap" id="export-preview-wrap">
         <div class="export-preview-loading" id="export-preview-loading">Generando vista previa…</div>
       </div>
@@ -1751,6 +1766,8 @@ function showBadgeUnlockToast(badge) {
 // ===================== EXPORT =====================
 let exportMode = 'stats';
 let exportFormat = 'story';
+let exportPeriod = 'total';        // 'total' | 'year' | 'month'
+let exportPeriodValue = null;      // año (número) o 'YYYY-MM'
 let exportCanvas = null;
 const EXPORT_FORMATS = { story: { W: 1080, H: 1920 }, feed: { W: 1080, H: 1350 } };
 
@@ -1758,8 +1775,14 @@ function openExportModal() {
   document.getElementById('export-overlay').classList.add('visible');
   exportMode = 'stats';
   exportFormat = 'story';
+  exportPeriod = 'total';
+  exportPeriodValue = null;
   // Pequeño delay para que el modal sea visible antes de medir dimensiones
-  setTimeout(() => { syncExportButtons(); renderExportPreview(); }, 50);
+  setTimeout(() => {
+    document.getElementById('export-period-select').style.display = 'none';
+    syncExportButtons();
+    renderExportPreview();
+  }, 50);
 }
 function closeExportModal() {
   document.getElementById('export-overlay').classList.remove('visible');
@@ -1769,6 +1792,8 @@ function syncExportButtons() {
     document.getElementById('em-' + m).classList.toggle('active', m === exportMode));
   ['story','feed'].forEach(f =>
     document.getElementById('ef-' + f).classList.toggle('active', f === exportFormat));
+  ['total','year','month'].forEach(p =>
+    document.getElementById('ep-' + p).classList.toggle('active', p === exportPeriod));
   const phraseWrap = document.getElementById('export-phrase-wrap');
   phraseWrap.classList.toggle('visible', exportMode === 'wrapped');
   if (exportMode === 'wrapped') {
@@ -1787,16 +1812,74 @@ function setExportFormat(fmt) {
   renderExportPreview();
 }
 
-function generatePhrase() {
-  const stats = getBadgeStats();
-  const diary = loadDiary();
-  const km = Math.round(entries.reduce((s,e) => s+e.km, 0));
-  const books = new Set(entries.map(e => e.book.toLowerCase().trim())).size;
-  const dests = [...new Set(entries.map(e => e.dest))];
-  const fictional = entries.filter(e => e.fictional);
+// ── Periodo de la exportación ─────────────────────────────────────────
+function exportAvailableYears() {
+  return [...new Set(entries.map(e => e.year).filter(Boolean))].sort((a,b) => b - a);
+}
+function exportAvailableMonths() {
+  return [...new Set(entries.map(e => (e.date || '').slice(0,7)).filter(Boolean))].sort().reverse();
+}
+function monthLabel(ym) {
+  const [y, m] = ym.split('-');
+  return new Date(Number(y), Number(m) - 1, 1)
+    .toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+}
+function getExportEntries() {
+  if (exportPeriod === 'year' && exportPeriodValue != null)
+    return entries.filter(e => e.year === Number(exportPeriodValue));
+  if (exportPeriod === 'month' && exportPeriodValue != null)
+    return entries.filter(e => (e.date || '').slice(0,7) === exportPeriodValue);
+  return entries.slice();
+}
+function exportPeriodSubtitle() {
+  if (exportPeriod === 'year' && exportPeriodValue != null) return 'MI AÑO LECTOR ' + exportPeriodValue;
+  if (exportPeriod === 'month' && exportPeriodValue != null) return 'MI MES LECTOR · ' + monthLabel(exportPeriodValue);
+  return 'MI VIAJE LECTOR';
+}
+function exportWrappedSubtitle() {
+  if (exportPeriod === 'year' && exportPeriodValue != null) return 'Wrapped ' + exportPeriodValue;
+  if (exportPeriod === 'month' && exportPeriodValue != null) return 'Wrapped · ' + monthLabel(exportPeriodValue);
+  return 'Wrapped · todo mi viaje';
+}
+function setExportPeriod(period) {
+  exportPeriod = period;
+  const sel = document.getElementById('export-period-select');
+  if (period === 'year') {
+    const years = exportAvailableYears();
+    exportPeriodValue = years.length ? years[0] : new Date().getFullYear();
+    sel.innerHTML = (years.length ? years : [exportPeriodValue])
+      .map(y => `<option value="${y}">${y}</option>`).join('');
+    sel.value = String(exportPeriodValue);
+    sel.style.display = 'block';
+  } else if (period === 'month') {
+    const months = exportAvailableMonths();
+    exportPeriodValue = months.length ? months[0] : null;
+    sel.innerHTML = months.map(m => `<option value="${m}">${monthLabel(m)}</option>`).join('');
+    if (exportPeriodValue) sel.value = exportPeriodValue;
+    sel.style.display = months.length ? 'block' : 'none';
+  } else {
+    exportPeriodValue = null;
+    sel.style.display = 'none';
+  }
+  syncExportButtons();
+  renderExportPreview();
+}
+function onExportPeriodChange() {
+  const sel = document.getElementById('export-period-select');
+  exportPeriodValue = exportPeriod === 'year' ? Number(sel.value) : sel.value;
+  renderExportPreview();
+}
 
-  const firstDest = entries.length ? entries[0].dest : null;
-  const lastDest  = entries.length ? entries[entries.length-1].dest : null;
+function generatePhrase() {
+  const diary = loadDiary();
+  const ents = getExportEntries();
+  const km = Math.round(ents.reduce((s,e) => s+e.km, 0));
+  const books = new Set(ents.map(e => e.book.toLowerCase().trim())).size;
+  const dests = [...new Set(ents.map(e => e.dest))];
+  const fictional = ents.filter(e => e.fictional);
+
+  const firstDest = ents.length ? ents[0].dest : null;
+  const lastDest  = ents.length ? ents[ents.length-1].dest : null;
 
   const phrases = [
     `Este año viajé ${km.toLocaleString()} km gracias a ${books} libro${books !== 1 ? 's' : ''}, sin moverme de casa.`,
@@ -1890,20 +1973,21 @@ async function buildExportCanvas() {
     ctx.beginPath(); ctx.arc(W/2, H*0.42, r, 0, Math.PI*2); ctx.stroke();
   }
 
-  // ── Stats ────────────────────────────────────────────────────────────
-  const km      = Math.round(entries.reduce((s,e) => s+e.km, 0));
-  const books   = entries.length;
-  const places  = new Set(entries.map(e => e.dest)).size;
-  const countries = new Set(entries.filter(e=>!e.fictional)
+  // ── Stats (misma lógica que la barra lateral: títulos únicos + periodo elegido) ──
+  const exFiltered = getExportEntries();
+  const km      = Math.round(exFiltered.reduce((s,e) => s+e.km, 0));
+  const books   = new Set(exFiltered.map(e => e.book.toLowerCase().trim())).size;
+  const places  = new Set(exFiltered.map(e => e.dest.toLowerCase())).size;
+  const countries = new Set(exFiltered.filter(e=>!e.fictional)
     .map(e=>e.countryCode||e.country||'').filter(Boolean)).size;
   const pioneers = loadDiary().filter(e=>e.pioneer).length;
-  const fictional = entries.filter(e=>e.fictional).length;
+  const fictional = new Set(exFiltered.filter(e=>e.fictional).map(e=>e.dest.toLowerCase())).size;
 
   const year = activeYear === 'all' ? new Date().getFullYear() : activeYear;
 
   if (exportMode === 'stats' || exportMode === 'books') {
     // Altura natural del bloque para centrarlo verticalmente
-    const bookList = [...new Set(entries.map(e => e.book))].slice(0, 6);
+    const bookList = [...new Set(exFiltered.map(e => e.book))].slice(0, 6);
     const lastContentY = bookList.length ? (638 + (bookList.length - 1) * 28) : 495;
     const offsetY = centerOffset(50, lastContentY + 20);
 
@@ -1919,7 +2003,7 @@ async function buildExportCanvas() {
     ctx.fillStyle = 'rgba(159,217,192,0.4)';
     ctx.font = '500 13px Inter, sans-serif';
     ctx.letterSpacing = '0.12em';
-    ctx.fillText(('MI AÑO LECTOR ' + year).toUpperCase(), W/2, 100);
+    ctx.fillText(exportPeriodSubtitle().toUpperCase(), W/2, 100);
 
     // ── Número grande: km ──────────────────────────────────────────────
     ctx.fillStyle = '#faf7f2';
@@ -2022,7 +2106,7 @@ async function buildExportCanvas() {
     if (curLine) lineArr.push(curLine);
     const lineH = 44;
     const phraseStartY = 530;
-    const blist = [...new Set(entries.map(e=>e.book))].slice(0,5);
+    const blist = [...new Set(exFiltered.map(e=>e.book))].slice(0,5);
     const listStartY = phraseStartY + lineArr.length*lineH + 60;
     const lastContentY = blist.length
       ? (listStartY + 28 + (blist.length-1)*28)
@@ -2040,7 +2124,7 @@ async function buildExportCanvas() {
 
     ctx.fillStyle = 'rgba(159,217,192,0.4)';
     ctx.font = '500 12px Inter, sans-serif';
-    ctx.fillText(('Wrapped ' + year).toUpperCase(), W/2, 108);
+    ctx.fillText(exportWrappedSubtitle().toUpperCase(), W/2, 108);
 
     // Km grande
     ctx.fillStyle = '#faf7f2';
@@ -2195,7 +2279,8 @@ function downloadExport() {
   const year = activeYear === 'all' ? new Date().getFullYear() : activeYear;
   const modeLabel = { stats: 'stats', books: 'lecturas', wrapped: 'wrapped' }[exportMode] || exportMode;
   const fmtLabel = { story: 'historia', feed: 'feed' }[exportFormat] || exportFormat;
-  link.download = `leer-es-viajar-${modeLabel}-${fmtLabel}-${year}.png`;
+  const periodLabel = exportPeriod === 'total' ? 'todo' : String(exportPeriodValue);
+  link.download = `leer-es-viajar-${modeLabel}-${fmtLabel}-${periodLabel}.png`;
   link.href = exportCanvas.toDataURL('image/png');
   link.click();
 }
