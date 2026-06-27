@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -908,7 +909,7 @@ async function sendMagicLink() {
     btn.disabled = false;
     btn.textContent = 'Enviar enlace';
   } else {
-    msg.textContent = '✓ Enlace enviado — revisa tu email y pulsa el enlace para entrar.';
+    msg.textContent = '✓ Enlace enviado. Revisa tu email y pulsa el enlace para entrar.';
     msg.className = 'auth-msg ok';
     btn.textContent = 'Enviado';
   }
@@ -3102,7 +3103,7 @@ window.addEventListener('load', async () => {
 <div class="auth-overlay" id="auth-overlay" onclick="if(event.target===this) closeAuthModal()">
   <div class="auth-modal">
     <h3>Guardar mis viajes</h3>
-    <p>Introduce tu email y te enviamos un enlace mágico — sin contraseña.</p>
+    <p>Introduce tu email y te enviamos un enlace mágico, sin contraseña.</p>
     <input type="email" id="auth-email" placeholder="tu@email.com" onkeydown="if(event.key==='Enter') sendMagicLink()"/>
     <div class="auth-modal-actions">
       <button class="auth-submit" id="auth-submit-btn" onclick="sendMagicLink()">Enviar enlace</button>
