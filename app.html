@@ -746,10 +746,6 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
         <div class="legend-line community"></div>
         Rutas de la comunidad
       </div>
-      <div class="legend-item">
-        <div class="legend-line fictional"></div>
-        ✦ Viajes entre mundos
-      </div>
     </div>
 
   </div>
@@ -2704,13 +2700,48 @@ function closePostal() {
   document.getElementById('postal-overlay').classList.remove('open');
 }
 
-function sendPostal() {
+async function sendPostal() {
   const name = document.getElementById('postal-to-name').value.trim();
+  const email = document.getElementById('postal-to-email').value.trim();
   const place = document.getElementById('postal-stamp-place').textContent;
-  document.getElementById('postal-form-side').style.display = 'none';
-  document.getElementById('postal-sent-side').style.display = 'flex';
-  document.getElementById('postal-sent-msg').textContent =
-    name ? `Tu postal a ${name} ha salido de ${place}.` : `Tu postal ha salido de ${place}.`;
+  const book = document.getElementById('postal-book-display').textContent.replace('Leyendo: ', '').trim();
+  const quote = document.getElementById('postal-quote').value.trim();
+  const date = document.getElementById('postal-stamp-date').textContent;
+
+  if (!email || !email.includes('@')) {
+    alert('Introduce un email válido.');
+    return;
+  }
+
+  const btn = document.querySelector('.postal-btn-send');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  try {
+    const res = await fetch('https://leer-es-viajar-postal.paula-7a6.workers.dev', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ toName: name, toEmail: email, fromPlace: place, book, quote, date })
+    });
+
+    if (res.ok) {
+      document.getElementById('postal-form-side').style.display = 'none';
+      document.getElementById('postal-sent-side').style.display = 'flex';
+      document.getElementById('postal-sent-msg').textContent =
+        name ? `Tu postal a ${name} ha salido de ${place}.` : `Tu postal ha salido de ${place}.`;
+      document.querySelector('#postal-sent-side small').textContent = 'Debería llegar en unos segundos.';
+    } else {
+      const err = await res.text();
+      alert('Error al enviar la postal. Inténtalo de nuevo.');
+      console.error(err);
+    }
+  } catch (e) {
+    alert('Error de conexión. Comprueba tu internet e inténtalo de nuevo.');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✉ Enviar postal';
+  }
 }
 
 // ===================== ONBOARDING =====================
