@@ -858,7 +858,7 @@ const FICTIONAL = {
   'marineda':[43.37,-8.39],'oleza':[38.1,-1.1],
   'arrakis':[23.5,46.0],'dune':[23.5,46.0],'giedi prime':[15.0,60.0],'caladan':[48.0,-4.0],
   'terramar':[37.9,-122.5],'earthsea':[37.9,-122.5],'anarres':[-30.0,140.0],'omelas':[47.6,-122.3],
-  'narnia':[51.5,-1.0],'cair paravel':[51.6,-1.1],
+  'narnia':[55.0,-3.5],'cair paravel':[55.1,-3.4],
   'westeros':[53.5,-7.5],'desembarco del rey':[43.7,16.0],'kings landing':[43.7,16.0],
   'winterfell':[55.0,-2.0],'rocadragón':[38.7,26.9],'dragonstone':[38.7,26.9],
   'oceania':[51.5,-0.1],'oceanía':[51.5,-0.1],'airstrip one':[51.5,-0.1],
@@ -1609,6 +1609,115 @@ document.addEventListener('click', e => { if (!e.target.closest('.book-input-wra
 // ===================== FICTIONAL COMMUNITY DATA =====================
 // Estructura preparada para API real: GET /api/fictional-positions/{placeKey}
 const COMMUNITY_POSITIONS = {
+  // Tolkien
+  'minas tirith':    { votes: 876,  regionName: 'Anatolia occidental (Turquía)' },
+  'rohan':           { votes: 743,  regionName: 'Ucrania occidental' },
+  'moria':           { votes: 612,  regionName: 'Bosnia central' },
+  'isengard':        { votes: 534,  regionName: 'Bosnia-Herzegovina' },
+  'erebor':          { votes: 489,  regionName: 'Cáucaso georgiano' },
+  'lothloren':       { votes: 467,  regionName: 'Austria central' },
+  'cair paravel':    { votes: 398,  regionName: 'Frontera escocesa' },
+  // Harry Potter
+  'hogsmeade':       { votes: 892,  regionName: 'Highlands escocesas' },
+  'azkaban':         { votes: 654,  regionName: 'Islas Shetland (Escocia)' },
+  // Juego de Tronos
+  'winterfell':      { votes: 1876, regionName: 'norte de Inglaterra' },
+  'kings landing':   { votes: 1654, regionName: 'costa dálmata (Croacia)' },
+  'rocadragón':      { votes: 743,  regionName: 'islas del Egeo (Grecia)' },
+  // Idhún
+  'celestia':        { votes: 312,  regionName: 'islas griegas del Egeo' },
+  'kelesban':        { votes: 234,  regionName: 'Chipre oriental' },
+  'nanhai':          { votes: 198,  regionName: 'Nepal / Himalaya' },
+  'gran oráculo':    { votes: 187,  regionName: 'Nepal / Himalaya' },
+  'kash-tar':        { votes: 176,  regionName: 'desierto de Irán' },
+  'kosh':            { votes: 154,  regionName: 'Omán oriental' },
+  'lumbak':          { votes: 143,  regionName: 'costa de Omán' },
+  'nin':             { votes: 132,  regionName: 'golfo Pérsico' },
+  'derbhad':         { votes: 167,  regionName: 'Bohemia meridional (Rep. Checa)' },
+  'drackwen':        { votes: 145,  regionName: 'Finlandia central' },
+  'shur-ikail':      { votes: 123,  regionName: 'Siberia occidental (Rusia)' },
+  'anillo de hielo': { votes: 112,  regionName: 'norte de Noruega' },
+  'raden':           { votes: 134,  regionName: 'Mar Caspio (Azerbaiyán)' },
+  'gantadd':         { votes: 98,   regionName: 'Iraq meridional' },
+  'limbhad':         { votes: 156,  regionName: 'Alemania central' },
+  'umadhun':         { votes: 89,   regionName: 'Yemen / Mar Arábigo' },
+  'torre de awinor': { votes: 134,  regionName: 'Islandia volcánica' },
+  'torre de drackwen':{ votes: 112, regionName: 'Finlandia central' },
+  'haai-sil':        { votes: 98,   regionName: 'costa egea de Turquía' },
+  'vaisel':          { votes: 87,   regionName: 'Creta occidental' },
+  'monte lunn':      { votes: 143,  regionName: 'Highlands escocesas' },
+  'thalis':          { votes: 112,  regionName: 'Cracovia (Polonia)' },
+  'raheld':          { votes: 98,   regionName: 'Polonia meridional' },
+  'nurgon':          { votes: 87,   regionName: 'Eslovenia' },
+  'nanetten':        { votes: 76,   regionName: 'Eslovaquia occidental' },
+  'dingra':          { votes: 65,   regionName: 'Cárpatos orientales' },
+  'shia':            { votes: 54,   regionName: 'Croacia septentrional' },
+  'arén':            { votes: 43,   regionName: 'Eslovaquia oriental' },
+  // Literatura hispánica
+  'vetusta':         { votes: 543,  regionName: 'Oviedo, Asturias (España)' },
+  'orbajosa':        { votes: 312,  regionName: 'Andalucía interior (España)' },
+  'marineda':        { votes: 234,  regionName: 'A Coruña, Galicia (España)' },
+  'oleza':           { votes: 198,  regionName: 'Orihuela, Murcia (España)' },
+  'región':          { votes: 176,  regionName: 'León / Castilla (España)' },
+  // Pullman (La materia oscura)
+  'bolvangar':       { votes: 432,  regionName: 'norte de Noruega' },
+  'cittàgazze':      { votes: 376,  regionName: 'Liguria (Italia)' },
+  // Literatura inglesa clásica
+  'thornfield':      { votes: 298,  regionName: 'Yorkshire (Inglaterra)' },
+  'wuthering heights':{ votes: 276, regionName: 'Yorkshire (Inglaterra)' },
+  'manderley':       { votes: 254,  regionName: 'Cornualles (Inglaterra)' },
+  'mansfield park':  { votes: 198,  regionName: 'Northamptonshire (Inglaterra)' },
+  'coketown':        { votes: 167,  regionName: 'Lancashire (Inglaterra)' },
+  // Calvino (Ciudades invisibles)
+  'dorothea':        { votes: 145,  regionName: 'Lombardía (Italia)' },
+  'anastasia':       { votes: 134,  regionName: 'Lombardía (Italia)' },
+  'isidora':         { votes: 123,  regionName: 'Lombardía (Italia)' },
+  'octavia':         { votes: 112,  regionName: 'Liguria (Italia)' },
+  'ombra':           { votes: 98,   regionName: 'Suiza italiana' },
+  'tintamundo':      { votes: 87,   regionName: 'Suiza italiana' },
+  'capricorno':      { votes: 76,   regionName: 'Suiza italiana' },
+  // Ursula K. Le Guin
+  'terramar':        { votes: 432,  regionName: 'costa de California (EEUU)' },
+  'anarres':         { votes: 312,  regionName: 'Australia occidental' },
+  'omelas':          { votes: 234,  regionName: 'Seattle, Washington (EEUU)' },
+  // Narnia
+  'oceania':         { votes: 543,  regionName: 'Londres, Inglaterra' },
+  // 1984
+  // Sanderson (Cosmere)
+  'luthadel':        { votes: 312,  regionName: 'Anatolia oriental (Turquía)' },
+  'roshar':          { votes: 289,  regionName: 'Oriente Próximo / Arabia' },
+  // King (La Torre Oscura)
+  'mid-world':       { votes: 234,  regionName: 'Grandes Llanuras (EEUU)' },
+  // Rothfuss (Crónica del asesino de reyes)
+  'tarbean':         { votes: 198,  regionName: 'Budapest, Hungría' },
+  'imre':            { votes: 176,  regionName: 'Polonia meridional' },
+  // Anime/manga
+  'konoha':          { votes: 432,  regionName: 'Japón central' },
+  'alabasta':        { votes: 312,  regionName: 'Egipto / Nilo' },
+  'dressrosa':       { votes: 287,  regionName: 'Islas Baleares (España)' },
+  'trost':           { votes: 234,  regionName: 'norte de Alemania' },
+  'paradis':         { votes: 212,  regionName: 'Mecklemburgo (Alemania)' },
+  // Pratchett
+  'lancre':          { votes: 312,  regionName: 'Lake District (Inglaterra)' },
+  // Gaiman
+  'neverwhere':      { votes: 345,  regionName: 'Londres subterráneo (Inglaterra)' },
+  'american gods':   { votes: 289,  regionName: 'Wisconsin (EEUU)' },
+  'stardust':        { votes: 234,  regionName: 'norte de Inglaterra' },
+  // Verne
+  'isla misteriosa': { votes: 198,  regionName: 'Pacífico sur' },
+  'centro de la tierra':{ votes: 176, regionName: 'Islandia volcánica' },
+  // Dune adicionales
+  'caladan':         { votes: 312,  regionName: 'Bretaña (Francia)' },
+  // Kafka
+  'the castle':      { votes: 234,  regionName: 'Bohemia (Rep. Checa)' },
+  // Yoknapatawpha
+  'yoknapatawpha':   { votes: 198,  regionName: 'Mississippi (EEUU)' },
+  // Zenda
+  'zenda':           { votes: 145,  regionName: 'Eslovaquia occidental' },
+  'tlön':            { votes: 189,  regionName: 'Argentina / Cono Sur' },
+  'uqbar':           { votes: 167,  regionName: 'Chile / Cono Sur' },
+  // Ataque a los titanes
+
   'hobbiton':        { votes: 1842, regionName: 'Midlands inglesas (Inglaterra)' },
   'la comarca':      { votes: 1842, regionName: 'Midlands inglesas (Inglaterra)' },
   'mordor':          { votes: 2103, regionName: 'costa norte del Mar Negro' },
@@ -1620,6 +1729,8 @@ const COMMUNITY_POSITIONS = {
   'kazlunn':         { votes: 201,  regionName: 'Highlands escocesas' },
   'bosque de awa':   { votes: 178,  regionName: 'Selva Negra, Alemania' },
   'awinor':          { votes: 143,  regionName: 'Islandia' },
+  'gilead':          { votes: 876,  regionName: 'Boston, Massachusetts (EEUU)' },
+  'panem':           { votes: 654,  regionName: 'Washington D.C. (EEUU)' },
   'westeros':        { votes: 2891, regionName: 'Islas Británicas e Irlanda' },
   'narnia':          { votes: 1203, regionName: 'Inglaterra rural' },
   'comala':          { votes: 445,  regionName: 'Jalisco, México' },
