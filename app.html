@@ -166,6 +166,17 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 /* FICTIONAL PLACE MODAL */
 .fictional-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.55); z-index: 9000; display: none; align-items: center; justify-content: center; }
 .fictional-overlay.visible { display: flex; }
+.disambig-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.55); z-index: 9100; display: none; align-items: center; justify-content: center; }
+.disambig-overlay.visible { display: flex; }
+.disambig-modal { background: var(--white); border-radius: 12px; padding: 1.5rem 1.6rem; max-width: 400px; width: 92%; box-shadow: 0 12px 44px rgba(0,0,0,0.18); font-family: 'Inter', sans-serif; }
+.disambig-modal h3 { font-family: 'Instrument Serif', serif; font-size: 1.15rem; color: var(--ink); margin-bottom: 0.35rem; }
+.disambig-modal p { font-size: 0.78rem; color: var(--muted); margin-bottom: 1rem; line-height: 1.5; }
+.disambig-option { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.85rem; border: 0.5px solid var(--line); border-radius: 8px; margin-bottom: 0.5rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; background: var(--white); width: 100%; text-align: left; font-family: 'Inter', sans-serif; }
+.disambig-option:hover { border-color: var(--teal); background: rgba(29,158,117,0.04); }
+.disambig-option-name { font-size: 0.88rem; color: var(--ink); font-weight: 500; display: block; }
+.disambig-option-detail { font-size: 0.72rem; color: var(--muted); display: block; margin-top: 1px; }
+.disambig-cancel { margin-top: 0.5rem; width: 100%; padding: 0.55rem; background: none; border: 0.5px solid var(--line); border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 0.8rem; color: var(--muted); cursor: pointer; }
+.disambig-cancel:hover { border-color: var(--ink); color: var(--ink); }
 .fictional-modal { background: var(--white); border-radius: 12px; padding: 1.5rem 1.6rem; max-width: 400px; width: 92%; box-shadow: 0 12px 44px rgba(0,0,0,0.18); font-family: 'Inter', sans-serif; }
 .fictional-modal h3 { font-family: 'Instrument Serif', serif; font-size: 1.2rem; color: var(--ink); margin-bottom: 1rem; }
 .fictional-modal h3 span { color: #e8913c; }
@@ -923,17 +934,40 @@ async function geocode(place, askUser = false) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000); // 5 segundos máximo
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1&addressdetails=1`, {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=5&addressdetails=1`, {
       headers: { 'Accept-Language': 'es' },
       signal: controller.signal
     });
     clearTimeout(timeout);
     const d = await r.json();
-    if (d.length > 0) {
-      const country = d[0].address ? (d[0].address.country || '') : '';
-      const countryCode = d[0].address ? (d[0].address.country_code || '').toUpperCase() : '';
-      return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon), fictional: false, country, countryCode };
+    if (d.length === 0) return null;
+
+    // Un candidato por país (el mejor de cada uno)
+    const byCountry = {};
+    for (const r of d) {
+      const cc = r.address && r.address.country_code;
+      if (cc && !byCountry[cc]) byCountry[cc] = r;
     }
+    const candidates = Object.values(byCountry);
+
+    // Detectar ambigüedad: más de un país distinto
+    const needsPicker = candidates.length > 1;
+
+    if (needsPicker) {
+      return new Promise(resolve => {
+        openDisambigModal(place, candidates, (chosen) => {
+          if (!chosen) { resolve(null); return; }
+          const country = chosen.address ? (chosen.address.country || '') : '';
+          const countryCode = chosen.address ? (chosen.address.country_code || '').toUpperCase() : '';
+          resolve({ lat: parseFloat(chosen.lat), lng: parseFloat(chosen.lon), fictional: false, country, countryCode });
+        });
+      });
+    }
+
+    const best = candidates[0];
+    const country = best.address ? (best.address.country || '') : '';
+    const countryCode = best.address ? (best.address.country_code || '').toUpperCase() : '';
+    return { lat: parseFloat(best.lat), lng: parseFloat(best.lon), fictional: false, country, countryCode };
   } catch(e) {}
   return null;
 }
@@ -1596,6 +1630,34 @@ function openFictionalModal(placeKey, onResolve) {
 function closeFictionalModal() {
   document.getElementById('fictional-overlay').classList.remove('visible');
   fictionalPending = null;
+}
+
+let disambigPending = null;
+
+function openDisambigModal(placeName, candidates, onResolve) {
+  disambigPending = { onResolve };
+  const overlay = document.getElementById('disambig-overlay');
+  const title = document.getElementById('disambig-title');
+  const list = document.getElementById('disambig-list');
+  title.textContent = placeName;
+  list.innerHTML = '';
+  candidates.forEach((c, i) => {
+    const addr = c.address || {};
+    const parts = [addr.city || addr.town || addr.village || addr.municipality || c.name, addr.state || addr.county, addr.country].filter(Boolean);
+    const label = parts[0] || c.display_name;
+    const detail = parts.slice(1).join(', ');
+    const btn = document.createElement('button');
+    btn.className = 'disambig-option';
+    btn.innerHTML = `<span><span class="disambig-option-name">${label}</span><span class="disambig-option-detail">${detail}</span></span>`;
+    btn.onclick = () => { overlay.classList.remove('visible'); disambigPending.onResolve(c); disambigPending = null; };
+    list.appendChild(btn);
+  });
+  overlay.classList.add('visible');
+}
+
+function closeDisambigModal() {
+  document.getElementById('disambig-overlay').classList.remove('visible');
+  if (disambigPending) { disambigPending.onResolve(null); disambigPending = null; }
 }
 
 function useCommunityPosition() {
@@ -2835,6 +2897,14 @@ window.addEventListener('load', () => {
 </div>
 
 
+<div class="disambig-overlay" id="disambig-overlay">
+  <div class="disambig-modal">
+    <h3 id="disambig-title"></h3>
+    <p>Encontramos este nombre en varios lugares. ¿Cuál es tu destino?</p>
+    <div id="disambig-list"></div>
+    <button class="disambig-cancel" onclick="closeDisambigModal()">Cancelar</button>
+  </div>
+</div>
 <div class="fictional-overlay" id="fictional-overlay">
   <div class="fictional-modal">
     <h3>✦ <span id="fic-place-name"></span></h3>
