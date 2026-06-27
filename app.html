@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -182,6 +183,26 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .disambig-option-detail { font-size: 0.72rem; color: var(--muted); display: block; margin-top: 1px; }
 .disambig-cancel { margin-top: 0.5rem; width: 100%; padding: 0.55rem; background: none; border: 0.5px solid var(--line); border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 0.8rem; color: var(--muted); cursor: pointer; }
 .disambig-cancel:hover { border-color: var(--ink); color: var(--ink); }
+/* AUTH */
+.auth-btn { font-size:0.65rem; font-family:'Inter',sans-serif; font-weight:500; color:var(--muted); background:none; border:0.5px solid var(--line); border-radius:5px; padding:0.25rem 0.55rem; cursor:pointer; letter-spacing:0.03em; transition:border-color 0.15s, color 0.15s; white-space:nowrap; }
+.auth-btn:hover { border-color:var(--teal); color:var(--teal); }
+.auth-user { font-size:0.62rem; font-family:'Inter',sans-serif; color:var(--muted); display:flex; align-items:center; gap:0.4rem; }
+.auth-user-dot { width:6px; height:6px; border-radius:50%; background:var(--teal); flex-shrink:0; }
+.auth-overlay { position:fixed; inset:0; background:rgba(26,26,24,0.55); z-index:9200; display:none; align-items:center; justify-content:center; }
+.auth-overlay.visible { display:flex; }
+.auth-modal { background:var(--white); border-radius:12px; padding:1.75rem 1.8rem; max-width:380px; width:92%; box-shadow:0 12px 44px rgba(0,0,0,0.18); font-family:'Inter',sans-serif; }
+.auth-modal h3 { font-family:'Instrument Serif',serif; font-size:1.3rem; color:var(--ink); margin-bottom:0.35rem; }
+.auth-modal p { font-size:0.78rem; color:var(--muted); margin-bottom:1.25rem; line-height:1.55; }
+.auth-modal input { width:100%; padding:0.55rem 0.75rem; border:0.5px solid var(--line); border-radius:6px; font-family:'Inter',sans-serif; font-size:0.85rem; color:var(--ink); outline:none; margin-bottom:0.75rem; transition:border-color 0.15s; }
+.auth-modal input:focus { border-color:var(--teal); }
+.auth-modal-actions { display:flex; gap:0.5rem; }
+.auth-submit { flex:1; padding:0.6rem; background:var(--teal); color:white; border:none; border-radius:6px; font-family:'Inter',sans-serif; font-size:0.83rem; font-weight:500; cursor:pointer; transition:background 0.15s; }
+.auth-submit:hover { background:var(--forest); }
+.auth-submit:disabled { opacity:0.6; cursor:default; }
+.auth-cancel { padding:0.6rem 0.85rem; background:none; border:0.5px solid var(--line); border-radius:6px; font-family:'Inter',sans-serif; font-size:0.83rem; color:var(--muted); cursor:pointer; }
+.auth-msg { font-size:0.75rem; margin-top:0.6rem; min-height:1.2em; line-height:1.4; }
+.auth-msg.ok { color:var(--teal); }
+.auth-msg.err { color:#e05555; }
 .fictional-modal { background: var(--white); border-radius: 12px; padding: 1.5rem 1.6rem; max-width: 400px; width: 92%; box-shadow: 0 12px 44px rgba(0,0,0,0.18); font-family: 'Inter', sans-serif; }
 .fictional-modal h3 { font-family: 'Instrument Serif', serif; font-size: 1.2rem; color: var(--ink); margin-bottom: 1rem; }
 .fictional-modal h3 span { color: #e8913c; }
@@ -611,7 +632,10 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="logo">Leer <em>es</em> viajar</div>
-      <span style="font-family:'Inter',sans-serif;font-size:0.58rem;font-weight:600;letter-spacing:0.12em;background:rgba(29,158,117,0.08);border:0.5px solid rgba(29,158,117,0.3);color:var(--teal);padding:0.2rem 0.45rem;border-radius:5px;font-style:normal;margin-top:0.3rem;">BETA</span>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;">
+        <span style="font-family:'Inter',sans-serif;font-size:0.58rem;font-weight:600;letter-spacing:0.12em;background:rgba(29,158,117,0.08);border:0.5px solid rgba(29,158,117,0.3);color:var(--teal);padding:0.2rem 0.45rem;border-radius:5px;font-style:normal;">BETA</span>
+        <div id="auth-header"></div>
+      </div>
     </div>
     <div class="stats-bar">
       <div class="stat"><div class="stat-val" id="stat-places">0</div><div class="stat-label">destinos</div></div>
@@ -819,6 +843,118 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 </div>
 
 <script>
+// ===================== SUPABASE =====================
+const SUPABASE_URL = 'https://mvmpxbyflklqcmunmywq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_qwwBhGzS4PiJs3-JxH9C5g_X3lfFNnr';
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser = null;
+let saveTimeout = null;
+
+async function initAuth() {
+  const { data: { session } } = await supa.auth.getSession();
+  if (session) { currentUser = session.user; }
+  renderAuthHeader();
+  supa.auth.onAuthStateChange((_event, session) => {
+    currentUser = session ? session.user : null;
+    renderAuthHeader();
+    if (currentUser) loadFromCloud();
+  });
+}
+
+function renderAuthHeader() {
+  const el = document.getElementById('auth-header');
+  if (!el) return;
+  if (currentUser) {
+    const email = currentUser.email || '';
+    const short = email.length > 18 ? email.slice(0, 16) + '…' : email;
+    el.innerHTML = `<div class="auth-user"><div class="auth-user-dot"></div><span>${short}</span><button class="auth-btn" onclick="signOut()">Salir</button></div>`;
+  } else {
+    el.innerHTML = `<button class="auth-btn" onclick="openAuthModal()">Guardar viajes ↗</button>`;
+  }
+}
+
+function openAuthModal() {
+  document.getElementById('auth-overlay').classList.add('visible');
+  document.getElementById('auth-email').value = '';
+  document.getElementById('auth-msg').textContent = '';
+  document.getElementById('auth-msg').className = 'auth-msg';
+  document.getElementById('auth-submit-btn').disabled = false;
+  document.getElementById('auth-submit-btn').textContent = 'Enviar enlace';
+  setTimeout(() => document.getElementById('auth-email').focus(), 100);
+}
+
+function closeAuthModal() {
+  document.getElementById('auth-overlay').classList.remove('visible');
+}
+
+async function sendMagicLink() {
+  const email = document.getElementById('auth-email').value.trim();
+  const msg = document.getElementById('auth-msg');
+  const btn = document.getElementById('auth-submit-btn');
+  if (!email || !email.includes('@')) {
+    msg.textContent = 'Introduce un email válido.';
+    msg.className = 'auth-msg err';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+  msg.textContent = '';
+  const { error } = await supa.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.href }
+  });
+  if (error) {
+    msg.textContent = 'Error al enviar. Inténtalo de nuevo.';
+    msg.className = 'auth-msg err';
+    btn.disabled = false;
+    btn.textContent = 'Enviar enlace';
+  } else {
+    msg.textContent = '✓ Enlace enviado. Revisa tu email y pulsa el enlace para entrar.';
+    msg.className = 'auth-msg ok';
+    btn.textContent = 'Enviado';
+  }
+}
+
+async function signOut() {
+  await supa.auth.signOut();
+  currentUser = null;
+  renderAuthHeader();
+}
+
+async function saveToCloud() {
+  if (!currentUser) return;
+  const data = { origin, entries };
+  const { error } = await supa
+    .from('trips')
+    .upsert({ user_id: currentUser.id, data, updated_at: new Date().toISOString() },
+             { onConflict: 'user_id' });
+  if (error) console.warn('Error guardando en la nube:', error.message);
+}
+
+async function loadFromCloud() {
+  if (!currentUser) return;
+  const { data, error } = await supa
+    .from('trips')
+    .select('data')
+    .eq('user_id', currentUser.id)
+    .single();
+  if (error || !data) return;
+  const d = data.data;
+  if (d.origin) {
+    origin = d.origin;
+    document.getElementById('origin-name').textContent = origin.name;
+    addOriginMarker();
+    map.setView([origin.lat, origin.lng], 4);
+  }
+  if (d.entries && d.entries.length > 0) {
+    entries = d.entries;
+    sortedFiltered().forEach(en => { drawRoute(en); addDestMarker(en); });
+    migrateDiary();
+    updateList(); updateStats();
+  }
+  updateOriginNarrative();
+}
+
 // ===================== STATE =====================
 let origin = null;
 let entries = [];
@@ -1463,6 +1599,11 @@ function onDateChange(val) {
 function saveState() {
   localStorage.setItem('lev_origin', JSON.stringify(origin));
   localStorage.setItem('lev_entries', JSON.stringify(entries));
+  // Sync to cloud with debounce (wait 1.5s after last change)
+  if (currentUser) {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveToCloud, 1500);
+  }
 }
 function loadState() {
   try {
@@ -2926,13 +3067,16 @@ function startActivityStrip() {
 }
 
 // ===================== INIT =====================
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
   initDate();
   loadState();
   drawCommunityRoutes();
   startActivityStrip();
   initOnboarding();
   initMobile();
+  await initAuth();
+  // Si hay sesión activa, los datos de la nube sobreescriben el localStorage
+  if (currentUser) await loadFromCloud();
   if (!origin) {
     document.getElementById('origin-input-wrap').classList.add('visible');
     if (!isMobile()) document.getElementById('origin-input').focus();
@@ -2955,6 +3099,19 @@ window.addEventListener('load', () => {
 </div>
 
 
+<!-- AUTH MODAL -->
+<div class="auth-overlay" id="auth-overlay" onclick="if(event.target===this) closeAuthModal()">
+  <div class="auth-modal">
+    <h3>Guardar mis viajes</h3>
+    <p>Introduce tu email y te enviamos un enlace mágico, sin contraseña.</p>
+    <input type="email" id="auth-email" placeholder="tu@email.com" onkeydown="if(event.key==='Enter') sendMagicLink()"/>
+    <div class="auth-modal-actions">
+      <button class="auth-submit" id="auth-submit-btn" onclick="sendMagicLink()">Enviar enlace</button>
+      <button class="auth-cancel" onclick="closeAuthModal()">Cancelar</button>
+    </div>
+    <div class="auth-msg" id="auth-msg"></div>
+  </div>
+</div>
 <div class="disambig-overlay" id="disambig-overlay">
   <div class="disambig-modal">
     <h3 id="disambig-title"></h3>
