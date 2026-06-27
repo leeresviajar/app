@@ -266,8 +266,8 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .export-period-select:focus { border-color: var(--teal); }
 
 /* Preview canvas */
-.export-preview-wrap { background: var(--paper); border: 0.5px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 1rem; position: relative; min-height: 180px; display: flex; align-items: center; justify-content: center; }
-.export-preview-wrap canvas { max-width: 100%; display: block; border-radius: 6px; }
+.export-preview-wrap { background: transparent; border: none; overflow: visible; margin: 0.15rem 0 1.1rem; position: relative; min-height: 200px; display: flex; align-items: center; justify-content: center; padding: 0.6rem 0; }
+.export-preview-wrap canvas { max-width: 100%; display: block; border-radius: 9px; border: 0.5px solid var(--line); box-shadow: 0 10px 30px rgba(26,26,24,0.15), 0 2px 6px rgba(26,26,24,0.08); }
 .export-preview-loading { color: var(--muted); font-size: 0.8rem; position: absolute; }
 
 /* Frase editable (solo modo wrapped) */
@@ -688,15 +688,9 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
     <div class="export-modal-body">
       <div class="export-group-label">Qué mostrar</div>
       <div class="export-modes">
-        <button class="export-mode-btn active" onclick="setExportMode('stats')" id="em-stats">
-          <span class="em-icon">📊</span>Estadísticas
-        </button>
-        <button class="export-mode-btn" onclick="setExportMode('books')" id="em-books">
-          <span class="em-icon">📚</span>Lecturas
-        </button>
-        <button class="export-mode-btn" onclick="setExportMode('wrapped')" id="em-wrapped">
-          <span class="em-icon">✨</span>Wrapped
-        </button>
+        <button class="export-mode-btn active" onclick="setExportMode('stats')" id="em-stats">Estadísticas</button>
+        <button class="export-mode-btn" onclick="setExportMode('books')" id="em-books">Lecturas</button>
+        <button class="export-mode-btn" onclick="setExportMode('wrapped')" id="em-wrapped">Wrapped</button>
       </div>
       <div class="export-group-label">Formato</div>
       <div class="export-formats">
@@ -1910,7 +1904,7 @@ async function renderExportPreview() {
 
   // Escalar para preview
   const previewCanvas = document.createElement('canvas');
-  const scale = Math.min(wrap.clientWidth / c.width, 220 / c.height);
+  const scale = Math.min(wrap.clientWidth / c.width, 250 / c.height);
   previewCanvas.width  = c.width  * scale;
   previewCanvas.height = c.height * scale;
   const pctx = previewCanvas.getContext('2d');
@@ -1948,16 +1942,16 @@ async function buildExportCanvas() {
     ctx.closePath();
   }
 
-  // ── Fondo: gradiente forestal oscuro ────────────────────────────────
+  // ── Fondo: papel claro (Concepto B) ─────────────────────────────────
   const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0,   '#0d2318');
-  bg.addColorStop(0.5, '#1a3a2a');
-  bg.addColorStop(1,   '#0f2a1e');
+  bg.addColorStop(0,   '#faf8f4');
+  bg.addColorStop(0.5, '#f5f2ec');
+  bg.addColorStop(1,   '#f2eee7');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
   // Textura sutil: líneas de latitud/longitud fantasma
-  ctx.strokeStyle = 'rgba(159,217,192,0.05)';
+  ctx.strokeStyle = 'rgba(29,158,117,0.06)';
   ctx.lineWidth = 1;
   for (let x = 0; x <= W; x += W/8) {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
@@ -1971,6 +1965,20 @@ async function buildExportCanvas() {
   ctx.lineWidth = 1.5;
   for (const r of [180, 300, 420]) {
     ctx.beginPath(); ctx.arc(W/2, H*0.42, r, 0, Math.PI*2); ctx.stroke();
+  }
+
+  // ── Logo de marca con "es" en teal (centrado) ───────────────────────
+  function drawBrandLogo(cx, cy, size) {
+    ctx.font = `italic ${size}px Georgia, serif`;
+    ctx.textAlign = 'left';
+    const w1 = ctx.measureText('Leer ').width;
+    const w2 = ctx.measureText('es').width;
+    const w3 = ctx.measureText(' viajar').width;
+    let x = cx - (w1 + w2 + w3) / 2;
+    ctx.fillStyle = '#1a1a18'; ctx.fillText('Leer ', x, cy); x += w1;
+    ctx.fillStyle = '#1d9e75'; ctx.fillText('es', x, cy);     x += w2;
+    ctx.fillStyle = '#1a1a18'; ctx.fillText(' viajar', x, cy);
+    ctx.textAlign = 'center';
   }
 
   // ── Stats (misma lógica que la barra lateral: títulos únicos + periodo elegido) ──
@@ -1995,23 +2003,21 @@ async function buildExportCanvas() {
     ctx.translate(0, offsetY);
 
     // ── Logo arriba ────────────────────────────────────────────────────
-    ctx.fillStyle = '#9fd9c0';
-    ctx.font = 'italic 28px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Leer es viajar', W/2, 72);
+    drawBrandLogo(W/2, 72, 28);
 
-    ctx.fillStyle = 'rgba(159,217,192,0.4)';
+    ctx.fillStyle = '#9a948d';
     ctx.font = '500 13px Inter, sans-serif';
     ctx.letterSpacing = '0.12em';
+    ctx.textAlign = 'center';
     ctx.fillText(exportPeriodSubtitle().toUpperCase(), W/2, 100);
 
     // ── Número grande: km ──────────────────────────────────────────────
-    ctx.fillStyle = '#faf7f2';
+    ctx.fillStyle = '#1a1a18';
     ctx.font = 'bold 110px Georgia, serif';
     ctx.textAlign = 'center';
     ctx.fillText(km.toLocaleString(), W/2, 260);
 
-    ctx.fillStyle = 'rgba(159,217,192,0.7)';
+    ctx.fillStyle = '#1d9e75';
     ctx.font = '400 20px Inter, sans-serif';
     ctx.fillText('KILÓMETROS LEÍDOS', W/2, 298);
 
@@ -2027,9 +2033,9 @@ async function buildExportCanvas() {
 
     // ── Grid de stats secundarias ──────────────────────────────────────
     const stats = [
-      { val: books,    label: books === 1 ? 'libro' : 'libros' },
       { val: places,   label: places === 1 ? 'destino' : 'destinos' },
       { val: countries,label: countries === 1 ? 'país' : 'países' },
+      { val: books,    label: books === 1 ? 'libro' : 'libros' },
       { val: fictional,label: 'lugares imaginarios' },
       { val: pioneers, label: pioneers === 1 ? 'primera llegada' : 'primeras llegadas' },
     ];
@@ -2040,18 +2046,18 @@ async function buildExportCanvas() {
       const x = colW * i + colW / 2;
       // Tarjetita
       roundRect(colW*i + 20, statY - 55, colW - 40, 130, 10);
-      ctx.fillStyle = 'rgba(29,158,117,0.08)';
+      ctx.fillStyle = 'rgba(29,158,117,0.05)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(29,158,117,0.2)';
+      ctx.strokeStyle = 'rgba(29,158,117,0.18)';
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      ctx.fillStyle = '#9fd9c0';
+      ctx.fillStyle = '#0f6e56';
       ctx.font = 'bold 44px Georgia, serif';
       ctx.textAlign = 'center';
       ctx.fillText(String(s.val), x, statY + 8);
 
-      ctx.fillStyle = 'rgba(159,217,192,0.55)';
+      ctx.fillStyle = '#9a948d';
       ctx.font = '400 12px Inter, sans-serif';
       const labelLines = s.label.split('\n');
       labelLines.forEach((l, li) => ctx.fillText(l.toUpperCase(), x, statY + 30 + li*16));
@@ -2059,12 +2065,13 @@ async function buildExportCanvas() {
 
     // ── Libros del año ─────────────────────────────────────────────────
     if (bookList.length) {
-      ctx.fillStyle = 'rgba(159,217,192,0.35)';
+      ctx.fillStyle = '#b8b2a8';
       ctx.font = '400 12px Inter, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('LECTURAS', W/2, 610);
 
       ctx.fillStyle = 'rgba(250,247,242,0.7)';
+      ctx.fillStyle = '#55504a';
       ctx.font = 'italic 17px Georgia, serif';
       bookList.forEach((b, i) => {
         const text = b.length > 42 ? b.slice(0,40)+'…' : b;
@@ -2080,12 +2087,12 @@ async function buildExportCanvas() {
       '"Cada libro, un pasaporte."',
       '"Sin maletas. Sin límites."',
     ];
-    ctx.fillStyle = 'rgba(29,158,117,0.6)';
+    ctx.fillStyle = 'rgba(29,158,117,0.75)';
     ctx.font = 'italic 15px Georgia, serif';
     ctx.textAlign = 'center';
     ctx.fillText(taglines[books % taglines.length], W/2, H - 50);
 
-    ctx.fillStyle = 'rgba(159,217,192,0.25)';
+    ctx.fillStyle = '#b8b2a8';
     ctx.font = '400 12px Inter, sans-serif';
     ctx.fillText('leeresviajar.app', W/2, H - 25);
 
@@ -2117,17 +2124,15 @@ async function buildExportCanvas() {
     ctx.translate(0, offsetY);
 
     // Logo
-    ctx.fillStyle = '#9fd9c0';
-    ctx.font = 'italic 26px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Leer es viajar', W/2, 80);
+    drawBrandLogo(W/2, 80, 26);
 
-    ctx.fillStyle = 'rgba(159,217,192,0.4)';
+    ctx.fillStyle = '#9a948d';
     ctx.font = '500 12px Inter, sans-serif';
+    ctx.textAlign = 'center';
     ctx.fillText(exportWrappedSubtitle().toUpperCase(), W/2, 108);
 
     // Km grande
-    ctx.fillStyle = '#faf7f2';
+    ctx.fillStyle = '#1a1a18';
     ctx.font = 'bold 96px Georgia, serif';
     ctx.fillText(km.toLocaleString() + ' km', W/2, 270);
 
@@ -2139,33 +2144,33 @@ async function buildExportCanvas() {
 
     // Stats en fila
     const ws = [
-      {val: books, label: books===1?'libro':'libros'},
       {val: places, label: places===1?'destino':'destinos'},
       {val: countries, label: countries===1?'país':'países'},
+      {val: books, label: books===1?'libro':'libros'},
     ];
     const cww = W / ws.length;
     ws.forEach((s,i) => {
       const x = cww*i + cww/2;
-      ctx.fillStyle = '#9fd9c0';
+      ctx.fillStyle = '#0f6e56';
       ctx.font = 'bold 52px Georgia, serif';
       ctx.fillText(String(s.val), x, 400);
-      ctx.fillStyle = 'rgba(159,217,192,0.5)';
+      ctx.fillStyle = '#9a948d';
       ctx.font = '400 13px Inter, sans-serif';
       ctx.fillText(s.label.toUpperCase(), x, 428);
     });
 
     // Frase editable — centrada, con word-wrap
-    ctx.fillStyle = '#faf7f2';
+    ctx.fillStyle = '#1a1a18';
     ctx.font = 'italic 30px Georgia, serif';
     ctx.textAlign = 'center';
     lineArr.forEach((l,i) => ctx.fillText(l, W/2, phraseStartY + i*lineH));
 
     // Libros
     if (blist.length) {
-      ctx.fillStyle = 'rgba(159,217,192,0.35)';
+      ctx.fillStyle = '#b8b2a8';
       ctx.font = '400 12px Inter, sans-serif';
       ctx.fillText('ESTE AÑO LEÍSTE', W/2, listStartY);
-      ctx.fillStyle = 'rgba(250,247,242,0.65)';
+      ctx.fillStyle = '#55504a';
       ctx.font = 'italic 18px Georgia, serif';
       blist.forEach((b,i) => {
         const t = b.length>40 ? b.slice(0,38)+'…' : b;
@@ -2176,11 +2181,11 @@ async function buildExportCanvas() {
     ctx.restore();
 
     // Pie (anclado abajo)
-    ctx.fillStyle = 'rgba(29,158,117,0.5)';
+    ctx.fillStyle = 'rgba(29,158,117,0.75)';
     ctx.font = 'italic 14px Georgia, serif';
     ctx.textAlign = 'center';
     ctx.fillText('"Leer es la forma más barata de viajar."', W/2, H-50);
-    ctx.fillStyle = 'rgba(159,217,192,0.2)';
+    ctx.fillStyle = '#b8b2a8';
     ctx.font = '11px Inter, sans-serif';
     ctx.fillText('leeresviajar.app', W/2, H-25);
   }
