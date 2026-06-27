@@ -543,6 +543,47 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   font-family: 'Inter', sans-serif; transition: background 0.15s;
 }
 .diary-postal-btn:hover { background: rgba(29,158,117,0.15); }
+/* ===================== MÓVIL · Opción B (pestañas) ===================== */
+.mobile-tabbar { display: none; }
+
+@media (max-width: 768px) {
+  .app { display: block; height: auto; }
+  .map-wrap { position: fixed; inset: 0; z-index: 1; }
+  #map { width: 100%; height: 100%; }
+
+  .sidebar {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    z-index: 20; border-right: none; overflow-y: auto;
+    -webkit-overflow-scrolling: touch; padding-bottom: 80px;
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  }
+  .sidebar.mv-hidden { transform: translateY(100%); }
+  .sidebar-nav { display: none; }   /* la reemplaza la barra inferior */
+
+  .mobile-tabbar {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0;
+    height: 60px; z-index: 50;
+    background: rgba(255,255,255,0.96);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    border-top: 0.5px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mtab {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px; cursor: pointer;
+    font-family: 'Inter', sans-serif; font-size: 0.6rem; font-weight: 500;
+    color: var(--muted); background: none; border: none; padding: 0;
+  }
+  .mtab .mtab-ico { width: 21px; height: 21px; stroke: currentColor; fill: none; }
+  .mtab.active { color: var(--teal); }
+
+  /* overlays sobre el mapa */
+  .activity-strip { display: none; }
+  .map-legend { bottom: 76px; }
+  .map-title { top: 0.75rem; right: 0.75rem; }
+  .export-trigger { top: 0.75rem; left: 0.75rem; right: auto; }
+  .pioneer-toast, .badge-unlock-toast { left: 0.75rem; right: 0.75rem; max-width: none; }
+}
 </style>
 </head>
 <body>
@@ -678,6 +719,30 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 
   </div>
 </div>
+
+<!-- BARRA DE PESTAÑAS MÓVIL -->
+<nav class="mobile-tabbar" id="mobile-tabbar">
+  <button class="mtab active" id="mtab-map" onclick="setMobileView('map')">
+    <svg class="mtab-ico" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>
+    Mapa
+  </button>
+  <button class="mtab" id="mtab-anadir" onclick="setMobileView('anadir')">
+    <svg class="mtab-ico" viewBox="0 0 24 24" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    Añadir
+  </button>
+  <button class="mtab" id="mtab-viajes" onclick="setMobileView('viajes')">
+    <svg class="mtab-ico" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8 16.5 16 7.5" stroke-dasharray="2.5 2.5"/></svg>
+    Viajes
+  </button>
+  <button class="mtab" id="mtab-diario" onclick="setMobileView('diario')">
+    <svg class="mtab-ico" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4Z"/><path d="M5 4v14"/></svg>
+    Diario
+  </button>
+  <button class="mtab" id="mtab-logros" onclick="setMobileView('logros')">
+    <svg class="mtab-ico" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13 7 20l5-2.5L17 20l-1.5-7"/></svg>
+    Logros
+  </button>
+</nav>
 
 <div class="activity-strip">
   <div class="activity-content">
@@ -1356,14 +1421,54 @@ function onBookInput(val) {
   if (val.length < 3) { closeDropdown(); return; }
   acTimer = setTimeout(() => searchBooks(val), 350);
 }
+// Fetch con timeout (aborta si tarda demasiado)
+async function fetchJSON(url, ms = 5000) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: controller.signal });
+    if (!r.ok) throw new Error('status ' + r.status);
+    return await r.json();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// Normalizadores a un formato común { title, author, cover }
+function normOpenLibrary(d) {
+  return (d.docs || []).slice(0, 6).map(b => ({
+    title: b.title,
+    author: b.author_name ? b.author_name[0] : '',
+    cover: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-S.jpg` : null,
+  })).filter(b => b.title);
+}
+function normGoogleBooks(d) {
+  return (d.items || []).slice(0, 6).map(it => {
+    const v = it.volumeInfo || {};
+    let cover = v.imageLinks ? (v.imageLinks.smallThumbnail || v.imageLinks.thumbnail) : null;
+    if (cover) cover = cover.replace(/^http:\/\//, 'https://'); // evita contenido mixto en HTTPS
+    return { title: v.title || '', author: v.authors ? v.authors[0] : '', cover: cover || null };
+  }).filter(b => b.title);
+}
+
 async function searchBooks(q) {
   const dd = document.getElementById('ac-dropdown');
   dd.innerHTML = '<div class="ac-loading">Buscando…</div>'; dd.classList.add('visible');
+
+  // 1) Fuente principal: Open Library
   try {
-    const r = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=6&fields=title,author_name,cover_i`);
-    const d = await r.json();
-    acResults = (d.docs || []).slice(0, 6); acIndex = -1; renderDropdown();
-  } catch(e) { dd.innerHTML = '<div class="ac-loading">Sin conexión a Open Library</div>'; }
+    const d = await fetchJSON(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=6&fields=title,author_name,cover_i`);
+    const res = normOpenLibrary(d);
+    if (res.length) { acResults = res; acIndex = -1; renderDropdown(); return; }
+  } catch (e) { /* caída o lentitud: probamos el respaldo */ }
+
+  // 2) Respaldo: Google Books
+  try {
+    const d = await fetchJSON(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=6&country=ES`);
+    acResults = normGoogleBooks(d); acIndex = -1; renderDropdown(); return;
+  } catch (e) {
+    dd.innerHTML = '<div class="ac-loading" style="line-height:1.45">No se pudo conectar con el buscador.<br>Escribe el título a mano y sigue sin problema.</div>';
+  }
 }
 function renderDropdown() {
   const dd = document.getElementById('ac-dropdown');
@@ -1371,8 +1476,8 @@ function renderDropdown() {
   dd.innerHTML = '';
   acResults.forEach((book, i) => {
     const div = document.createElement('div'); div.className = 'ac-item';
-    const author = book.author_name ? book.author_name[0] : '';
-    const coverUrl = book.cover_i ? `https://covers.openlibrary.org/b/id/${book.cover_i}-S.jpg` : null;
+    const author = book.author || '';
+    const coverUrl = book.cover || null;
     div.innerHTML = `
       ${coverUrl ? `<img class="ac-cover" src="${coverUrl}" alt="" loading="lazy" onerror="this.style.display='none'">` : `<div class="ac-cover-placeholder">📖</div>`}
       <div><div class="ac-title">${book.title}</div>${author ? `<div class="ac-author">${author}</div>` : ''}</div>
@@ -1384,7 +1489,7 @@ function renderDropdown() {
 function selectBook(i) {
   const b = acResults[i]; if (!b) return;
   document.getElementById('book-title').value = b.title;
-  document.getElementById('book-author').value = b.author_name ? b.author_name[0] : '';
+  document.getElementById('book-author').value = b.author || '';
   closeDropdown(); document.getElementById('destination').focus();
 }
 function onBookKeydown(e) {
@@ -1538,6 +1643,33 @@ function switchTab(name) {
   });
   if (name === 'logros') { const lt = document.getElementById('tab-logros'); if (lt) lt.textContent = 'Logros'; renderBadges(); }
   if (name === 'diario') renderDiary();
+}
+
+// ===================== MÓVIL (Opción B: pestañas) =====================
+let mobileView = 'map';
+function isMobile() { return window.matchMedia('(max-width: 768px)').matches; }
+
+function setMobileView(view) {
+  mobileView = view;
+  const ids = { map:'mtab-map', anadir:'mtab-anadir', viajes:'mtab-viajes', diario:'mtab-diario', logros:'mtab-logros' };
+  Object.values(ids).forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('active'); });
+  const active = document.getElementById(ids[view]); if (active) active.classList.add('active');
+
+  const sidebar = document.querySelector('.sidebar');
+  if (view === 'map') {
+    sidebar.classList.add('mv-hidden');
+    // Leaflet necesita recalcular tamaño al volver al mapa
+    setTimeout(() => { if (typeof map !== 'undefined' && map.invalidateSize) map.invalidateSize(); }, 60);
+  } else {
+    sidebar.classList.remove('mv-hidden');
+    const tabMap = { anadir:'añadir', viajes:'itinerario', diario:'diario', logros:'logros' };
+    switchTab(tabMap[view]);
+    sidebar.scrollTop = 0;
+  }
+}
+
+function initMobile() {
+  if (isMobile()) setMobileView('map');
 }
 
 // ===================== PRIMERAS LLEGADAS =====================
@@ -2369,6 +2501,7 @@ let onboardingStep = 0;
 let onboardingActive = false;
 
 function initOnboarding() {
+  if (isMobile()) return;   // En móvil, el onboarding se abordará en una fase posterior
   if (localStorage.getItem('lev_onboarding_done')) return;
   showOnboardingStep(0);
 }
@@ -2675,9 +2808,10 @@ window.addEventListener('load', () => {
   drawCommunityRoutes();
   startActivityStrip();
   initOnboarding();
+  initMobile();
   if (!origin) {
     document.getElementById('origin-input-wrap').classList.add('visible');
-    document.getElementById('origin-input').focus();
+    if (!isMobile()) document.getElementById('origin-input').focus();
   }
 });
 </script>
@@ -2775,10 +2909,7 @@ window.addEventListener('load', () => {
 </div>
 
 <script>
-  if (window.innerWidth < 768) {
-    const w = document.getElementById('mobile-warning');
-    w.style.display = 'flex';
-  }
+  /* Soporte móvil activado (Opción B). La antigua pantalla de bloqueo queda desactivada. */
 </script>
 
 </body>
