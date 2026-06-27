@@ -553,10 +553,14 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 
   .sidebar {
     position: fixed; inset: 0; width: 100%; height: 100%;
-    z-index: 20; border-right: none; overflow-y: auto;
+    z-index: 20; border-right: none; overflow-y: auto; overflow-x: hidden;
     -webkit-overflow-scrolling: touch; padding-bottom: 80px;
     transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
   }
+  .sidebar-header { padding: 1.25rem 1.25rem 0.75rem; }
+  .stats-bar { padding: 0 1.25rem 1rem; }
+  .sidebar-nav { padding: 0 1.25rem; }
+  .tab-panel.active { padding: 1.25rem 1.25rem 1.5rem; }
   .sidebar.mv-hidden { transform: translateY(100%); }
   .sidebar-nav { display: none; }   /* la reemplaza la barra inferior */
 
