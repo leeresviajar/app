@@ -99,6 +99,10 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .dep-opt { flex: 1; padding: 0.5rem 0.4rem; font-size: 0.72rem; text-align: center; cursor: pointer; color: var(--muted); border: none; background: none; transition: all 0.15s; line-height: 1.3; font-family: 'Inter', sans-serif; }
 .dep-opt:not(:last-child) { border-right: 0.5px solid var(--line); }
 .dep-opt.active { background: var(--teal); color: white; }
+.dep-other-wrap { background: rgba(29,158,117,0.05); border-left: 2px solid var(--teal); border-radius: 0 8px 8px 0; padding: 0.6rem 0.75rem 0.55rem; margin-bottom: 0.7rem; animation: depSlide 0.22s ease; }
+.dep-other-label { display: block; font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 500; color: var(--teal); margin-bottom: 0.35rem; }
+.dep-other-wrap #dep-other-input { border-bottom-color: rgba(29,158,117,0.3); padding-top: 0; margin: 0; }
+@keyframes depSlide { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ADD BUTTON */
 .add-btn { width: 100%; padding: 0.7rem; background: var(--teal); color: white; border: none; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background 0.15s, transform 0.1s; }
@@ -597,12 +601,16 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
       <button class="date-change" onclick="toggleDatePicker()">cambiar</button>
       <input type="date" id="date-picker" style="display:none" onchange="onDateChange(this.value)"/>
     </div>
+    <div class="origin-label" style="margin-bottom:0.4rem">Sales desde</div>
     <div class="departure-toggle">
-      <button class="dep-opt active" id="dep-last" onclick="setDep('last')">Desde último<br>destino</button>
-      <button class="dep-opt" id="dep-home" onclick="setDep('home')">Desde<br>casa</button>
-      <button class="dep-opt" id="dep-other" onclick="setDep('other')">Otro<br>lugar…</button>
+      <button class="dep-opt active" id="dep-last" onclick="setDep('last')">Último<br>destino</button>
+      <button class="dep-opt" id="dep-home" onclick="setDep('home')">Casa</button>
+      <button class="dep-opt" id="dep-other" onclick="setDep('other')">Otro lugar</button>
     </div>
-    <input type="text" id="dep-other-input" placeholder="Lugar de partida…" style="display:none"/>
+    <div class="dep-other-wrap" id="dep-other-wrap" style="display:none">
+      <label class="dep-other-label" for="dep-other-input">¿Desde dónde sales esta vez?</label>
+      <input type="text" id="dep-other-input" placeholder="Escribe la ciudad de salida"/>
+    </div>
     <button class="add-btn" id="add-btn" onclick="addEntry()">+ Añadir al mapa</button>
   </div>
 
@@ -934,7 +942,11 @@ function addOriginMarker() {
 function setDep(mode) {
   departure = mode;
   ['last','home','other'].forEach(m => document.getElementById('dep-'+m).classList.toggle('active', m === mode));
-  document.getElementById('dep-other-input').style.display = mode === 'other' ? 'block' : 'none';
+  const wrap = document.getElementById('dep-other-wrap');
+  wrap.style.display = mode === 'other' ? 'block' : 'none';
+  if (mode === 'other') {
+    setTimeout(() => document.getElementById('dep-other-input').focus(), 60);
+  }
 }
 
 // ===================== ADD ENTRY =====================
