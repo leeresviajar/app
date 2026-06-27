@@ -142,6 +142,11 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .entry-edit-actions { display: flex; gap: 0.5rem; }
 .entry-edit-save { background: var(--teal); color: white; border: none; border-radius: 5px; padding: 0.4rem 0.85rem; font-size: 0.75rem; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
 .entry-edit-cancel { background: none; border: 0.5px solid var(--line); border-radius: 5px; padding: 0.4rem 0.75rem; font-size: 0.75rem; color: var(--muted); cursor: pointer; font-family: 'Inter', sans-serif; }
+.entry-edit-location { display: flex; gap: 0.4rem; }
+.entry-edit-location input { flex: 1; }
+.entry-edit-geo-btn { background: none; border: 0.5px solid var(--line); border-radius: 5px; padding: 0.4rem 0.65rem; font-size: 0.75rem; color: var(--muted); cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; flex-shrink: 0; }
+.entry-edit-geo-btn:hover { border-color: var(--teal); color: var(--teal); }
+.entry-edit-geo-status { font-size: 0.68rem; color: var(--muted); font-style: italic; margin-top: -0.2rem; min-height: 1em; }
 .confirm-delete { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; background: var(--white); border: 0.5px solid var(--line); border-radius: 8px; padding: 0.25rem 0.6rem; margin-left: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 .confirm-delete span { color: var(--muted); }
 .confirm-delete button { background: none; border: none; cursor: pointer; font-size: 0.7rem; font-family: 'Inter', sans-serif; padding: 0 0.25rem; transition: color 0.15s; }
@@ -1264,6 +1269,11 @@ function editEntry(i) {
     <input type="text" id="edit-book-${i}" value="${entry.book.replace(/"/g,'&quot;')}" placeholder="Título del libro…">
     <input type="text" id="edit-author-${i}" value="${(entry.author||'').replace(/"/g,'&quot;')}" placeholder="Autor (opcional)…">
     <input type="text" id="edit-note-${i}" value="${(entry.note||'').replace(/"/g,'&quot;')}" placeholder="Nota personal (opcional)…">
+    <div class="entry-edit-location">
+      <input type="text" id="edit-dest-${i}" value="${entry.dest.replace(/"/g,'&quot;')}" placeholder="Ubicación del destino…">
+      <button class="entry-edit-geo-btn" onclick="relocateEntry(${i})">Buscar</button>
+    </div>
+    <div class="entry-edit-geo-status" id="edit-geo-status-${i}"></div>
     <div class="entry-edit-actions">
       <button class="entry-edit-save" onclick="saveEditEntry(${i})">Guardar</button>
       <button class="entry-edit-cancel" onclick="cancelEdit(${i})">Cancelar</button>
@@ -1273,15 +1283,63 @@ function editEntry(i) {
   document.getElementById(`edit-book-${i}`).focus();
 }
 
-function saveEditEntry(i) {
+async function saveEditEntry(i) {
   const book = document.getElementById(`edit-book-${i}`).value.trim();
   const author = document.getElementById(`edit-author-${i}`).value.trim();
   const note = document.getElementById(`edit-note-${i}`).value.trim();
+  const destVal = document.getElementById(`edit-dest-${i}`).value.trim();
   if (!book) return;
+
+  // Si el destino cambió y no se ha buscado explícitamente, geocodificar ahora
+  const pending = editGeoPending[i];
+  if (!pending && destVal && destVal !== entries[i].dest) {
+    const status = document.getElementById(`edit-geo-status-${i}`);
+    const saveBtn = document.querySelector(`#delete-wrap-${i}`)?.closest('.journey-entry')?.querySelector('.entry-edit-save');
+    if (status) { status.textContent = 'Buscando…'; status.style.color = 'var(--muted)'; }
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Guardando…'; }
+    const geo = await geocode(destVal, true);
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Guardar'; }
+    if (!geo) {
+      if (status) { status.textContent = 'No encontré ese lugar. Prueba con otro nombre.'; status.style.color = 'var(--route)'; }
+      return;
+    }
+    editGeoPending[i] = { name: destVal, lat: geo.lat, lng: geo.lng, country: geo.country, countryCode: geo.countryCode, fictional: geo.fictional };
+  }
+
   entries[i].book = book;
   entries[i].author = author;
   entries[i].note = note;
+
+  const finalPending = editGeoPending[i];
+  if (finalPending) {
+    entries[i].dest = finalPending.name;
+    entries[i].destLat = finalPending.lat;
+    entries[i].destLng = finalPending.lng;
+    entries[i].country = finalPending.country;
+    entries[i].countryCode = finalPending.countryCode;
+    entries[i].fictional = finalPending.fictional || false;
+    entries[i].km = haversineKm(entries[i].fromLat, entries[i].fromLng, finalPending.lat, finalPending.lng);
+    delete editGeoPending[i];
+    redrawMap();
+  }
   updateList(); updateStats(); saveState();
+}
+
+const editGeoPending = {};
+
+async function relocateEntry(i) {
+  const val = document.getElementById(`edit-dest-${i}`).value.trim();
+  const status = document.getElementById(`edit-geo-status-${i}`);
+  if (!val) return;
+  status.textContent = 'Buscando…';
+  const geo = await geocode(val, true);
+  if (!geo) {
+    status.textContent = 'No encontré ese lugar. Prueba con otro nombre.';
+    return;
+  }
+  editGeoPending[i] = { name: val, lat: geo.lat, lng: geo.lng, country: geo.country, countryCode: geo.countryCode, fictional: geo.fictional };
+  status.textContent = `✓ ${val}${geo.country ? ' · ' + geo.country : ''} — guarda para aplicar`;
+  status.style.color = 'var(--teal)';
 }
 
 function cancelEdit(i) {
