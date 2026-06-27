@@ -322,15 +322,16 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   transition: opacity 0.4s ease;
 }
 .onboarding-highlight {
-  position: absolute;
+  position: fixed;
   border-radius: 10px;
   box-shadow: 0 0 0 4000px rgba(26,26,24,0.45);
   border: 2px solid var(--teal);
+  z-index: 8050;
   transition: all 0.5s cubic-bezier(0.4,0,0.2,1);
   pointer-events: none;
 }
 .onboarding-card {
-  position: absolute;
+  position: fixed;
   background: var(--white);
   border: 0.5px solid var(--line);
   border-radius: 12px;
@@ -338,6 +339,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   max-width: 300px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
   pointer-events: auto;
+  z-index: 8100;
   transition: all 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
   opacity: 0;
   top: -999px; left: -999px;
@@ -596,6 +598,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   }
   .mtab .mtab-ico { width: 21px; height: 21px; stroke: currentColor; fill: none; }
   .mtab.active { color: var(--teal); }
+  .onboarding-card { max-width: calc(100vw - 2rem); }
 
   /* overlays sobre el mapa */
   .activity-strip { display: none; }
@@ -2590,6 +2593,24 @@ function sendPostal() {
 }
 
 // ===================== ONBOARDING =====================
+const ONBOARDING_STEPS_MOBILE = [
+  {
+    label: 'Paso 1 de 3', icon: '🗺',
+    text: '<em>Esto es un mapa vivo.</em> Cada línea es el viaje de un lector — y se construye entre todos.',
+    target: '#map', placement: 'center'
+  },
+  {
+    label: 'Paso 2 de 3', icon: '✏️',
+    text: 'Toca <em>Añadir</em> para registrar un viaje: el libro, el destino y desde dónde partes.',
+    target: '#mtab-anadir', placement: 'top', pad: 6
+  },
+  {
+    label: 'Paso 3 de 3', icon: '📖',
+    text: 'Aquí viven tus rutas, tu diario de lectura y los logros que desbloqueas leyendo. <em>Buen viaje.</em>',
+    target: ['#mtab-viajes', '#mtab-diario', '#mtab-logros'], spanAll: true, placement: 'top', pad: 6
+  }
+];
+
 const ONBOARDING_STEPS = [
   {
     label: 'Paso 1 de 5',
@@ -2627,14 +2648,14 @@ let onboardingStep = 0;
 let onboardingActive = false;
 
 function initOnboarding() {
-  if (isMobile()) return;   // En móvil, el onboarding se abordará en una fase posterior
   if (localStorage.getItem('lev_onboarding_done')) return;
+  window._obSteps = isMobile() ? ONBOARDING_STEPS_MOBILE : ONBOARDING_STEPS;
   showOnboardingStep(0);
 }
 
 function showOnboardingStep(i) {
   const overlay = document.getElementById('onboarding-overlay');
-  const step = ONBOARDING_STEPS[i];
+  const step = window._obSteps[i];
 
   overlay.style.display = 'block';
   overlay.style.pointerEvents = 'auto';
@@ -2644,10 +2665,10 @@ function showOnboardingStep(i) {
   document.getElementById('onboarding-text').innerHTML =
     '<span style="font-size:1.4rem;display:block;margin-bottom:0.5rem;font-style:normal">' + step.icon + '</span>' + step.text;
   document.getElementById('onboarding-next').textContent =
-    i === ONBOARDING_STEPS.length - 1 ? '¡Empezar! →' : 'Siguiente →';
+    i === window._obSteps.length - 1 ? '¡Empezar! →' : 'Siguiente →';
 
   const dots = document.getElementById('onboarding-dots');
-  dots.innerHTML = ONBOARDING_STEPS.map((_, j) =>
+  dots.innerHTML = window._obSteps.map((_, j) =>
     '<div class="onboarding-dot' + (j === i ? ' active' : '') + '"></div>'
   ).join('');
 
@@ -2660,30 +2681,47 @@ function showOnboardingStep(i) {
 }
 
 function positionOnboarding(i, animate) {
-  const step = ONBOARDING_STEPS[i];
+  const step = window._obSteps[i];
   const highlight = document.getElementById('onboarding-highlight');
   const card = document.getElementById('onboarding-card');
   const vw = window.innerWidth, vh = window.innerHeight;
   const m = 16;
 
-  // Rectángulo del elemento a iluminar (primer candidato visible)
+  // Rectángulo del elemento a iluminar
   let hRect = null;
+  const pad = (step.pad != null) ? step.pad : 8;
   const selectors = Array.isArray(step.target) ? step.target : (step.target ? [step.target] : []);
-  let target = null;
-  for (const sel of selectors) {
-    const el = document.querySelector(sel);
-    if (el) {
+  if (step.spanAll) {
+    // Rectángulo que envuelve varios elementos
+    let u = null;
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (!el) continue;
       const r = el.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) { target = el; break; }
+      if (r.width <= 0 || r.height <= 0) continue;
+      if (!u) u = { top: r.top, left: r.left, right: r.right, bottom: r.bottom };
+      else { u.top = Math.min(u.top, r.top); u.left = Math.min(u.left, r.left); u.right = Math.max(u.right, r.right); u.bottom = Math.max(u.bottom, r.bottom); }
     }
-  }
-  if (target) {
-    const r = target.getBoundingClientRect();
-    const pad = (step.pad != null) ? step.pad : 8;
-    hRect = { top: r.top - pad, left: r.left - pad, width: r.width + pad * 2, height: r.height + pad * 2 };
+    if (u) hRect = { top: u.top - pad, left: u.left - pad, width: (u.right - u.left) + pad * 2, height: (u.bottom - u.top) + pad * 2 };
+  } else {
+    let target = null;
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el) { const r = el.getBoundingClientRect(); if (r.width > 0 && r.height > 0) { target = el; break; } }
+    }
+    if (target) {
+      const r = target.getBoundingClientRect();
+      hRect = { top: r.top - pad, left: r.left - pad, width: r.width + pad * 2, height: r.height + pad * 2 };
+    }
   }
 
   if (hRect) {
+    // Clampear dentro de los límites visibles de la pantalla
+    const clampedLeft = Math.max(0, hRect.left);
+    const clampedTop = Math.max(0, hRect.top);
+    const clampedRight = Math.min(vw, hRect.left + hRect.width);
+    const clampedBottom = Math.min(vh, hRect.top + hRect.height);
+    hRect = { top: clampedTop, left: clampedLeft, width: clampedRight - clampedLeft, height: clampedBottom - clampedTop };
     highlight.style.transition = animate ? 'all 0.45s cubic-bezier(0.4,0,0.2,1)' : 'none';
     highlight.style.display = 'block';
     highlight.style.top = hRect.top + 'px';
@@ -2708,9 +2746,13 @@ function positionOnboarding(i, animate) {
 
   let left, top;
   if (!hRect || step.placement === 'center') {
-    // Centrada en la zona del mapa
-    left = sbRight + (vw - sbRight) / 2 - cw / 2;
+    // Centrada en la zona del mapa (o pantalla completa en móvil)
+    left = isMobile() ? vw / 2 - cw / 2 : sbRight + (vw - sbRight) / 2 - cw / 2;
     top = vh / 2 - ch / 2;
+  } else if (step.placement === 'top') {
+    // Encima del elemento (móvil)
+    left = vw / 2 - cw / 2;
+    top = hRect.top - ch - m;
   } else if (step.placement === 'right') {
     // A la derecha del elemento iluminado, alineada verticalmente
     left = hRect.left + hRect.width + m;
@@ -2745,7 +2787,7 @@ window.addEventListener('resize', () => {
 });
 
 function nextOnboardingStep() {
-  if (onboardingStep < ONBOARDING_STEPS.length - 1) {
+  if (onboardingStep < window._obSteps.length - 1) {
     showOnboardingStep(onboardingStep + 1);
   } else {
     finishOnboarding();
