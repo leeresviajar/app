@@ -406,11 +406,18 @@ async function buildExportCanvas() {
 
 function downloadExport() {
   if (!exportCanvas) return;
+  const dataUrl = exportCanvas.toDataURL('image/png');
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) {
+    const win = window.open();
+    win.document.write(`<img src="${dataUrl}" style="max-width:100%;display:block;margin:auto"><p style="text-align:center;font-family:sans-serif;color:#888;font-size:14px;margin-top:12px">Mantén pulsada la imagen para guardarla en Fotos</p>`);
+    return;
+  }
   const link = document.createElement('a');
   const modeLabel = { stats: 'stats', books: 'lecturas', wrapped: 'wrapped' }[exportMode] || exportMode;
   const fmtLabel = { story: 'historia', feed: 'feed' }[exportFormat] || exportFormat;
   const periodLabel = exportPeriod === 'total' ? 'todo' : String(exportPeriodValue);
   link.download = `leer-es-viajar-${modeLabel}-${fmtLabel}-${periodLabel}.png`;
-  link.href = exportCanvas.toDataURL('image/png');
+  link.href = dataUrl;
   link.click();
 }
