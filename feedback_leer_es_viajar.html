@@ -340,14 +340,15 @@ textarea { min-height: 90px; line-height: 1.6; }
           <div class="inline-opt" onclick="selectOpt(this, 'n-libros')">2–3</div>
           <div class="inline-opt" onclick="selectOpt(this, 'n-libros')">4 o más</div>
         </div>
+        <input type="hidden" name="libros_count" id="libros-value">
       </div>
 
       <div class="question">
         <label class="q-label">¿Añadiste algún lugar ficticio (Hogwarts, Macondo, Arrakis…)?</label>
         <div class="options">
-          <label class="option"><input type="radio" name="ficticio"> <div class="option-text">Sí, lo probé<div class="option-sub">Y funcionó / y no lo encontré</div></div></label>
-          <label class="option"><input type="radio" name="ficticio"> <div class="option-text">No, no se me ocurrió</div></label>
-          <label class="option"><input type="radio" name="ficticio"> <div class="option-text">No sabía que se podía</div></label>
+          <label class="option"><input type="radio" name="ficticio" value="Sí, lo probé"> <div class="option-text">Sí, lo probé<div class="option-sub">Y funcionó / y no lo encontré</div></div></label>
+          <label class="option"><input type="radio" name="ficticio" value="No, no se me ocurrió"> <div class="option-text">No, no se me ocurrió</div></label>
+          <label class="option"><input type="radio" name="ficticio" value="No sabía que se podía"> <div class="option-text">No sabía que se podía</div></label>
         </div>
       </div>
 
@@ -373,43 +374,43 @@ textarea { min-height: 90px; line-height: 1.6; }
       <div class="question">
         <div class="checklist">
           <label class="check-item" onclick="toggleCheck(this)">
-            <input type="checkbox">
+            <input type="checkbox" name="visto[]" value="Rutas de comunidad">
             <div><div class="check-item-text">🗺 Rutas de comunidad</div><div class="check-item-sub">Las líneas verdes de otros lectores</div></div>
           </label>
           <label class="check-item" onclick="toggleCheck(this)">
-            <input type="checkbox">
+            <input type="checkbox" name="visto[]" value="Lugares ficticios">
             <div><div class="check-item-text">✦ Lugares ficticios</div><div class="check-item-sub">Hogwarts, Macondo, Arrakis…</div></div>
           </label>
           <label class="check-item" onclick="toggleCheck(this)">
-            <input type="checkbox">
+            <input type="checkbox" name="visto[]" value="Toggle de partida">
             <div><div class="check-item-text">🔄 Toggle de partida</div><div class="check-item-sub">Desde último destino / desde casa / otro lugar</div></div>
           </label>
           <label class="check-item" onclick="toggleCheck(this)">
-            <input type="checkbox">
+            <input type="checkbox" name="visto[]" value="Popups del mapa">
             <div><div class="check-item-text">📍 Popups del mapa</div><div class="check-item-sub">Al pinchar en un marcador o ruta</div></div>
           </label>
           <label class="check-item" onclick="toggleCheck(this)">
-            <input type="checkbox">
+            <input type="checkbox" name="visto[]" value="Diario">
             <div><div class="check-item-text">✍️ Diario</div><div class="check-item-sub">El registro de llegadas</div></div>
           </label>
           <label class="check-item" onclick="toggleCheck(this)">
-            <input type="checkbox">
+            <input type="checkbox" name="visto[]" value="Logros">
             <div><div class="check-item-text">🏅 Logros</div><div class="check-item-sub">Los retos desbloqueables</div></div>
           </label>
           <label class="check-item" onclick="toggleCheck(this)">
-            <input type="checkbox">
+            <input type="checkbox" name="visto[]" value="Postal">
             <div><div class="check-item-text">✉ Postal</div><div class="check-item-sub">Enviar una postal desde tu destino</div></div>
           </label>
           <label class="check-item" onclick="toggleCheck(this)">
-            <input type="checkbox">
+            <input type="checkbox" name="visto[]" value="Exportar">
             <div><div class="check-item-text">⬇ Exportar</div><div class="check-item-sub">Descargar tu mapa como imagen</div></div>
           </label>
           <label class="check-item" onclick="toggleCheck(this)">
-            <input type="checkbox">
+            <input type="checkbox" name="visto[]" value="Estadísticas">
             <div><div class="check-item-text">📊 Estadísticas</div><div class="check-item-sub">Km leídos, destinos, países…</div></div>
           </label>
           <label class="check-item" onclick="toggleCheck(this)">
-            <input type="checkbox">
+            <input type="checkbox" name="visto[]" value="Primera llegada">
             <div><div class="check-item-text">🔴 Primera llegada</div><div class="check-item-sub">El aviso de ser el primero en llegar a un lugar</div></div>
           </label>
         </div>
@@ -444,6 +445,7 @@ textarea { min-height: 90px; line-height: 1.6; }
             <div class="scale-btn" onclick="selectScale(this, 'nps')">9</div>
             <div class="scale-btn" onclick="selectScale(this, 'nps')">10</div>
           </div>
+          <input type="hidden" name="nps" id="nps-value">
           <div class="scale-labels"><span>Para nada</span><span>Sin dudarlo</span></div>
         </div>
       </div>
@@ -451,10 +453,10 @@ textarea { min-height: 90px; line-height: 1.6; }
       <div class="question">
         <label class="q-label">¿Crees que lo usarías habitualmente si estuviera disponible?</label>
         <div class="options">
-          <label class="option"><input type="radio" name="uso-habitual"> <div class="option-text">Sí, lo usaría regularmente</div></label>
-          <label class="option"><input type="radio" name="uso-habitual"> <div class="option-text">Quizás, dependería de cómo evolucione</div></label>
-          <label class="option"><input type="radio" name="uso-habitual"> <div class="option-text">Probablemente no</div></label>
-          <label class="option"><input type="radio" name="uso-habitual"> <div class="option-text">No, no es para mí</div></label>
+          <label class="option"><input type="radio" name="uso-habitual" value="Sí, lo usaría regularmente"> <div class="option-text">Sí, lo usaría regularmente</div></label>
+          <label class="option"><input type="radio" name="uso-habitual" value="Quizás, dependería de cómo evolucione"> <div class="option-text">Quizás, dependería de cómo evolucione</div></label>
+          <label class="option"><input type="radio" name="uso-habitual" value="Probablemente no"> <div class="option-text">Probablemente no</div></label>
+          <label class="option"><input type="radio" name="uso-habitual" value="No, no es para mí"> <div class="option-text">No, no es para mí</div></label>
         </div>
       </div>
 
@@ -520,11 +522,13 @@ textarea { min-height: 90px; line-height: 1.6; }
 function selectOpt(el, group) {
   el.closest('.inline-opts').querySelectorAll('.inline-opt').forEach(o => o.classList.remove('selected'));
   el.classList.add('selected');
+  if (group === 'n-libros') document.getElementById('libros-value').value = el.textContent.trim();
 }
 
 function selectScale(el, group) {
   el.closest('.scale-btns').querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
+  if (group === 'nps') document.getElementById('nps-value').value = el.textContent.trim();
 }
 
 function toggleCheck(el) {
