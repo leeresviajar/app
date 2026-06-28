@@ -230,6 +230,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .badge-card.unlocked .badge-name { color: var(--teal); }
 .badge-progress { font-size: 0.65rem; color: var(--teal); margin-top: 0.4rem; font-weight: 500; }
 .badges-section-title { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 1.25rem 0 0.6rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
+.badges-section-title:first-child { margin-top: 0; }
 .badges-section-title::after { content: ''; flex: 1; height: 0.5px; background: var(--line); }
 
 /* CELEBRACIÓN primer viajero */
