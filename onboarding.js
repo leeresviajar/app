@@ -124,7 +124,7 @@ function positionOnboarding(i, animate) {
     const clampedLeft = Math.max(0, hRect.left);
     const clampedTop = Math.max(0, hRect.top);
     const clampedRight = Math.min(vw, hRect.left + hRect.width);
-    const clampedBottom = Math.min(vh, hRect.top + hRect.height);
+    const clampedBottom = Math.min(window.innerHeight, hRect.top + hRect.height); // innerHeight completo, el highlight es position:fixed
     hRect = { top: clampedTop, left: clampedLeft, width: clampedRight - clampedLeft, height: clampedBottom - clampedTop };
     highlight.style.transition = animate ? 'all 0.45s cubic-bezier(0.4,0,0.2,1)' : 'none';
     highlight.style.display = 'block';
@@ -165,9 +165,7 @@ function positionOnboarding(i, animate) {
   }
 
   left = Math.max(m, Math.min(left, vw - cw - m));
-  // Para placement:top la card va encima del highlight — no clampear hacia abajo del highlight
-  const maxTop = (hRect && step.placement === 'top') ? hRect.top - ch - m : vh - ch - m;
-  top = Math.max(m, Math.min(top, maxTop));
+  top = Math.max(m, Math.min(top, vh - ch - m));
 
   card.style.left = left + 'px';
   card.style.top = top + 'px';
