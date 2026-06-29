@@ -165,7 +165,9 @@ function positionOnboarding(i, animate) {
   }
 
   left = Math.max(m, Math.min(left, vw - cw - m));
-  top = Math.max(m, Math.min(top, vh - ch - m));
+  // Para placement:top la card va encima del highlight — no clampear hacia abajo del highlight
+  const maxTop = (hRect && step.placement === 'top') ? hRect.top - ch - m : vh - ch - m;
+  top = Math.max(m, Math.min(top, maxTop));
 
   card.style.left = left + 'px';
   card.style.top = top + 'px';
