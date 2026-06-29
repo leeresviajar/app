@@ -188,7 +188,11 @@ function openFictionalModal(placeKey, onResolve) {
 
 function closeFictionalModal() {
   document.getElementById('fictional-overlay').classList.remove('visible');
-  fictionalPending = null;
+  if (fictionalPending) {
+    const { onResolve } = fictionalPending;
+    fictionalPending = null;
+    onResolve(null, null);
+  }
 }
 
 let disambigPending = null;

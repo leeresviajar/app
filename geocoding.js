@@ -71,6 +71,7 @@ async function geocode(place, askUser = false) {
         }
         return new Promise(resolve => {
           openFictionalModal(k, (lat, lng) => {
+            if (lat === null) { resolve(null); return; }
             resolve({ lat, lng, fictional: true, country: '', countryCode: '' });
           });
         });
