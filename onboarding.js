@@ -88,7 +88,10 @@ function positionOnboarding(i, animate) {
   const step = window._obSteps[i];
   const highlight = document.getElementById('onboarding-highlight');
   const card = document.getElementById('onboarding-card');
-  const vw = window.innerWidth, vh = window.innerHeight;
+  const vw = window.innerWidth;
+  const tabbar = document.getElementById('mobile-tabbar');
+  const tabbarH = (tabbar && getComputedStyle(tabbar).display !== 'none') ? tabbar.getBoundingClientRect().height : 0;
+  const vh = window.innerHeight - tabbarH;
   const m = 16;
 
   let hRect = null;
