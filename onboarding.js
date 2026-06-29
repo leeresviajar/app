@@ -124,7 +124,8 @@ function positionOnboarding(i, animate) {
     const clampedLeft = Math.max(0, hRect.left);
     const clampedTop = Math.max(0, hRect.top);
     const clampedRight = Math.min(vw, hRect.left + hRect.width);
-    const clampedBottom = Math.min(window.innerHeight, hRect.top + hRect.height); // innerHeight completo, el highlight es position:fixed
+    const highlightVh = step.placement === 'top' ? window.innerHeight : vh;
+    const clampedBottom = Math.min(highlightVh, hRect.top + hRect.height);
     hRect = { top: clampedTop, left: clampedLeft, width: clampedRight - clampedLeft, height: clampedBottom - clampedTop };
     highlight.style.transition = animate ? 'all 0.45s cubic-bezier(0.4,0,0.2,1)' : 'none';
     highlight.style.display = 'block';
