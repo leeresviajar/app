@@ -8,6 +8,10 @@
 <link rel="stylesheet" href="app.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/tabler-icons.min.css">
 <!-- Privacy-friendly analytics by Plausible -->
 <script async src="https://plausible.io/js/pa-uzN9px7T65J9Spx8vKFXp.js"></script>
 <script>
@@ -279,6 +283,77 @@
   </div>
 </div>
 
+<!-- AUTH CTA TOAST (aparece al añadir el primer libro, si no hay sesión) -->
+<div class="pioneer-toast" id="auth-cta-toast" style="cursor:default">
+  <div class="p-icon">✦</div>
+  <div>
+    <div class="p-title">Guarda tus rutas</div>
+    <div class="p-text">Crea un perfil para no perder tu mapa lector si cambias de dispositivo.</div>
+    <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+      <button onclick="openAuthFromCta()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:0.35rem 0.75rem;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;">Crear cuenta</button>
+      <button onclick="dismissAuthCtaToast()" style="background:none;border:none;color:var(--muted);font-size:0.75rem;cursor:pointer;font-family:inherit;">Ahora no</button>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="postal-overlay" id="auth-overlay" onclick="if(event.target===this) closeAuthModal()">
+  <div style="background:#ffffff; border-radius:16px; padding:2.5rem 1.75rem 2rem; max-width:400px; width:92%; margin:auto; position:relative; font-family:'Inter',sans-serif; color:#1a1a18;">
+    <button onclick="closeAuthModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.1rem;color:var(--muted);cursor:pointer;">✕</button>
+
+    <div style="text-align:center; margin-bottom:1.5rem;">
+      <div style="font-family:'Instrument Serif', serif; font-size:30px; line-height:1.1; color:#1a1a18;">Leer <span style="font-style:italic; color:#1d9e75;">es</span> viajar</div>
+    </div>
+
+    <div style="text-align:center; margin-bottom:1.5rem;">
+      <div id="auth-headline" style="font-family:'Instrument Serif', serif; font-style:italic; font-size:17px; color:#6f6a62;">Empieza a guardar tu mapa lector en la nube</div>
+    </div>
+
+    <div style="text-align:center; margin-bottom:1.5rem;">
+      <span id="auth-eyebrow" style="font-size:11px; letter-spacing:0.08em; color:#9a948d; font-weight:500;">· CREAR CUENTA</span>
+    </div>
+
+    <div style="display:flex; justify-content:center; gap:1.5rem; margin-bottom:1.5rem;">
+      <button id="auth-tab-login" onclick="setAuthMode('login')" class="auth-tab" style="background:none; border:none; padding:0 0 6px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; color:#9a948d; border-bottom:2px solid transparent; cursor:pointer;">Iniciar sesión</button>
+      <button id="auth-tab-signup" onclick="setAuthMode('signup')" class="auth-tab active" style="background:none; border:none; padding:0 0 6px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; color:#1a1a18; border-bottom:2px solid #1d9e75; cursor:pointer;">Registrarse</button>
+    </div>
+
+    <div id="auth-error" style="display:none; background:#fdf1ef; color:#c14b34; font-size:12px; padding:0.6rem 0.75rem; border-radius:6px; margin-bottom:1rem; text-align:center;"></div>
+
+    <button onclick="authSignInWithGoogle()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:11px; background:#ffffff; border:0.5px solid #ece8e1; border-radius:6px; font-family:'Inter',sans-serif; font-size:13.5px; color:#1a1a18; cursor:pointer; margin-bottom:1.5rem;">
+      <i class="ti ti-brand-google" style="font-size:16px;"></i>
+      <span id="auth-google-label">Registrarse con Google</span>
+    </button>
+
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:1.5rem;">
+      <div style="flex:1; height:0.5px; background:#ece8e1;"></div>
+      <span style="font-size:11px; color:#9a948d;">o</span>
+      <div style="flex:1; height:0.5px; background:#ece8e1;"></div>
+    </div>
+
+    <div style="margin-bottom:1.5rem;">
+      <label style="display:block; font-size:11px; letter-spacing:0.06em; color:#9a948d; font-weight:500; margin-bottom:8px;">EMAIL</label>
+      <input type="email" id="auth-email" placeholder="tu@email.com" style="width:100%; padding:0 0 10px; border:none; border-bottom:0.5px solid #d8d3ca; font-family:'Inter',sans-serif; font-size:16px; color:#1a1a18; background:transparent; outline:none;">
+    </div>
+
+    <div style="margin-bottom:0.5rem;">
+      <label style="display:block; font-size:11px; letter-spacing:0.06em; color:#9a948d; font-weight:500; margin-bottom:8px;">CONTRASEÑA</label>
+      <div style="position:relative;">
+        <input id="auth-password" type="password" placeholder="Tu contraseña" style="width:100%; padding:0 28px 10px 0; border:none; border-bottom:0.5px solid #d8d3ca; font-family:'Inter',sans-serif; font-size:16px; color:#1a1a18; background:transparent; outline:none;" onkeydown="if(event.key==='Enter') authSubmit()">
+        <i id="auth-eye" class="ti ti-eye" onclick="const p=document.getElementById('auth-password'); const show=p.type==='password'; p.type=show?'text':'password'; this.className=show?'ti ti-eye-off':'ti ti-eye';" style="position:absolute; right:0; bottom:10px; font-size:16px; color:#9a948d; cursor:pointer;"></i>
+      </div>
+    </div>
+
+    <div id="auth-forgot" style="text-align:right; margin-bottom:1.5rem; display:none;">
+      <span style="font-size:11.5px; color:#9a948d; cursor:pointer;">¿Olvidaste tu contraseña?</span>
+    </div>
+
+    <button id="auth-submit" onclick="authSubmit()" style="width:100%; padding:14px; background:#1d9e75; border:none; border-radius:8px; color:#ffffff; font-family:'Inter',sans-serif; font-size:14.5px; font-weight:700; cursor:pointer; margin-top:0.5rem;">Crear cuenta</button>
+
+    <div style="text-align:center; margin-top:1.25rem; font-size:11px; color:#9a948d; line-height:1.6; padding:0 0.5rem;">Sin cuenta, tus rutas viven solo en este dispositivo.</div>
+  </div>
+</div>
+
 <!-- POSTAL MODAL -->
 <div class="postal-overlay" id="postal-overlay" onclick="if(event.target===this) closePostal()">
   <div class="postal-modal" id="postal-modal">
@@ -324,6 +399,7 @@
 <!-- JS — orden de carga garantizado -->
 <script src="date.js"></script>
 <script src="state.js"></script>
+<script src="auth.js"></script>
 <script src="geocoding.js"></script>
 <script src="fictional.js"></script>
 <script src="map.js"></script>
@@ -340,7 +416,8 @@
 // ===================== INIT =====================
 window.addEventListener('load', async () => {
   initDate();
-  loadState();
+  await initAuth();
+  await loadState();
   drawCommunityRoutes();
   startActivityStrip();
   initOnboarding();

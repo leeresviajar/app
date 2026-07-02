@@ -112,12 +112,15 @@ async function addEntry() {
     };
     const pioneer = isPioneer(dest);
     if (pioneer) markDestinationKnown(dest);
+    entry.pioneer = pioneer;
 
+    const wasFirstEntry = entries.length === 0;
     entries.push(entry);
     redrawMap();
 
     addDiaryEntry(entry, pioneer);
     if (pioneer) showPioneerToast(dest);
+    if (wasFirstEntry) showAuthCtaToast();
 
     const stats = getBadgeStats();
     checkNewBadges(stats);
