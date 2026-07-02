@@ -26,6 +26,11 @@
       <div class="logo">Leer <em>es</em> viajar</div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;">
         <span style="font-family:'Inter',sans-serif;font-size:0.58rem;font-weight:600;letter-spacing:0.12em;background:rgba(29,158,117,0.08);border:0.5px solid rgba(29,158,117,0.3);color:var(--teal);padding:0.2rem 0.45rem;border-radius:5px;font-style:normal;">BETA</span>
+        <div id="user-badge" style="display:none;align-items:center;gap:0.35rem;font-family:'Inter',sans-serif;">
+          <span id="user-avatar" style="width:18px;height:18px;border-radius:50%;background:rgba(29,158,117,0.12);color:var(--teal);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.6rem;flex-shrink:0;"></span>
+          <span id="user-email" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.62rem;color:var(--muted);"></span>
+          <button onclick="authSignOut()" style="background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:0.62rem;font-family:inherit;padding:0;">Salir</button>
+        </div>
       </div>
     </div>
     <div class="stats-bar">

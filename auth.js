@@ -13,14 +13,90 @@ let authMode = 'signup'; // 'signup' | 'login'
 async function initAuth() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   currentUser = session ? session.user : null;
+  updateUserBadge();
 
-  supabaseClient.auth.onAuthStateChange((event, session) => {
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
     currentUser = session ? session.user : null;
+    updateUserBadge();
     if (event === 'SIGNED_IN') {
       closeAuthModal();
+      await migrateLocalToCloud();
       loadState(); // recarga desde la nube al iniciar sesión
     }
   });
+}
+
+// Muestra en la cabecera si hay sesión iniciada (email + botón de salir), o lo oculta si no.
+function updateUserBadge() {
+  const badge = document.getElementById('user-badge');
+  if (!badge) return;
+  if (currentUser) {
+    const email = currentUser.email || '';
+    document.getElementById('user-avatar').textContent = email.charAt(0).toUpperCase();
+    document.getElementById('user-email').textContent = email;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ===================== MIGRACIÓN LOCAL → NUBE =====================
+// Si el usuario tenía datos guardados en este dispositivo antes de registrarse,
+// los subimos a su cuenta nueva. Solo se migra si la cuenta está vacía en la nube,
+// para no duplicar datos si inicia sesión otra vez más adelante desde este mismo dispositivo.
+async function migrateLocalToCloud() {
+  try {
+    const localOriginRaw = localStorage.getItem('lev_origin');
+    const localEntriesRaw = localStorage.getItem('lev_entries');
+    if (!localEntriesRaw) return;
+
+    const localEntries = JSON.parse(localEntriesRaw);
+    if (!Array.isArray(localEntries) || localEntries.length === 0) return;
+
+    const { data: existing } = await supabaseClient
+      .from('entries')
+      .select('id')
+      .eq('user_id', currentUser.id)
+      .limit(1);
+    if (existing && existing.length) return; // ya tiene datos en la nube, no tocar nada
+
+    if (localOriginRaw) {
+      const o = JSON.parse(localOriginRaw);
+      await supabaseClient.from('profiles').upsert({
+        id: currentUser.id,
+        origin_name: o.name,
+        origin_lat: o.lat,
+        origin_lng: o.lng
+      });
+    }
+
+    const rows = localEntries.map(e => ({
+      user_id: currentUser.id,
+      book: e.book,
+      author: e.author || null,
+      note: e.note || null,
+      dest: e.dest,
+      dest_lat: e.destLat,
+      dest_lng: e.destLng,
+      from_name: e.fromName,
+      from_lat: e.fromLat,
+      from_lng: e.fromLng,
+      km: e.km,
+      fictional: !!e.fictional,
+      country: e.country || null,
+      country_code: e.countryCode || null,
+      date: e.date,
+      year: e.year || null,
+      pioneer: !!e.pioneer
+    }));
+    await supabaseClient.from('entries').insert(rows);
+
+    // Limpiamos el local tras migrar, para que no se mezcle con la sesión de otro usuario después
+    localStorage.removeItem('lev_origin');
+    localStorage.removeItem('lev_entries');
+  } catch (err) {
+    console.warn('Error migrando datos locales a la nube:', err);
+  }
 }
 
 // ===================== MODAL: ABRIR / CERRAR =====================
