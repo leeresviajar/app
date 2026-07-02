@@ -89,7 +89,10 @@ async function authSubmit() {
 }
 
 async function authSignInWithGoogle() {
-  await supabaseClient.auth.signInWithOAuth({ provider: 'google' });
+  await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
 }
 
 function traduceErrorAuth(msg) {
