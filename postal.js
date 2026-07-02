@@ -58,6 +58,6 @@ async function sendPostal() {
     console.error(e);
   } finally {
     btn.disabled = false;
-    btn.textContent = '✉ Enviar postal';
+    btn.textContent = '✉️ Enviar postal';
   }
 }

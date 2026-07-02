@@ -50,11 +50,11 @@ function renderDiary() {
   }
   container.innerHTML = diary.map((e, idx) => {
     const dateStr = e.date ? new Date(e.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-    const pioneerBadge = e.pioneer ? `<div><span class="diary-pioneer">🧭 Primera persona en llegar aquí</span></div>` : '';
+    const pioneerBadge = e.pioneer ? `<div><span class="diary-pioneer">🧭 Primera persona en llegar</span></div>` : '';
     const fictionalTag = e.fictional ? '✦ ' : '';
     const isFirst = idx === 0;
     const postalBtn = isFirst
-      ? `<button class="diary-postal-btn" onclick="openPostal('${e.dest.replace(/'/g,"\\'")}','${(e.book||'').replace(/'/g,"\\'")}',${!!e.fictional})">✉ Enviar postal desde aquí</button>`
+      ? `<button class="diary-postal-btn" onclick="openPostal('${e.dest.replace(/'/g,"\\'")}','${(e.book||'').replace(/'/g,"\\'")}',${!!e.fictional})">✉️ Enviar postal desde aquí</button>`
       : '';
     return `<div class="diary-entry">
       <div class="diary-date">${dateStr}</div>
