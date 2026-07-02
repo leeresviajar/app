@@ -26,17 +26,21 @@ async function initAuth() {
   });
 }
 
-// Muestra en la cabecera si hay sesión iniciada (email + botón de salir), o lo oculta si no.
+// Muestra en la cabecera si hay sesión iniciada (email + botón de salir),
+// o un enlace para iniciar sesión si no la hay.
 function updateUserBadge() {
   const badge = document.getElementById('user-badge');
-  if (!badge) return;
+  const loginLink = document.getElementById('login-link');
+  if (!badge || !loginLink) return;
   if (currentUser) {
     const email = currentUser.email || '';
     document.getElementById('user-avatar').textContent = email.charAt(0).toUpperCase();
     document.getElementById('user-email').textContent = email;
     badge.style.display = 'flex';
+    loginLink.style.display = 'none';
   } else {
     badge.style.display = 'none';
+    loginLink.style.display = 'block';
   }
 }
 
