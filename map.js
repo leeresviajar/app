@@ -63,10 +63,11 @@ function addDestMarker(entry) {
       if (vData) {
         const others = vData.books.filter(b => b !== entry.book).slice(0,2);
         const nowCount = COMMUNITY_ROUTES.filter(r => r.toName.toLowerCase() === key && r.now >= 2).reduce((s,r) => s + r.now, 0);
+        const highlightColor = entry.fictional ? '#e8913c' : 'var(--teal)';
         return `<div class="popup-community">
-          <strong>${vData.count.toLocaleString()} lectores</strong> también han llegado hasta aquí leyendo:
+          <strong style="color:${highlightColor}">${vData.count.toLocaleString()} lectores</strong> también han llegado hasta aquí leyendo:
           ${others.length ? '<br>' + others.map(b => `<span style="font-size:0.7rem;color:#aaa;font-style:italic">· ${b}</span>`).join(' ') : ''}
-          ${nowCount >= 2 ? `<br><span style="color:var(--teal);font-weight:500">● ${nowCount} leyendo aquí ahora mismo</span>` : ''}
+          ${nowCount >= 2 ? `<br><span style="color:${highlightColor};font-weight:500">● ${nowCount} leyendo aquí ahora mismo</span>` : ''}
         </div>`;
       }
       return '';
@@ -142,14 +143,15 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
       ]);
     }
     const color = r.fictional ? 'rgba(232,89,60,0.6)' : 'rgba(29,158,117,0.55)';
+    const highlightColor = r.fictional ? '#e8913c' : 'var(--teal)';
     L.polyline(points, { color: 'transparent', weight: 12, opacity: 1 })
       .addTo(communityLayer)
       .bindPopup(`
         <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
         <div class="popup-place" style="font-size:0.75rem;color:#888">${r.fromName} → ${r.toName} · <em>${r.book}</em></div>
         <div class="popup-community">
-          <strong>${r.visitors.toLocaleString()} lectores</strong> han llegado hasta aquí leyendo:
-          ${r.now >= 2 ? `<br><span style="color:var(--teal);font-weight:500">● ${r.now} leyendo aquí ahora mismo</span>` : ''}
+          <strong style="color:${highlightColor}">${r.visitors.toLocaleString()} lectores</strong> han llegado hasta aquí leyendo:
+          ${r.now >= 2 ? `<br><span style="color:${highlightColor};font-weight:500">● ${r.now} leyendo aquí ahora mismo</span>` : ''}
         </div>
       `);
     L.polyline(points, { color, weight: 2, opacity: 1, dashArray: '5 5' }).addTo(communityLayer);
@@ -184,9 +186,9 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
       L.marker(r.to, { icon }).addTo(communityLayer).bindPopup(`
         <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
         <div class="popup-community">
-          <strong>${vData ? vData.count.toLocaleString() : r.visitors} lectores</strong> han llegado hasta aquí leyendo:
+          <strong style="color:${highlightColor}">${vData ? vData.count.toLocaleString() : r.visitors} lectores</strong> han llegado hasta aquí leyendo:
           ${booksHtml}
-          ${r.now >= 2 ? `<br><span style="color:var(--teal);font-weight:500">● ${r.now} leyendo aquí ahora mismo</span>` : ''}
+          ${r.now >= 2 ? `<br><span style="color:${highlightColor};font-weight:500">● ${r.now} leyendo aquí ahora mismo</span>` : ''}
         </div>
       `);
     }
