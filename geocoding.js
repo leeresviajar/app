@@ -60,10 +60,35 @@ const FICTIONAL = {
   'limbhad':[49.0,10.0],'umadhun':[20.0,65.0],
 };
 
+// Normaliza para comparar sin depender de acentos ni mayúsculas
+function _normFic(s) {
+  return s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// ¿La clave ficticia k aparece en lo que escribió el usuario?
+// - Claves cortas (<=4 letras): solo coincidencia exacta, para no secuestrar
+//   topónimos reales (Nin en Croacia, Awa en Japón, Oz en un futuro, etc.).
+// - Claves más largas: coincidencia por palabra(s) completa(s), nunca como
+//   fragmento pegado a otras letras ("region" no debe casar dentro de otra palabra).
+// Claves que exigen coincidencia exacta aunque sean largas, por ser también
+// palabras comunes del idioma (evita que "Región de Murcia" caiga en el
+// ficticio de Benet). Ampliable a medida que el uso de la beta lo pida.
+const FICTIONAL_EXACT_ONLY = new Set(['region', 'oceania', 'dune']);
+
+function _matchesFictional(userKey, k) {
+  const nk = _normFic(k);
+  const nu = _normFic(userKey);
+  if (nk.length <= 4 || FICTIONAL_EXACT_ONLY.has(nk)) return nu === nk;
+  if (nu === nk) return true;
+  // límite de palabra: la clave rodeada de principio/fin o de separadores
+  const escaped = nk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('(^|[^\\p{L}\\p{N}])' + escaped + '($|[^\\p{L}\\p{N}])', 'u').test(nu);
+}
+
 async function geocode(place, askUser = false) {
   const key = place.toLowerCase().trim();
   for (const [k, v] of Object.entries(FICTIONAL)) {
-    if (key === k || key.includes(k)) {
+    if (_matchesFictional(key, k)) {
       if (askUser) {
         const overrides = loadPersonalOverrides();
         if (overrides[k]) {
