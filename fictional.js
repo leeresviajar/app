@@ -239,26 +239,60 @@ async function useCustomPosition() {
   const btn = document.querySelector('.btn-use-custom');
   btn.textContent = 'Buscando…'; btn.disabled = true;
 
+  const pendingKey = fictionalPending.placeKey;
+  const onResolve = fictionalPending.onResolve;
+  const restoreBtn = () => { btn.textContent = 'Usar mi ubicación'; btn.disabled = false; };
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
+    // limit=5 + addressdetails: igual que el buscador principal, para poder
+    // desambiguar por país (¿qué Santander?) en vez de coger el primer
+    // resultado a ciegas (que podía ser una calle o un banco en otro país).
     const r = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input)}&format=json&limit=1`,
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input)}&format=json&limit=5&addressdetails=1`,
       { headers: { 'Accept-Language': 'es' }, signal: controller.signal }
     );
     clearTimeout(timeout);
     const d = await r.json();
-    if (!d.length) { alert('No encontré ese lugar. Prueba con otro nombre.'); return; }
-    const lat = parseFloat(d[0].lat), lng = parseFloat(d[0].lon);
-    savePersonalOverride(fictionalPending.placeKey, lat, lng);
-    const { onResolve } = fictionalPending;
-    fictionalPending = null; // evita que closeFictionalModal resuelva null
-    document.getElementById('fictional-overlay').classList.remove('visible');
-    onResolve(lat, lng);
+    if (!d.length) { alert('No encontré ese lugar. Prueba con otro nombre.'); restoreBtn(); return; }
+
+    // Agrupar por país y quedarnos con un candidato por país
+    const byCountry = {};
+    for (const res of d) {
+      const cc = res.address && res.address.country_code;
+      if (cc && !byCountry[cc]) byCountry[cc] = res;
+    }
+    const candidates = Object.values(byCountry);
+
+    const applyChosen = (chosen) => {
+      const lat = parseFloat(chosen.lat), lng = parseFloat(chosen.lon);
+      savePersonalOverride(pendingKey, lat, lng);
+      fictionalPending = null; // evita que closeFictionalModal resuelva null
+      const overlay = document.getElementById('fictional-overlay');
+      overlay.classList.remove('visible');
+      overlay.style.visibility = '';
+      onResolve(lat, lng);
+    };
+
+    if (candidates.length > 1) {
+      // Varios países: ocultamos este modal y mostramos el desambiguador reutilizando
+      // el mismo componente que el buscador principal.
+      const overlay = document.getElementById('fictional-overlay');
+      overlay.style.visibility = 'hidden';
+      restoreBtn();
+      openDisambigModal(input, candidates, (chosen) => {
+        if (!chosen) { overlay.style.visibility = ''; return; } // sigue en el modal ficticio
+        applyChosen(chosen);
+      });
+      return;
+    }
+
+    applyChosen(candidates[0] || d[0]);
   } catch(e) {
+    document.getElementById('fictional-overlay').style.visibility = '';
     alert('Error de conexión. Inténtalo de nuevo.');
-  } finally {
-    btn.textContent = 'Usar mi ubicación'; btn.disabled = false;
+    restoreBtn();
   }
 }
 
