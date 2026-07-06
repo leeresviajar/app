@@ -265,6 +265,19 @@
   </div>
 </div>
 
+<!-- MODAL: LUGAR NO ENCONTRADO (¿real o imaginario?) -->
+<div class="fictional-overlay" id="unknown-place-overlay">
+  <div class="fictional-modal">
+    <h3>✦ No encuentro "<span id="unknown-place-name"></span>"</h3>
+    <p style="font-size:0.9rem; color:var(--muted); line-height:1.55; margin-bottom:1.25rem;">¿Es un lugar de este mundo o de otro?</p>
+    <div class="fictional-btns" style="flex-direction:column; gap:0.6rem; margin:0;">
+      <button class="btn-use-community" style="width:100%; padding:0.7rem; border-radius:8px; font-family:inherit; font-size:0.85rem; font-weight:500; cursor:pointer; border:0.5px solid var(--line); background:var(--white); color:var(--ink);" onclick="resolveUnknownPlace('real')">Está en el mundo real</button>
+      <button class="btn-use-community" style="width:100%; padding:0.7rem; border-radius:8px; font-family:inherit; font-size:0.85rem; font-weight:500; cursor:pointer; border:none; background:var(--teal); color:white;" onclick="resolveUnknownPlace('imaginary')">✦ Es un lugar imaginario</button>
+    </div>
+    <div class="input-hint" style="margin-top:0.85rem; text-align:center;">Si es real, corrige el nombre y vuelve a intentarlo.</div>
+  </div>
+</div>
+
 <div class="fictional-overlay" id="fictional-overlay">
   <div class="fictional-modal">
     <h3>✦ <span id="fic-place-name"></span></h3>

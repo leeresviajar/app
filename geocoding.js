@@ -115,7 +115,25 @@ async function geocode(place, askUser = false) {
     });
     clearTimeout(timeout);
     const d = await r.json();
-    if (d.length === 0) return null;
+    if (d.length === 0) {
+      // No es un ficticio conocido ni Nominatim lo encuentra.
+      // Preguntamos al usuario: ¿lugar real (con errata) o imaginario nuevo?
+      if (!askUser) return null; // en contextos sin interacción (origen/partida) no preguntamos
+      return new Promise(resolve => {
+        openUnknownPlaceModal(place, (choice) => {
+          if (choice === 'imaginary') {
+            const fkey = place.toLowerCase().trim();
+            openFictionalModal(fkey, (lat, lng) => {
+              if (lat === null) { resolve(null); return; }
+              resolve({ lat, lng, fictional: true, country: '', countryCode: '' });
+            });
+          } else {
+            // "real" o cierre: el usuario corrige el nombre y reintenta
+            resolve(null);
+          }
+        });
+      });
+    }
 
     const byCountry = {};
     for (const r of d) {

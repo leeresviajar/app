@@ -261,3 +261,20 @@ async function useCustomPosition() {
     btn.textContent = 'Usar mi ubicación'; btn.disabled = false;
   }
 }
+
+// ===================== MODAL: LUGAR NO ENCONTRADO =====================
+let unknownPlacePending = null;
+
+function openUnknownPlaceModal(placeName, onResolve) {
+  unknownPlacePending = { onResolve };
+  document.getElementById('unknown-place-name').textContent = placeName;
+  document.getElementById('unknown-place-overlay').classList.add('visible');
+}
+
+function resolveUnknownPlace(choice) {
+  document.getElementById('unknown-place-overlay').classList.remove('visible');
+  if (!unknownPlacePending) return;
+  const { onResolve } = unknownPlacePending;
+  unknownPlacePending = null;
+  onResolve(choice);
+}
