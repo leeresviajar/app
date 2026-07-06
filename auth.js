@@ -24,6 +24,12 @@ async function initAuth() {
   supabaseClient.auth.onAuthStateChange(async (event, session) => {
     currentUser = session ? session.user : null;
     updateUserBadge();
+    if (event === 'PASSWORD_RECOVERY') {
+      // El usuario llega desde el enlace del email de recuperación:
+      // abrimos el modal en modo "nueva contraseña".
+      openAuthModal('recovery');
+      return;
+    }
     if (event === 'SIGNED_IN' && currentUser && currentUser.id !== lastLoadedUserId) {
       lastLoadedUserId = currentUser.id;
       closeAuthModal();
@@ -126,24 +132,51 @@ function closeAuthModal() {
 function setAuthMode(mode) {
   authMode = mode;
   const isLogin = mode === 'login';
-  const tabLogin = document.getElementById('auth-tab-login');
-  const tabSignup = document.getElementById('auth-tab-signup');
-  tabLogin.style.borderBottomColor = isLogin ? '#1d9e75' : 'transparent';
-  tabLogin.style.color = isLogin ? '#1a1a18' : '#9a948d';
-  tabSignup.style.borderBottomColor = isLogin ? 'transparent' : '#1d9e75';
-  tabSignup.style.color = isLogin ? '#9a948d' : '#1a1a18';
-  document.getElementById('auth-headline').textContent = isLogin
-    ? 'Guarda tus rutas y retómalas donde las dejaste'
-    : 'Empieza a guardar tu mapa lector en la nube';
-  document.getElementById('auth-eyebrow').textContent = isLogin ? '· INICIAR SESIÓN' : '· CREAR CUENTA';
+  const isRecovery = mode === 'recovery';
+
+  // En modo recuperación solo se muestra el campo de nueva contraseña
+  document.getElementById('auth-tabs').style.display = isRecovery ? 'none' : 'flex';
+  document.getElementById('auth-google-btn').style.display = isRecovery ? 'none' : 'flex';
+  document.getElementById('auth-divider').style.display = isRecovery ? 'none' : 'flex';
+  document.getElementById('auth-email-wrap').style.display = isRecovery ? 'none' : 'block';
+
+  if (!isRecovery) {
+    const tabLogin = document.getElementById('auth-tab-login');
+    const tabSignup = document.getElementById('auth-tab-signup');
+    tabLogin.style.borderBottomColor = isLogin ? '#1d9e75' : 'transparent';
+    tabLogin.style.color = isLogin ? '#1a1a18' : '#9a948d';
+    tabSignup.style.borderBottomColor = isLogin ? 'transparent' : '#1d9e75';
+    tabSignup.style.color = isLogin ? '#9a948d' : '#1a1a18';
+  }
+
+  document.getElementById('auth-password-label').textContent = isRecovery ? 'NUEVA CONTRASEÑA' : 'CONTRASEÑA';
+  document.getElementById('auth-password').placeholder = isRecovery ? 'Mínimo 6 caracteres' : 'Tu contraseña';
+
+  document.getElementById('auth-headline').textContent = isRecovery
+    ? 'Elige una nueva contraseña y sigue viajando'
+    : (isLogin
+      ? 'Guarda tus rutas y retómalas donde las dejaste'
+      : 'Empieza a guardar tu mapa lector en la nube');
+  document.getElementById('auth-eyebrow').textContent = isRecovery ? '· NUEVA CONTRASEÑA' : (isLogin ? '· INICIAR SESIÓN' : '· CREAR CUENTA');
   document.getElementById('auth-google-label').textContent = isLogin ? 'Continuar con Google' : 'Registrarse con Google';
-  document.getElementById('auth-submit').textContent = isLogin ? 'Entrar' : 'Crear cuenta';
+  document.getElementById('auth-submit').textContent = isRecovery ? 'Guardar contraseña' : (isLogin ? 'Entrar' : 'Crear cuenta');
   document.getElementById('auth-forgot').style.display = isLogin ? 'block' : 'none';
 }
 
 function showAuthError(msg) {
   const el = document.getElementById('auth-error');
   el.textContent = msg;
+  el.style.background = '#fdf1ef';
+  el.style.color = '#c14b34';
+  el.style.display = 'block';
+}
+
+// Mensajes informativos (verde) en el mismo hueco que los errores
+function showAuthInfo(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.background = '#eaf6f1';
+  el.style.color = '#137a5a';
   el.style.display = 'block';
 }
 
@@ -151,13 +184,26 @@ function showAuthError(msg) {
 async function authSubmit() {
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
-  if (!email || !password) { showAuthError('Rellena email y contraseña.'); return; }
+
+  if (authMode === 'recovery') {
+    if (!password || password.length < 6) { showAuthError('La contraseña necesita al menos 6 caracteres.'); return; }
+  } else if (!email || !password) {
+    showAuthError('Rellena email y contraseña.'); return;
+  }
 
   const btn = document.getElementById('auth-submit');
   const prevText = btn.textContent;
   btn.textContent = 'Un momento…'; btn.disabled = true;
 
   try {
+    if (authMode === 'recovery') {
+      const { error } = await supabaseClient.auth.updateUser({ password });
+      if (error) { showAuthError(traduceErrorAuth(error.message)); return; }
+      document.getElementById('auth-password').value = '';
+      showAuthInfo('Contraseña actualizada. ¡Buen viaje!');
+      setTimeout(closeAuthModal, 1600);
+      return;
+    }
     if (authMode === 'signup') {
       const { error } = await supabaseClient.auth.signUp({ email, password });
       if (error) { showAuthError(traduceErrorAuth(error.message)); return; }
@@ -169,12 +215,36 @@ async function authSubmit() {
     // todavía y el usuario deberá confirmar el correo antes de entrar.
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session && authMode === 'signup') {
-      showAuthError('Cuenta creada. Revisa tu correo para confirmarla.');
+      showAuthInfo('Cuenta creada. Revisa tu correo para confirmarla.');
     }
   } catch (e) {
     showAuthError('Error de conexión. Inténtalo de nuevo.');
   } finally {
     btn.textContent = prevText; btn.disabled = false;
+  }
+}
+
+// ===================== RECUPERAR CONTRASEÑA =====================
+async function authForgotPassword() {
+  const email = document.getElementById('auth-email').value.trim();
+  if (!email || !email.includes('@')) {
+    showAuthError('Escribe tu email arriba y vuelve a pulsar aquí.');
+    document.getElementById('auth-email').focus();
+    return;
+  }
+  const link = document.getElementById('auth-forgot-link');
+  const prev = link.textContent;
+  link.textContent = 'Enviando…';
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    if (error) { showAuthError(traduceErrorAuth(error.message)); return; }
+    showAuthInfo('Te hemos enviado un correo para restablecer la contraseña. Revisa tu bandeja.');
+  } catch (e) {
+    showAuthError('Error de conexión. Inténtalo de nuevo.');
+  } finally {
+    link.textContent = prev;
   }
 }
 
