@@ -293,11 +293,27 @@
     </div>
     <p id="fic-first-intro" style="display:none; font-size:0.82rem; color:var(--muted); line-height:1.55; margin-bottom:1rem;"></p>
     <label>Definir mi propia ubicación</label>
-    <input type="text" id="fic-custom-input" placeholder="Ej: norte de Noruega, desierto de Namibia…" onkeydown="if(event.key==='Enter') useCustomPosition()"/>
-    <div class="input-hint">Se geocodificará y quedará guardada solo en tu mapa.</div>
-    <div class="fictional-btns" style="margin-top:0.9rem">
-      <button class="btn-fictional-cancel" onclick="closeFictionalModal()">Cancelar</button>
-      <button class="btn-use-custom" onclick="useCustomPosition()">Usar mi ubicación</button>
+    <div class="fic-method-tabs">
+      <button type="button" class="fic-method-tab active" id="fic-tab-write" onclick="setFictionalMethod('write')">✍️ Escribir lugar</button>
+      <button type="button" class="fic-method-tab" id="fic-tab-pin" onclick="setFictionalMethod('pin')">📍 Señalar en el mapa</button>
+    </div>
+
+    <div id="fic-method-write">
+      <input type="text" id="fic-custom-input" placeholder="Ej: norte de Noruega, desierto de Namibia…" onkeydown="if(event.key==='Enter') useCustomPosition()"/>
+      <div class="input-hint">Se geocodificará y quedará guardada solo en tu mapa.</div>
+      <div class="fictional-btns" style="margin-top:0.9rem">
+        <button class="btn-fictional-cancel" onclick="closeFictionalModal()">Cancelar</button>
+        <button class="btn-use-custom" onclick="useCustomPosition()">Usar mi ubicación</button>
+      </div>
+    </div>
+
+    <div id="fic-method-pin" style="display:none;">
+      <div id="fic-mini-map"></div>
+      <div class="input-hint">Arrastra el mapa o toca para colocar el pin donde tú imaginas este lugar.</div>
+      <div class="fictional-btns" style="margin-top:0.9rem">
+        <button class="btn-fictional-cancel" onclick="closeFictionalModal()">Cancelar</button>
+        <button class="btn-use-custom" onclick="usePinPosition()">Colocar aquí</button>
+      </div>
     </div>
   </div>
 </div>

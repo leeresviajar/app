@@ -182,17 +182,97 @@ function openFictionalModal(placeKey, onResolve) {
   }
 
   document.getElementById('fic-custom-input').value = '';
+  setFictionalMethod('write'); // siempre arranca en "escribir"
   document.getElementById('fictional-overlay').classList.add('visible');
   setTimeout(() => document.getElementById('fic-custom-input').focus(), 100);
 }
 
 function closeFictionalModal() {
   document.getElementById('fictional-overlay').classList.remove('visible');
+  destroyFicMiniMap();
   if (fictionalPending) {
     const { onResolve } = fictionalPending;
     fictionalPending = null;
     onResolve(null, null);
   }
+}
+
+// ===================== MINI-MAPA PARA PINEAR FICTICIOS =====================
+let ficMiniMap = null;
+let ficMiniMarker = null;
+
+function setFictionalMethod(method) {
+  const tabWrite = document.getElementById('fic-tab-write');
+  const tabPin = document.getElementById('fic-tab-pin');
+  const paneWrite = document.getElementById('fic-method-write');
+  const panePin = document.getElementById('fic-method-pin');
+  const isPin = method === 'pin';
+
+  tabWrite.classList.toggle('active', !isPin);
+  tabPin.classList.toggle('active', isPin);
+  paneWrite.style.display = isPin ? 'none' : 'block';
+  panePin.style.display = isPin ? 'block' : 'none';
+
+  if (isPin) initFicMiniMap();
+}
+
+function initFicMiniMap() {
+  // Posición inicial: sugerencia de la comunidad si existe, si no el centro del mapa principal
+  let startLat, startLng, startZoom;
+  if (fictionalPending && fictionalPending.communityLat != null) {
+    startLat = fictionalPending.communityLat;
+    startLng = fictionalPending.communityLng;
+    startZoom = 5;
+  } else if (typeof map !== 'undefined' && map) {
+    const c = map.getCenter();
+    startLat = c.lat; startLng = c.lng; startZoom = Math.min(map.getZoom(), 5);
+  } else {
+    startLat = 30; startLng = 10; startZoom = 3;
+  }
+
+  if (!ficMiniMap) {
+    ficMiniMap = L.map('fic-mini-map', { zoomControl: true, attributionControl: false })
+      .setView([startLat, startLng], startZoom);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd', maxZoom: 19
+    }).addTo(ficMiniMap);
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:16px;height:16px;background:#e8913c;border-radius:50%;border:2.5px solid white;box-shadow:0 0 0 1.5px #e8913c,0 2px 6px rgba(0,0,0,0.3)"></div>`,
+      iconSize: [16,16], iconAnchor: [8,8]
+    });
+    ficMiniMarker = L.marker([startLat, startLng], { icon, draggable: true }).addTo(ficMiniMap);
+
+    // Tocar el mapa mueve el pin
+    ficMiniMap.on('click', (e) => { ficMiniMarker.setLatLng(e.latlng); });
+  } else {
+    ficMiniMap.setView([startLat, startLng], startZoom);
+    ficMiniMarker.setLatLng([startLat, startLng]);
+  }
+
+  // El mapa nace oculto: hay que recalcular su tamaño cuando se muestra
+  setTimeout(() => { if (ficMiniMap) ficMiniMap.invalidateSize(); }, 60);
+}
+
+function destroyFicMiniMap() {
+  if (ficMiniMap) {
+    ficMiniMap.remove();
+    ficMiniMap = null;
+    ficMiniMarker = null;
+  }
+}
+
+function usePinPosition() {
+  if (!fictionalPending || !ficMiniMarker) return;
+  const pos = ficMiniMarker.getLatLng();
+  const pendingKey = fictionalPending.placeKey;
+  const onResolve = fictionalPending.onResolve;
+  savePersonalOverride(pendingKey, pos.lat, pos.lng);
+  fictionalPending = null; // evita que closeFictionalModal resuelva null
+  document.getElementById('fictional-overlay').classList.remove('visible');
+  destroyFicMiniMap();
+  onResolve(pos.lat, pos.lng);
 }
 
 let disambigPending = null;
@@ -228,6 +308,7 @@ function useCommunityPosition() {
   const { communityLat, communityLng, onResolve } = fictionalPending;
   fictionalPending = null; // evita que closeFictionalModal resuelva null
   document.getElementById('fictional-overlay').classList.remove('visible');
+  destroyFicMiniMap();
   onResolve(communityLat, communityLng);
 }
 
@@ -272,6 +353,7 @@ async function useCustomPosition() {
       const overlay = document.getElementById('fictional-overlay');
       overlay.classList.remove('visible');
       overlay.style.visibility = '';
+      destroyFicMiniMap();
       onResolve(lat, lng);
     };
 

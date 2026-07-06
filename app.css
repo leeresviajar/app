@@ -599,3 +599,17 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   .export-trigger { top: 0.75rem; left: 0.75rem; right: auto; }
   .pioneer-toast, .badge-unlock-toast { left: 0.75rem; right: 0.75rem; max-width: none; }
 }
+
+/* ===== MÉTODO DE UBICACIÓN FICTICIA: PESTAÑAS + MINI-MAPA ===== */
+.fic-method-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.9rem; }
+.fic-method-tab {
+  flex: 1; padding: 0.45rem 0.5rem; border: 0.5px solid var(--line); background: var(--white);
+  border-radius: 7px; font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 500;
+  color: var(--muted); cursor: pointer; transition: all 0.15s ease;
+}
+.fic-method-tab.active { background: rgba(29,158,117,0.08); border-color: rgba(29,158,117,0.35); color: var(--teal); }
+#fic-mini-map {
+  width: 100%; height: 240px; border-radius: 9px; overflow: hidden;
+  border: 0.5px solid var(--line); margin-bottom: 0.5rem; background: #e8e4dd;
+}
+#fic-mini-map .leaflet-container { font-family: 'Inter', sans-serif; }
