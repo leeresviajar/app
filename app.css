@@ -613,3 +613,14 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   border: 0.5px solid var(--line); margin-bottom: 0.5rem; background: #e8e4dd;
 }
 #fic-mini-map .leaflet-container { font-family: 'Inter', sans-serif; }
+
+
+/* ===== X DE CIERRE Y BOTÓN ÚNICO EN MODAL FICTICIO ===== */
+.fic-close-x {
+  position: absolute; top: 0.9rem; right: 1rem; background: none; border: none;
+  font-size: 1.05rem; line-height: 1; color: var(--muted); cursor: pointer;
+  padding: 0.2rem; transition: color 0.15s ease;
+}
+.fic-close-x:hover { color: var(--ink); }
+.fic-btns-single { justify-content: center; }
+.fic-btns-single .btn-use-custom { min-width: 60%; }

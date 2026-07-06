@@ -279,7 +279,8 @@
 </div>
 
 <div class="fictional-overlay" id="fictional-overlay">
-  <div class="fictional-modal">
+  <div class="fictional-modal" style="position:relative;">
+    <button class="fic-close-x" onclick="closeFictionalModal()" aria-label="Cerrar">✕</button>
     <h3>✦ <span id="fic-place-name"></span></h3>
     <div id="fic-community-section">
       <div class="community-block">
@@ -301,8 +302,7 @@
     <div id="fic-method-write">
       <input type="text" id="fic-custom-input" placeholder="Ej: norte de Noruega, desierto de Namibia…" onkeydown="if(event.key==='Enter') useCustomPosition()"/>
       <div class="input-hint">Se geocodificará y quedará guardada solo en tu mapa.</div>
-      <div class="fictional-btns" style="margin-top:0.9rem">
-        <button class="btn-fictional-cancel" onclick="closeFictionalModal()">Cancelar</button>
+      <div class="fictional-btns fic-btns-single" style="margin-top:0.9rem">
         <button class="btn-use-custom" onclick="useCustomPosition()">Usar mi ubicación</button>
       </div>
     </div>
@@ -310,8 +310,7 @@
     <div id="fic-method-pin" style="display:none;">
       <div id="fic-mini-map"></div>
       <div class="input-hint">Arrastra el mapa o toca para colocar el pin donde tú imaginas este lugar.</div>
-      <div class="fictional-btns" style="margin-top:0.9rem">
-        <button class="btn-fictional-cancel" onclick="closeFictionalModal()">Cancelar</button>
+      <div class="fictional-btns fic-btns-single" style="margin-top:0.9rem">
         <button class="btn-use-custom" onclick="usePinPosition()">Colocar aquí</button>
       </div>
     </div>

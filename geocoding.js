@@ -96,6 +96,7 @@ async function geocode(place, askUser = false) {
         }
         return new Promise(resolve => {
           openFictionalModal(k, (lat, lng) => {
+            if (lat && lat.cancelled) { resolve({ cancelled: true }); return; }
             if (lat === null) { resolve(null); return; }
             resolve({ lat, lng, fictional: true, country: '', countryCode: '' });
           });
@@ -124,6 +125,7 @@ async function geocode(place, askUser = false) {
           if (choice === 'imaginary') {
             const fkey = place.toLowerCase().trim();
             openFictionalModal(fkey, (lat, lng) => {
+              if (lat && lat.cancelled) { resolve({ cancelled: true }); return; }
               if (lat === null) { resolve(null); return; }
               resolve({ lat, lng, fictional: true, country: '', countryCode: '' });
             });

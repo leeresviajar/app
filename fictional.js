@@ -189,11 +189,14 @@ function openFictionalModal(placeKey, onResolve) {
 
 function closeFictionalModal() {
   document.getElementById('fictional-overlay').classList.remove('visible');
+  document.getElementById('fictional-overlay').style.visibility = '';
   destroyFicMiniMap();
   if (fictionalPending) {
     const { onResolve } = fictionalPending;
     fictionalPending = null;
-    onResolve(null, null);
+    // Cerrar el modal no cancela el viaje: devolvemos una señal para que
+    // addEntry no muestre error ni añada nada, dejando el formulario intacto.
+    onResolve({ cancelled: true });
   }
 }
 
