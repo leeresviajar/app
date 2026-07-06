@@ -84,18 +84,21 @@ async function addEntry() {
 
   try {
     let fromName, fromCoords;
-    if (departure === 'home' || entries.length === 0) {
-      if (!origin) { alert('Primero indica tu ciudad de origen.'); return; }
-      fromName = origin.name; fromCoords = { lat: origin.lat, lng: origin.lng };
-    } else if (departure === 'last') {
-      const last = entries[entries.length - 1];
-      fromName = last.dest; fromCoords = { lat: last.destLat, lng: last.destLng };
-    } else {
+    if (departure === 'other') {
+      // "Otro lugar" manda siempre, también en el primer viaje.
       const other = document.getElementById('dep-other-input').value.trim();
       if (!other) { alert('Indica el lugar de partida.'); return; }
       const geo = await geocode(other);
       if (!geo) { alert('No encontré ese lugar de partida.'); return; }
       fromName = other; fromCoords = { lat: geo.lat, lng: geo.lng };
+    } else if (departure === 'home' || entries.length === 0) {
+      // "Casa", o "Último destino" cuando aún no hay destino anterior.
+      if (!origin) { alert('Primero indica tu ciudad de origen.'); return; }
+      fromName = origin.name; fromCoords = { lat: origin.lat, lng: origin.lng };
+    } else {
+      // "Último destino"
+      const last = entries[entries.length - 1];
+      fromName = last.dest; fromCoords = { lat: last.destLat, lng: last.destLng };
     }
 
     const destGeo = await geocode(dest, true);
