@@ -142,7 +142,7 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
         (1-t)*(1-t)*p1.lng + 2*(1-t)*t*(midLng+perpLng) + t*t*p2.lng
       ]);
     }
-    const color = r.fictional ? 'rgba(232,89,60,0.6)' : 'rgba(29,158,117,0.55)';
+    const color = r.fictional ? 'rgba(232,145,60,0.6)' : 'rgba(29,158,117,0.55)';
     const highlightColor = r.fictional ? '#e8913c' : 'var(--teal)';
     L.polyline(points, { color: 'transparent', weight: 12, opacity: 1 })
       .addTo(communityLayer)
@@ -179,7 +179,7 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
       const icon = L.divIcon({
         className: '',
         html: r.fictional
-          ? `<div style="width:10px;height:10px;background:rgba(232,89,60,0.15);border-radius:50%;border:1.5px solid rgba(232,89,60,0.8);display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(232,89,60,0.9);line-height:1">✦</div>`
+          ? `<div style="width:10px;height:10px;background:rgba(232,145,60,0.15);border-radius:50%;border:1.5px solid rgba(232,145,60,0.8);display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(232,145,60,0.9);line-height:1">✦</div>`
           : `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
         iconSize: r.fictional ? [10,10] : [7,7], iconAnchor: r.fictional ? [5,5] : [3.5,3.5]
       });
