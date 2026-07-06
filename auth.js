@@ -8,17 +8,24 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
 let currentUser = null;
 let authMode = 'signup'; // 'signup' | 'login'
+// Evita recargar el estado en refires de SIGNED_IN (foco de pestaña, refresco
+// de token): solo cargamos cuando cambia de verdad el usuario con sesión.
+let lastLoadedUserId = null;
 
 // Se llama una vez al arrancar la app, antes de loadState()
 async function initAuth() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   currentUser = session ? session.user : null;
+  // La carga inicial la hace el loadState() del arranque, así que marcamos
+  // este usuario como ya cargado para que el SIGNED_IN de arranque no duplique.
+  lastLoadedUserId = currentUser ? currentUser.id : null;
   updateUserBadge();
 
   supabaseClient.auth.onAuthStateChange(async (event, session) => {
     currentUser = session ? session.user : null;
     updateUserBadge();
-    if (event === 'SIGNED_IN') {
+    if (event === 'SIGNED_IN' && currentUser && currentUser.id !== lastLoadedUserId) {
+      lastLoadedUserId = currentUser.id;
       closeAuthModal();
       await migrateLocalToCloud();
       loadState(); // recarga desde la nube al iniciar sesión
@@ -57,11 +64,14 @@ async function migrateLocalToCloud() {
     const localEntries = JSON.parse(localEntriesRaw);
     if (!Array.isArray(localEntries) || localEntries.length === 0) return;
 
-    const { data: existing } = await supabaseClient
+    const { data: existing, error: existingError } = await supabaseClient
       .from('entries')
       .select('id')
       .eq('user_id', currentUser.id)
       .limit(1);
+    // Si la comprobación falla (p. ej. sin conexión), no migramos: sin la
+    // certeza de que la cuenta está vacía podríamos duplicar datos.
+    if (existingError) return;
     if (existing && existing.length) return; // ya tiene datos en la nube, no tocar nada
 
     if (localOriginRaw) {
