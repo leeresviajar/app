@@ -102,6 +102,7 @@ async function addEntry() {
     }
 
     const destGeo = await geocode(dest, true);
+    if (destGeo && destGeo.cancelled) { return; } // el usuario corregirá el nombre
     if (!destGeo) { alert(`No encontré "${dest}". Prueba con otro nombre.`); return; }
 
     const entry = {
@@ -274,6 +275,7 @@ async function saveEditEntry(i) {
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Guardando…'; }
     const geo = await geocode(destVal, true);
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Guardar'; }
+    if (geo && geo.cancelled) { if (status) { status.textContent = ''; } return; }
     if (!geo) {
       if (status) { status.textContent = 'No encontré ese lugar. Prueba con otro nombre.'; status.style.color = 'var(--route)'; }
       return;
@@ -306,6 +308,7 @@ async function relocateEntry(i) {
   if (!val) return;
   status.textContent = 'Buscando…';
   const geo = await geocode(val, true);
+  if (geo && geo.cancelled) { status.textContent = ''; return; }
   if (!geo) {
     status.textContent = 'No encontré ese lugar. Prueba con otro nombre.';
     return;

@@ -128,8 +128,9 @@ async function geocode(place, askUser = false) {
               resolve({ lat, lng, fictional: true, country: '', countryCode: '' });
             });
           } else {
-            // "real" o cierre: el usuario corrige el nombre y reintenta
-            resolve(null);
+            // "real" o cierre: el usuario va a corregir el nombre y reintentar.
+            // Señal para que addEntry no muestre el alert genérico de "no encontrado".
+            resolve({ cancelled: true });
           }
         });
       });
