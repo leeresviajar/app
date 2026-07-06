@@ -226,7 +226,8 @@ function closeDisambigModal() {
 function useCommunityPosition() {
   if (!fictionalPending) return;
   const { communityLat, communityLng, onResolve } = fictionalPending;
-  closeFictionalModal();
+  fictionalPending = null; // evita que closeFictionalModal resuelva null
+  document.getElementById('fictional-overlay').classList.remove('visible');
   onResolve(communityLat, communityLng);
 }
 
@@ -251,7 +252,8 @@ async function useCustomPosition() {
     const lat = parseFloat(d[0].lat), lng = parseFloat(d[0].lon);
     savePersonalOverride(fictionalPending.placeKey, lat, lng);
     const { onResolve } = fictionalPending;
-    closeFictionalModal();
+    fictionalPending = null; // evita que closeFictionalModal resuelva null
+    document.getElementById('fictional-overlay').classList.remove('visible');
     onResolve(lat, lng);
   } catch(e) {
     alert('Error de conexión. Inténtalo de nuevo.');
