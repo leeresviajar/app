@@ -10,7 +10,7 @@ function updateOriginNarrative() {
   }
   section.style.display = 'none';
   narrative.style.display = 'flex';
-  const last = entries.length > 0 ? entries[entries.length - 1] : null;
+  const last = currentEntry();
   let text = `Saliste de <strong>${origin.name}</strong>`;
   if (last) text += ` · Ahora estás en <strong>${last.dest}</strong>`;
   el.innerHTML = text;
@@ -97,7 +97,7 @@ async function addEntry() {
       fromName = origin.name; fromCoords = { lat: origin.lat, lng: origin.lng };
     } else {
       // "Último destino"
-      const last = entries[entries.length - 1];
+      const last = currentEntry();
       fromName = last.dest; fromCoords = { lat: last.destLat, lng: last.destLng };
     }
 
@@ -187,6 +187,18 @@ function updateYearFilter() {
 }
 
 // ===================== LIST =====================
+// Entrada "actual": la de fecha más reciente (coherente entre local y nube).
+// Empate de fecha -> la última registrada de ese día.
+function currentEntry() {
+  if (!entries.length) return null;
+  let best = entries[0], bestIdx = 0;
+  entries.forEach((e, i) => {
+    const d = e.date || '', bd = best.date || '';
+    if (d > bd || (d === bd && i >= bestIdx)) { best = e; bestIdx = i; }
+  });
+  return best;
+}
+
 function sortedFiltered() {
   return (activeYear === 'all' ? entries : entries.filter(e => e.year === activeYear))
     .slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));

@@ -1,5 +1,13 @@
 // ===================== DATE =====================
-function todayStr() { return new Date().toISOString().split('T')[0]; }
+function todayStr() {
+  // Fecha LOCAL (no UTC): evita que entre medianoche y las 2h en España
+  // la fecha por defecto salga la del día anterior.
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
 function formatDate(str) {
   if (!str) return '';
   return new Date(str + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
