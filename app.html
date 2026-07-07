@@ -392,34 +392,50 @@
 <!-- POSTAL MODAL -->
 <div class="postal-overlay" id="postal-overlay" onclick="if(event.target===this) closePostal()">
   <div class="postal-modal" id="postal-modal">
-    <div class="postal-left">
-      <div class="postal-left-title">✉️ Postal desde</div>
-      <div class="postal-place-name" id="postal-place-display">
-        —<span id="postal-book-display"></span>
+    <button class="postal-close" onclick="closePostal()" aria-label="Cerrar">&times;</button>
+    <div class="postal-top">
+      <div class="postal-heading">
+        <div class="postal-left-title">Postal desde</div>
+        <div class="postal-place-name" id="postal-place-display">
+          —<span id="postal-book-display"></span>
+        </div>
       </div>
-      <div class="postal-stamp">
-        <div class="postal-stamp-name">Matasellos</div>
-        <div class="postal-stamp-place" id="postal-stamp-place">—</div>
-        <div class="postal-stamp-date" id="postal-stamp-date"></div>
+      <div class="postal-marks">
+        <div class="postal-cancel-mark">
+          <svg viewBox="0 0 100 100" class="postal-cancel-svg" aria-hidden="true">
+            <circle cx="50" cy="50" r="46"/>
+            <circle cx="50" cy="50" r="33"/>
+            <defs>
+              <path id="postal-arc-top" d="M 50 50 m -39.5 0 a 39.5 39.5 0 1 1 79 0"/>
+              <path id="postal-arc-bottom" d="M 50 50 m -39.5 0 a 39.5 39.5 0 1 0 79 0"/>
+            </defs>
+            <text class="postal-arc-text"><textPath href="#postal-arc-top" startOffset="50%" text-anchor="middle" id="postal-stamp-place">—</textPath></text>
+            <text class="postal-arc-dots"><textPath href="#postal-arc-bottom" startOffset="50%" text-anchor="middle">· · ·</textPath></text>
+          </svg>
+          <div class="postal-stamp-date" id="postal-stamp-date"></div>
+        </div>
+        <div class="postal-stamp">
+          <div class="postal-stamp-inner">
+            <span class="stamp-symbol-real"><span class="stamp-dot"></span></span>
+            <span class="stamp-symbol-fictional">✦</span>
+            <div class="postal-stamp-brand">Leer es<br/>viajar</div>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="postal-right" id="postal-form-side">
-      <h3>Escribe tu postal</h3>
-      <div class="postal-field">
-        <label>Una cita o pensamiento</label>
-        <textarea id="postal-quote" placeholder="Una cita, un pensamiento, lo que este lugar te dejó…"></textarea>
-      </div>
-      <div class="postal-field">
-        <label>De</label>
-        <input type="text" id="postal-from-name" placeholder="Tu nombre"/>
-      </div>
-      <div class="postal-field">
-        <label>Para</label>
-        <input type="text" id="postal-to-name" placeholder="Nombre del destinatario"/>
-      </div>
-      <div class="postal-field">
-        <label>Email</label>
-        <input type="email" id="postal-to-email" placeholder="correo@ejemplo.com"/>
+    <div class="postal-body" id="postal-form-side">
+      <div class="postal-columns">
+        <div class="postal-write">
+          <textarea id="postal-quote" placeholder="Una cita, un pensamiento, lo que este lugar te dejó…"></textarea>
+          <div class="postal-sign"><span>—</span><input type="text" id="postal-from-name" placeholder="Tu nombre"/></div>
+        </div>
+        <div class="postal-divider"></div>
+        <div class="postal-address">
+          <div class="postal-address-label">Para</div>
+          <input type="text" id="postal-to-name" placeholder="Nombre del destinatario"/>
+          <input type="email" id="postal-to-email" placeholder="correo@ejemplo.com"/>
+          <div class="postal-address-line"></div>
+        </div>
       </div>
       <div class="postal-actions">
         <button class="postal-btn-cancel" onclick="closePostal()">Cancelar</button>

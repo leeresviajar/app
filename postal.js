@@ -16,6 +16,7 @@ function openPostal(dest, book, fictional) {
   const overlay = document.getElementById('postal-overlay');
   const today = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
   postalIsFictional = fictional;
+  document.getElementById('postal-modal').classList.toggle('is-fictional', fictional);
   document.getElementById('postal-place-display').childNodes[0].textContent = (fictional ? '✦ ' : '') + dest;
   document.getElementById('postal-book-display').textContent = book ? `Leyendo: ${book}` : '';
   document.getElementById('postal-stamp-place').textContent = dest;
