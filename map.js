@@ -74,7 +74,7 @@ function addDestMarker(entry) {
     })()}
     <div style="margin-top:8px;">
       ${isCurrent
-        ? `<button onclick="openPostal(&quot;${escAttr(entry.dest)}&quot;,&quot;${escAttr(entry.book||'')}&quot;,${!!entry.fictional})" style="background:none;border:1px solid rgba(29,158,117,0.3);border-radius:12px;padding:3px 10px;font-size:0.68rem;color:var(--teal);cursor:pointer;font-family:'Inter',sans-serif;">✉️ Enviar postal</button>`
+        ? `<button onclick="openPostalFromEl(this)" data-dest="${esc(entry.dest)}" data-book="${esc(entry.book||'')}" data-fictional="${!!entry.fictional}" style="background:none;border:1px solid rgba(29,158,117,0.3);border-radius:12px;padding:3px 10px;font-size:0.68rem;color:var(--teal);cursor:pointer;font-family:'Inter',sans-serif;">✉️ Enviar postal</button>`
         : `<span style="font-size:0.68rem;color:#aaa;font-style:italic;">Solo puedes enviar postales desde tu destino actual</span>`}
     </div>
   `);

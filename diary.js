@@ -54,7 +54,7 @@ function renderDiary() {
     const fictionalTag = e.fictional ? '✦ ' : '';
     const isFirst = idx === 0;
     const postalBtn = isFirst
-      ? `<button class="diary-postal-btn" onclick="openPostal(&quot;${escAttr(e.dest)}&quot;,&quot;${escAttr(e.book||'')}&quot;,${!!e.fictional})">✉️ Enviar postal desde aquí</button>`
+      ? `<button class="diary-postal-btn" onclick="openPostalFromEl(this)" data-dest="${esc(e.dest)}" data-book="${esc(e.book||'')}" data-fictional="${!!e.fictional}">✉️ Enviar postal desde aquí</button>`
       : '';
     return `<div class="diary-entry">
       <div class="diary-date">${dateStr}</div>

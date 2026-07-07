@@ -1,4 +1,14 @@
 // ===================== POSTAL =====================
+// Lee los datos del propio botón (data-attributes), evitando meter texto de
+// usuario dentro de un onclick (donde comillas o caracteres raros rompían el JS).
+function openPostalFromEl(el) {
+  openPostal(
+    el.getAttribute('data-dest') || '',
+    el.getAttribute('data-book') || '',
+    el.getAttribute('data-fictional') === 'true'
+  );
+}
+
 function openPostal(dest, book, fictional) {
   const overlay = document.getElementById('postal-overlay');
   const today = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
