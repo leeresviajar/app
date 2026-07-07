@@ -53,10 +53,10 @@ function addDestMarker(entry) {
     iconSize: [size,size], iconAnchor: [size/2,size/2]
   });
   L.marker([entry.destLat, entry.destLng], { icon }).addTo(markersLayer).bindPopup(`
-    <div class="popup-book">${entry.book}${entry.author ? ` <span style="font-weight:400;font-style:normal;font-size:0.8rem;color:#888">— ${entry.author}</span>` : ''}</div>
-    <div class="popup-place">${entry.fictional ? '✦ ' : ''}${entry.dest}</div>
-    <div class="popup-km">+${entry.km.toLocaleString()} km desde ${entry.fromName}</div>
-    ${entry.note ? `<div style="font-size:0.75rem;color:#888;font-style:italic;margin-top:4px;">"${entry.note}"</div>` : ''}
+    <div class="popup-book">${esc(entry.book)}${entry.author ? ` <span style="font-weight:400;font-style:normal;font-size:0.8rem;color:#888">— ${esc(entry.author)}</span>` : ''}</div>
+    <div class="popup-place">${entry.fictional ? '✦ ' : ''}${esc(entry.dest)}</div>
+    <div class="popup-km">+${entry.km.toLocaleString()} km desde ${esc(entry.fromName)}</div>
+    ${entry.note ? `<div style="font-size:0.75rem;color:#888;font-style:italic;margin-top:4px;">"${esc(entry.note)}"</div>` : ''}
     ${(() => {
       const key = entry.dest.toLowerCase();
       const vData = PLACE_VISITORS[key];
@@ -74,7 +74,7 @@ function addDestMarker(entry) {
     })()}
     <div style="margin-top:8px;">
       ${isCurrent
-        ? `<button onclick="openPostal('${entry.dest.replace(/'/g,"\\'")}','${(entry.book||'').replace(/'/g,"\\'")}',${!!entry.fictional})" style="background:none;border:1px solid rgba(29,158,117,0.3);border-radius:12px;padding:3px 10px;font-size:0.68rem;color:var(--teal);cursor:pointer;font-family:'Inter',sans-serif;">✉️ Enviar postal</button>`
+        ? `<button onclick="openPostal(&quot;${escAttr(entry.dest)}&quot;,&quot;${escAttr(entry.book||'')}&quot;,${!!entry.fictional})" style="background:none;border:1px solid rgba(29,158,117,0.3);border-radius:12px;padding:3px 10px;font-size:0.68rem;color:var(--teal);cursor:pointer;font-family:'Inter',sans-serif;">✉️ Enviar postal</button>`
         : `<span style="font-size:0.68rem;color:#aaa;font-style:italic;">Solo puedes enviar postales desde tu destino actual</span>`}
     </div>
   `);

@@ -223,11 +223,11 @@ function updateList() {
     div.innerHTML = `
       <div class="entry-line"><div class="${dotClass}"></div>${connector}</div>
       <div class="entry-content">
-        <div class="entry-route">${e.fromName} → ${e.dest}${e.fictional ? ' ✦' : ''}${e.country && !e.fictional ? ` <span style="opacity:0.7">· ${e.country}</span>` : ''}</div>
-        <div class="entry-book">${e.book}${e.author ? ` <span style="font-size:0.78rem;color:#aaa;font-style:normal">— ${e.author}</span>` : ''}</div>
+        <div class="entry-route">${esc(e.fromName)} → ${esc(e.dest)}${e.fictional ? ' ✦' : ''}${e.country && !e.fictional ? ` <span style="opacity:0.7">· ${esc(e.country)}</span>` : ''}</div>
+        <div class="entry-book">${esc(e.book)}${e.author ? ` <span style="font-size:0.78rem;color:#aaa;font-style:normal">— ${esc(e.author)}</span>` : ''}</div>
         <div class="entry-km">+${e.km.toLocaleString()} km</div>
         ${e.date ? `<div class="entry-date">${formatDate(e.date)}</div>` : ''}
-        ${e.note ? `<div class="entry-note">"${e.note}"</div>` : ''}
+        ${e.note ? `<div class="entry-note">"${esc(e.note)}"</div>` : ''}
       </div>
       <div style="display:flex;align-items:flex-start;gap:0.25rem" id="delete-wrap-${realIndex}">
         <button class="entry-edit" onclick="editEntry(${realIndex})" title="Editar">✏️</button>
@@ -253,11 +253,11 @@ function editEntry(i) {
   const form = document.createElement('div');
   form.className = 'entry-edit-form';
   form.innerHTML = `
-    <input type="text" id="edit-book-${i}" value="${entry.book.replace(/"/g,'&quot;')}" placeholder="Título del libro…">
-    <input type="text" id="edit-author-${i}" value="${(entry.author||'').replace(/"/g,'&quot;')}" placeholder="Autor (opcional)…">
-    <input type="text" id="edit-note-${i}" value="${(entry.note||'').replace(/"/g,'&quot;')}" placeholder="Nota personal (opcional)…">
+    <input type="text" id="edit-book-${i}" value="${esc(entry.book)}" placeholder="Título del libro…">
+    <input type="text" id="edit-author-${i}" value="${esc(entry.author)}" placeholder="Autor (opcional)…">
+    <input type="text" id="edit-note-${i}" value="${esc(entry.note)}" placeholder="Nota personal (opcional)…">
     <div class="entry-edit-location">
-      <input type="text" id="edit-dest-${i}" value="${entry.dest.replace(/"/g,'&quot;')}" placeholder="Ubicación del destino…">
+      <input type="text" id="edit-dest-${i}" value="${esc(entry.dest)}" placeholder="Ubicación del destino…">
       <button class="entry-edit-geo-btn" onclick="relocateEntry(${i})">Buscar</button>
     </div>
     <div class="entry-edit-geo-status" id="edit-geo-status-${i}"></div>

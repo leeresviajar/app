@@ -54,13 +54,13 @@ function renderDiary() {
     const fictionalTag = e.fictional ? '✦ ' : '';
     const isFirst = idx === 0;
     const postalBtn = isFirst
-      ? `<button class="diary-postal-btn" onclick="openPostal('${e.dest.replace(/'/g,"\\'")}','${(e.book||'').replace(/'/g,"\\'")}',${!!e.fictional})">✉️ Enviar postal desde aquí</button>`
+      ? `<button class="diary-postal-btn" onclick="openPostal(&quot;${escAttr(e.dest)}&quot;,&quot;${escAttr(e.book||'')}&quot;,${!!e.fictional})">✉️ Enviar postal desde aquí</button>`
       : '';
     return `<div class="diary-entry">
       <div class="diary-date">${dateStr}</div>
       <div class="diary-text">
-        Llegada a <span class="place">${fictionalTag}${e.dest}</span>
-        <span class="book-ref">📖 ${e.book}${e.author ? ' — ' + e.author : ''} · +${e.km.toLocaleString()} km desde ${e.fromName}</span>
+        Llegada a <span class="place">${fictionalTag}${esc(e.dest)}</span>
+        <span class="book-ref">📖 ${esc(e.book)}${e.author ? ' — ' + esc(e.author) : ''} · +${e.km.toLocaleString()} km desde ${esc(e.fromName)}</span>
       </div>
       ${pioneerBadge}
       ${postalBtn}
