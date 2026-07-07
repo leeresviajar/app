@@ -283,3 +283,15 @@ function openAuthFromCta() {
   document.getElementById('auth-cta-toast').classList.remove('show');
   openAuthModal('signup');
 }
+
+
+// ===================== MOSTRAR / OCULTAR CONTRASEÑA =====================
+function toggleAuthPassword(el) {
+  const p = document.getElementById('auth-password');
+  const show = p.type === 'password';
+  p.type = show ? 'text' : 'password';
+  // Ojo abierto vs ojo tachado
+  el.innerHTML = show
+    ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>'
+    : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
