@@ -9,14 +9,19 @@ function openPostalFromEl(el) {
   );
 }
 
+// Si el destino de la postal abierta es ficticio (decide el símbolo del sello en el email)
+let postalIsFictional = false;
+
 function openPostal(dest, book, fictional) {
   const overlay = document.getElementById('postal-overlay');
   const today = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  postalIsFictional = fictional;
   document.getElementById('postal-place-display').childNodes[0].textContent = (fictional ? '✦ ' : '') + dest;
   document.getElementById('postal-book-display').textContent = book ? `Leyendo: ${book}` : '';
   document.getElementById('postal-stamp-place').textContent = dest;
   document.getElementById('postal-stamp-date').textContent = today;
   document.getElementById('postal-quote').value = '';
+  document.getElementById('postal-from-name').value = '';
   document.getElementById('postal-to-name').value = '';
   document.getElementById('postal-to-email').value = '';
   document.getElementById('postal-form-side').style.display = 'flex';
@@ -28,7 +33,17 @@ function closePostal() {
   document.getElementById('postal-overlay').classList.remove('open');
 }
 
+// Km acumulados del lector, leídos de la estadística ya calculada del sidebar.
+// El texto puede venir formateado con puntos de miles ("12.480"), se limpia antes de parsear.
+function getKmAcumulados() {
+  const el = document.getElementById('stat-km');
+  if (!el) return 0;
+  const n = parseInt(el.textContent.replace(/[.\s]/g, ''), 10);
+  return (!isNaN(n) && n > 0) ? n : 0;
+}
+
 async function sendPostal() {
+  const fromName = document.getElementById('postal-from-name').value.trim();
   const name = document.getElementById('postal-to-name').value.trim();
   const email = document.getElementById('postal-to-email').value.trim();
   const place = document.getElementById('postal-stamp-place').textContent;
@@ -49,7 +64,17 @@ async function sendPostal() {
     const res = await fetch('https://leer-es-viajar-postal.paula-7a6.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ toName: name, toEmail: email, fromPlace: place, book, quote, date })
+      body: JSON.stringify({
+        toName: name,
+        toEmail: email,
+        fromPlace: place,
+        book,
+        quote,
+        date,
+        deNombre: fromName,
+        esFicticio: postalIsFictional,
+        kmAcumulados: getKmAcumulados()
+      })
     });
 
     if (res.ok) {

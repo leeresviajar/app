@@ -53,8 +53,9 @@ function renderDiary() {
     const pioneerBadge = e.pioneer ? `<div><span class="diary-pioneer">🧭 Primera persona en llegar</span></div>` : '';
     const fictionalTag = e.fictional ? '✦ ' : '';
     const isFirst = idx === 0;
+    const bookFull = e.book ? (e.book + (e.author ? ', de ' + e.author : '')) : '';
     const postalBtn = isFirst
-      ? `<button class="diary-postal-btn" onclick="openPostalFromEl(this)" data-dest="${esc(e.dest)}" data-book="${esc(e.book||'')}" data-fictional="${!!e.fictional}">✉️ Enviar postal desde aquí</button>`
+      ? `<button class="diary-postal-btn" onclick="openPostalFromEl(this)" data-dest="${esc(e.dest)}" data-book="${esc(bookFull)}" data-fictional="${!!e.fictional}">✉️ Enviar postal desde aquí</button>`
       : '';
     return `<div class="diary-entry">
       <div class="diary-date">${dateStr}</div>
