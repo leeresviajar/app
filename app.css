@@ -559,17 +559,20 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 @media (max-width: 768px) {
   .app { display: block; height: auto; }
 
-  /* Área táctil ampliada para editar/borrar viajes (iconos iguales, zona mayor) */
+  /* Área táctil ampliada SIN cambiar el tamaño visual: el icono se ve igual
+     de pequeño, pero un pseudo-elemento invisible amplía la zona que responde
+     al toque hasta ~44px. Así se mantiene la proporción del resto de la UI. */
   .entry-edit, .entry-delete {
-    font-size: 1rem; padding: 8px 10px; margin-top: 0;
-    min-width: 40px; min-height: 40px;
-    display: inline-flex; align-items: center; justify-content: center;
+    position: relative;
+    font-size: 0.75rem; /* igual que en escritorio */
+    padding: 2px 4px; margin-top: 2px;
   }
-  #delete-wrap-0, [id^="delete-wrap-"] { gap: 0.15rem; }
-  .confirm-delete button { padding: 6px 10px; font-size: 0.85rem; min-height: 36px; }
-  .entry-edit-save, .entry-edit-cancel, .entry-edit-geo-btn {
-    padding: 0.6rem 1rem; font-size: 0.85rem; min-height: 40px;
+  .entry-edit::after, .entry-delete::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px; height: 44px; /* zona táctil, invisible */
   }
+  .confirm-delete button { padding: 5px 8px; }
   .map-wrap { position: fixed; inset: 0; z-index: 1; }
   #map { width: 100%; height: 100%; }
 
