@@ -6,7 +6,7 @@
   --muted: #9a948d; --route: #e8593c;
   --white: #ffffff; --paper: #f7f5f1; --line: #ece8e1;
 }
-html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--white); }
+html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--white); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 .app { display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
 
 /* SIDEBAR */
@@ -211,7 +211,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .diary-entry:last-child { border-bottom: none; }
 .diary-date { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.3rem; }
 .diary-text { font-family: 'Instrument Serif', serif; font-size: 0.92rem; color: var(--ink); line-height: 1.5; font-style: italic; }
-.diary-text .place { color: var(--teal); font-style: normal; font-weight: 600; }
+.diary-text .place { color: var(--teal); font-style: normal; }
 .diary-text .book-ref { color: var(--muted); font-size: 0.78rem; display: block; margin-top: 0.2rem; font-style: normal; font-family: 'Inter', sans-serif; }
 .diary-pioneer { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--teal); background: rgba(29,158,117,0.08); border: 1px solid rgba(29,158,117,0.25); border-radius: 20px; padding: 0.2rem 0.55rem; margin-top: 0.4rem; font-weight: 500; }
 
