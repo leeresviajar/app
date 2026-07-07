@@ -81,7 +81,7 @@ function loadUnlocked() {
 }
 function saveUnlocked(arr) { localStorage.setItem('lev_badges', JSON.stringify(arr)); }
 
-function checkNewBadges(stats) {
+function checkNewBadges(stats, silent = false) {
   const unlocked = loadUnlocked();
   const newOnes = [];
   for (const badge of BADGES_DEF) {
@@ -94,7 +94,9 @@ function checkNewBadges(stats) {
     saveUnlocked(unlocked);
     const tab = document.getElementById('tab-logros');
     tab.innerHTML = 'Logros <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--teal);vertical-align:middle;margin-left:3px;"></span>';
-    showBadgeUnlockToast(newOnes[0]);
+    // silent: al cargar desde la nube marcamos los logros ya conseguidos sin
+    // lanzar la lluvia de toasts por logros que el usuario ya tenía.
+    if (!silent) showBadgeUnlockToast(newOnes[0]);
   }
 }
 

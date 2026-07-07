@@ -179,6 +179,11 @@ async function loadStateFromCloud() {
 
   updateList(); updateStats();
   updateOriginNarrative();
+
+  // Recalcular logros con el estado recién cargado, en silencio (sin toasts)
+  // para que un usuario que entra en un dispositivo nuevo vea de inmediato
+  // los logros que ya tenía conseguidos, sin una avalancha de avisos.
+  checkNewBadges(getBadgeStats(), true);
 }
 
 function migrateDiary() {
