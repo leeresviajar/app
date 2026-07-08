@@ -21,6 +21,17 @@ async function initAuth() {
   lastLoadedUserId = currentUser ? currentUser.id : null;
   updateUserBadge();
 
+  // Si arrancamos con sesión ya activa (p. ej. volviendo del redirect de Google),
+  // el evento SIGNED_IN podría no dispararse o quedar descartado por el guardia.
+  // Comprobamos aquí mismo que el usuario tenga nombre; si no, se lo pedimos.
+  if (currentUser) {
+    const hasUsername = await ensureUsername();
+    if (!hasUsername) {
+      // Se mostrará la pantalla de elegir nombre; no seguimos hasta que elija.
+      return;
+    }
+  }
+
   supabaseClient.auth.onAuthStateChange(async (event, session) => {
     currentUser = session ? session.user : null;
     updateUserBadge();
@@ -261,9 +272,11 @@ function openAuthModal(mode) {
   document.getElementById('auth-error').style.display = 'none';
   document.getElementById('auth-overlay').classList.add('open');
 }
-function closeAuthModal() {
-  // En modo choose-username el nombre es obligatorio: no se puede cerrar sin él.
-  if (authMode === 'choose-username') return;
+function closeAuthModal(force) {
+  // En modo choose-username el nombre es obligatorio: no se puede cerrar con la X
+  // ni clic fuera. Pero cuando lo cerramos nosotros tras guardar el nombre,
+  // pasamos force=true para saltarnos ese candado.
+  if (authMode === 'choose-username' && !force) return;
   document.getElementById('auth-overlay').classList.remove('open');
 }
 
@@ -353,7 +366,12 @@ async function authSubmit() {
       const res = await saveUsername(username);
       if (!res.ok) { showAuthError(res.reason); return; }
       showAuthInfo('¡Listo! Buen viaje.');
-      setTimeout(() => { closeAuthModal(); loadState(); }, 900);
+      // Cierre forzado (salta el candado de choose-username) y carga de la app.
+      setTimeout(() => {
+        authMode = 'login';
+        closeAuthModal(true);
+        loadState();
+      }, 900);
     } catch (e) {
       showAuthError('Error de conexión. Inténtalo de nuevo.');
     } finally {
@@ -439,9 +457,12 @@ async function authForgotPassword() {
 }
 
 async function authSignInWithGoogle() {
+  // Usamos origin + pathname (sin hash ni query): si pasáramos
+  // window.location.href, su '#' se juntaría con el '#access_token' que añade
+  // Supabase al volver, creando un '##' que rompe el parseo de la sesión.
   await supabaseClient.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.href }
+    options: { redirectTo: window.location.origin + window.location.pathname }
   });
 }
 
