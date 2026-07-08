@@ -152,6 +152,9 @@ function setUsernameHint(text, color) {
   if (!el) return;
   el.textContent = text || '';
   el.style.color = color || '#9a948d';
+  // Solo ocupa espacio cuando hay mensaje, para que el hueco vacío no
+  // descuadre la separación con el campo de email.
+  el.style.marginTop = text ? '6px' : '0';
 }
 
 // Se llama en cada tecla del campo username (con debounce para la consulta a la nube)
