@@ -11,6 +11,7 @@ let authMode = 'signup'; // 'signup' | 'login'
 // Evita recargar el estado en refires de SIGNED_IN (foco de pestaña, refresco
 // de token): solo cargamos cuando cambia de verdad el usuario con sesión.
 let lastLoadedUserId = null;
+let currentUsername = null; // nombre de viajero del usuario en sesión
 
 // Se llama una vez al arrancar la app, antes de loadState()
 async function initAuth() {
@@ -20,6 +21,7 @@ async function initAuth() {
   // este usuario como ya cargado para que el SIGNED_IN de arranque no duplique.
   lastLoadedUserId = currentUser ? currentUser.id : null;
   updateUserBadge();
+  refreshCurrentUsername(); // carga y muestra el nombre de viajero si lo hay
 
   // Si arrancamos con sesión ya activa (p. ej. volviendo del redirect de Google),
   // el evento SIGNED_IN podría no dispararse o quedar descartado por el guardia.
@@ -52,6 +54,7 @@ async function initAuth() {
         // hasta que el usuario elija un nombre.
         return;
       }
+      refreshCurrentUsername();
 
       closeAuthModal();
       await migrateLocalToCloud();
@@ -68,14 +71,32 @@ function updateUserBadge() {
   if (!badge || !loginLink) return;
   if (currentUser) {
     const email = currentUser.email || '';
-    document.getElementById('user-avatar').textContent = email.charAt(0).toUpperCase();
-    document.getElementById('user-email').textContent = email;
+    // Mostramos el nombre de viajero si lo tenemos; si no, caemos al email.
+    const display = currentUsername || email;
+    document.getElementById('user-avatar').textContent = (display.charAt(0) || '?').toUpperCase();
+    document.getElementById('user-email').textContent = display;
     badge.style.display = 'flex';
     loginLink.style.display = 'none';
   } else {
     badge.style.display = 'none';
     loginLink.style.display = 'block';
   }
+}
+
+// Carga el username del perfil y refresca el badge. Se llama tras iniciar sesión.
+async function refreshCurrentUsername() {
+  if (!currentUser) { currentUsername = null; return; }
+  try {
+    const { data } = await supabaseClient
+      .from('profiles')
+      .select('username')
+      .eq('id', currentUser.id)
+      .single();
+    currentUsername = (data && data.username) ? data.username : null;
+  } catch (e) {
+    currentUsername = null;
+  }
+  updateUserBadge();
 }
 
 // ===================== MIGRACIÓN LOCAL → NUBE =====================
@@ -367,6 +388,8 @@ async function authSubmit() {
       if (!res.ok) { showAuthError(res.reason); return; }
       showAuthInfo('¡Listo! Buen viaje.');
       // Cierre forzado (salta el candado de choose-username) y carga de la app.
+      currentUsername = username; // reflejar de inmediato en el badge
+      updateUserBadge();
       setTimeout(() => {
         authMode = 'login';
         closeAuthModal(true);
