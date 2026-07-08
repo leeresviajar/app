@@ -32,6 +32,16 @@ async function initAuth() {
     }
     if (event === 'SIGNED_IN' && currentUser && currentUser.id !== lastLoadedUserId) {
       lastLoadedUserId = currentUser.id;
+
+      // ¿Falta el nombre de viajero? (usuarios de Google, o registros por email
+      // cuyo nombre quedó pendiente hasta confirmar el correo)
+      const hasUsername = await ensureUsername();
+      if (!hasUsername) {
+        // ensureUsername ya ha abierto el modo choose-username; no seguimos
+        // hasta que el usuario elija un nombre.
+        return;
+      }
+
       closeAuthModal();
       await migrateLocalToCloud();
       loadState(); // recarga desde la nube al iniciar sesión
@@ -119,6 +129,129 @@ async function migrateLocalToCloud() {
   }
 }
 
+// ===================== USERNAME =====================
+// Reglas: 3-20 caracteres, letras (con tildes y ñ), números y guion bajo.
+// Sin espacios ni otros símbolos. Único (sin distinguir mayúsculas/minúsculas
+// lo gestiona el índice de la base de datos).
+const USERNAME_RE = /^[\p{L}0-9_]{3,20}$/u;
+
+let usernameCheckTimer = null;
+let usernameStatus = 'empty'; // 'empty' | 'invalid' | 'checking' | 'taken' | 'ok'
+
+function validateUsernameFormat(v) {
+  if (!v) return { ok: false, reason: 'empty' };
+  if (v.length < 3) return { ok: false, reason: 'Mínimo 3 caracteres.' };
+  if (v.length > 20) return { ok: false, reason: 'Máximo 20 caracteres.' };
+  if (/\s/.test(v)) return { ok: false, reason: 'Sin espacios.' };
+  if (!USERNAME_RE.test(v)) return { ok: false, reason: 'Solo letras, números y guion bajo.' };
+  return { ok: true };
+}
+
+function setUsernameHint(text, color) {
+  const el = document.getElementById('auth-username-hint');
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.color = color || '#9a948d';
+}
+
+// Se llama en cada tecla del campo username (con debounce para la consulta a la nube)
+function onUsernameInput() {
+  const v = document.getElementById('auth-username').value.trim();
+  clearTimeout(usernameCheckTimer);
+
+  const fmt = validateUsernameFormat(v);
+  if (!fmt.ok) {
+    usernameStatus = v ? 'invalid' : 'empty';
+    setUsernameHint(v ? fmt.reason : '', '#c14b34');
+    return;
+  }
+
+  usernameStatus = 'checking';
+  setUsernameHint('Comprobando disponibilidad…', '#9a948d');
+  usernameCheckTimer = setTimeout(() => checkUsernameAvailable(v), 450);
+}
+
+async function checkUsernameAvailable(v) {
+  try {
+    const { data, error } = await supabaseClient
+      .from('profiles')
+      .select('id')
+      .ilike('username', v)   // ilike = comparación sin distinguir mayúsculas
+      .limit(1);
+    if (error) {
+      // Si la comprobación falla, no bloqueamos: se validará de nuevo al enviar.
+      usernameStatus = 'ok';
+      setUsernameHint('', '#9a948d');
+      return;
+    }
+    if (data && data.length) {
+      usernameStatus = 'taken';
+      setUsernameHint('Ese nombre ya está cogido. Prueba otro.', '#c14b34');
+    } else {
+      usernameStatus = 'ok';
+      setUsernameHint('¡Disponible!', '#137a5a');
+    }
+  } catch (e) {
+    usernameStatus = 'ok';
+    setUsernameHint('', '#9a948d');
+  }
+}
+
+// Guarda el username en el perfil del usuario actual.
+// Devuelve { ok } o { ok:false, reason } si el nombre se cogió entre medias.
+async function saveUsername(v) {
+  const { error } = await supabaseClient
+    .from('profiles')
+    .upsert({ id: currentUser.id, username: v });
+  if (error) {
+    // El índice único puede rechazarlo si alguien lo cogió a la vez (carrera).
+    if (/duplicate|unique/i.test(error.message)) {
+      return { ok: false, reason: 'Ese nombre acaba de cogerlo otra persona. Prueba otro.' };
+    }
+    return { ok: false, reason: 'No se pudo guardar el nombre. Inténtalo de nuevo.' };
+  }
+  return { ok: true };
+}
+
+// ¿El usuario con sesión tiene ya un username en su perfil?
+async function currentUserHasUsername() {
+  try {
+    const { data } = await supabaseClient
+      .from('profiles')
+      .select('username')
+      .eq('id', currentUser.id)
+      .single();
+    return !!(data && data.username);
+  } catch (e) {
+    return false;
+  }
+}
+
+// Garantiza que el usuario tenga username. Si hay uno pendiente (registro por
+// email), lo asigna. Si no tiene ninguno (Google), abre el modo para elegirlo.
+// Devuelve true si ya tiene (o se le acaba de asignar) username.
+async function ensureUsername() {
+  if (await currentUserHasUsername()) return true;
+
+  // ¿Había un nombre pendiente del registro por email?
+  const pending = localStorage.getItem('lev_pending_username');
+  if (pending) {
+    const fmt = validateUsernameFormat(pending);
+    if (fmt.ok) {
+      const res = await saveUsername(pending);
+      localStorage.removeItem('lev_pending_username');
+      if (res.ok) return true;
+      // Si el pendiente ya no está disponible, caemos a pedirlo de nuevo.
+    } else {
+      localStorage.removeItem('lev_pending_username');
+    }
+  }
+
+  // No tiene username: le pedimos que elija uno y no le dejamos salir del modal.
+  openAuthModal('choose-username');
+  return false;
+}
+
 // ===================== MODAL: ABRIR / CERRAR =====================
 function openAuthModal(mode) {
   setAuthMode(mode || 'signup');
@@ -126,6 +259,8 @@ function openAuthModal(mode) {
   document.getElementById('auth-overlay').classList.add('open');
 }
 function closeAuthModal() {
+  // En modo choose-username el nombre es obligatorio: no se puede cerrar sin él.
+  if (authMode === 'choose-username') return;
   document.getElementById('auth-overlay').classList.remove('open');
 }
 
@@ -133,14 +268,21 @@ function setAuthMode(mode) {
   authMode = mode;
   const isLogin = mode === 'login';
   const isRecovery = mode === 'recovery';
+  const isChooseUsername = mode === 'choose-username';
 
-  // En modo recuperación solo se muestra el campo de nueva contraseña
-  document.getElementById('auth-tabs').style.display = isRecovery ? 'none' : 'flex';
-  document.getElementById('auth-google-btn').style.display = isRecovery ? 'none' : 'flex';
-  document.getElementById('auth-divider').style.display = isRecovery ? 'none' : 'flex';
-  document.getElementById('auth-email-wrap').style.display = isRecovery ? 'none' : 'block';
+  // "choose-username": modo especial tras login con Google (o cuenta sin nombre).
+  // Solo se muestra el campo de nombre de viajero; ni tabs, ni Google, ni email,
+  // ni contraseña. El usuario no puede cerrar el modal hasta elegir uno.
+  document.getElementById('auth-tabs').style.display = (isRecovery || isChooseUsername) ? 'none' : 'flex';
+  document.getElementById('auth-google-btn').style.display = (isRecovery || isChooseUsername) ? 'none' : 'flex';
+  document.getElementById('auth-divider').style.display = (isRecovery || isChooseUsername) ? 'none' : 'flex';
+  document.getElementById('auth-email-wrap').style.display = (isRecovery || isChooseUsername) ? 'none' : 'block';
+  document.getElementById('auth-password-wrap').style.display = (isChooseUsername) ? 'none' : 'block';
 
-  if (!isRecovery) {
+  // El campo username se muestra en el registro y en el modo choose-username
+  document.getElementById('auth-username-wrap').style.display = (mode === 'signup' || isChooseUsername) ? 'block' : 'none';
+
+  if (!isRecovery && !isChooseUsername) {
     const tabLogin = document.getElementById('auth-tab-login');
     const tabSignup = document.getElementById('auth-tab-signup');
     tabLogin.style.borderBottomColor = isLogin ? '#1d9e75' : 'transparent';
@@ -152,15 +294,25 @@ function setAuthMode(mode) {
   document.getElementById('auth-password-label').textContent = isRecovery ? 'NUEVA CONTRASEÑA' : 'CONTRASEÑA';
   document.getElementById('auth-password').placeholder = isRecovery ? 'Mínimo 6 caracteres' : 'Tu contraseña';
 
-  document.getElementById('auth-headline').textContent = isRecovery
-    ? 'Elige una nueva contraseña y sigue viajando'
-    : (isLogin
-      ? 'Guarda tus rutas y retómalas donde las dejaste'
-      : 'Empieza a guardar tu mapa lector en la nube');
-  document.getElementById('auth-eyebrow').textContent = isRecovery ? '· NUEVA CONTRASEÑA' : (isLogin ? '· INICIAR SESIÓN' : '· CREAR CUENTA');
+  document.getElementById('auth-headline').textContent = isChooseUsername
+    ? 'Elige el nombre con el que viajarás'
+    : (isRecovery
+      ? 'Elige una nueva contraseña y sigue viajando'
+      : (isLogin
+        ? 'Guarda tus rutas y retómalas donde las dejaste'
+        : 'Empieza a guardar tu mapa lector en la nube'));
+  document.getElementById('auth-eyebrow').textContent = isChooseUsername ? '· ÚLTIMO PASO' : (isRecovery ? '· NUEVA CONTRASEÑA' : (isLogin ? '· INICIAR SESIÓN' : '· CREAR CUENTA'));
   document.getElementById('auth-google-label').textContent = isLogin ? 'Continuar con Google' : 'Registrarse con Google';
-  document.getElementById('auth-submit').textContent = isRecovery ? 'Guardar contraseña' : (isLogin ? 'Entrar' : 'Crear cuenta');
+  document.getElementById('auth-submit').textContent = isChooseUsername ? 'Empezar a viajar' : (isRecovery ? 'Guardar contraseña' : (isLogin ? 'Entrar' : 'Crear cuenta'));
   document.getElementById('auth-forgot').style.display = isLogin ? 'block' : 'none';
+
+  // Reset del campo username al cambiar de modo
+  if (mode === 'signup' || isChooseUsername) {
+    const u = document.getElementById('auth-username');
+    if (u) u.value = '';
+    setUsernameHint('', '#9a948d');
+    usernameStatus = 'empty';
+  }
 }
 
 function showAuthError(msg) {
@@ -184,9 +336,36 @@ function showAuthInfo(msg) {
 async function authSubmit() {
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
+  const username = (document.getElementById('auth-username').value || '').trim();
+
+  // ── Modo especial: elegir username tras login con Google / cuenta sin nombre ──
+  if (authMode === 'choose-username') {
+    const fmt = validateUsernameFormat(username);
+    if (!fmt.ok) { showAuthError(fmt.reason || 'Elige un nombre válido.'); return; }
+    if (usernameStatus === 'taken') { showAuthError('Ese nombre ya está cogido. Prueba otro.'); return; }
+
+    const btn = document.getElementById('auth-submit');
+    const prev = btn.textContent; btn.textContent = 'Un momento…'; btn.disabled = true;
+    try {
+      const res = await saveUsername(username);
+      if (!res.ok) { showAuthError(res.reason); return; }
+      showAuthInfo('¡Listo! Buen viaje.');
+      setTimeout(() => { closeAuthModal(); loadState(); }, 900);
+    } catch (e) {
+      showAuthError('Error de conexión. Inténtalo de nuevo.');
+    } finally {
+      btn.textContent = prev; btn.disabled = false;
+    }
+    return;
+  }
 
   if (authMode === 'recovery') {
     if (!password || password.length < 6) { showAuthError('La contraseña necesita al menos 6 caracteres.'); return; }
+  } else if (authMode === 'signup') {
+    if (!email || !password) { showAuthError('Rellena email y contraseña.'); return; }
+    const fmt = validateUsernameFormat(username);
+    if (!fmt.ok) { showAuthError(fmt.reason || 'Elige un nombre de viajero.'); return; }
+    if (usernameStatus === 'taken') { showAuthError('Ese nombre ya está cogido. Prueba otro.'); return; }
   } else if (!email || !password) {
     showAuthError('Rellena email y contraseña.'); return;
   }
@@ -205,17 +384,25 @@ async function authSubmit() {
       return;
     }
     if (authMode === 'signup') {
-      const { error } = await supabaseClient.auth.signUp({ email, password });
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
       if (error) { showAuthError(traduceErrorAuth(error.message)); return; }
+      // Guardamos el username elegido. Si hay sesión inmediata (confirmación de
+      // email desactivada), lo guardamos ya; si no, lo dejamos pendiente para
+      // guardarlo cuando confirme el correo y entre.
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        const res = await saveUsername(username);
+        if (!res.ok) { showAuthError(res.reason); return; }
+      } else {
+        // Sin sesión aún (debe confirmar email): guardamos el nombre localmente
+        // para asignarlo en cuanto entre por primera vez.
+        localStorage.setItem('lev_pending_username', username);
+        showAuthInfo('Cuenta creada. Revisa tu correo para confirmarla.');
+        return;
+      }
     } else {
       const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (error) { showAuthError(traduceErrorAuth(error.message)); return; }
-    }
-    // Si la confirmación de email está activada en Supabase, aquí no habrá sesión
-    // todavía y el usuario deberá confirmar el correo antes de entrar.
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session && authMode === 'signup') {
-      showAuthInfo('Cuenta creada. Revisa tu correo para confirmarla.');
     }
   } catch (e) {
     showAuthError('Error de conexión. Inténtalo de nuevo.');
