@@ -12,7 +12,7 @@ html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--w
 
 /* SIDEBAR */
 .sidebar { background: var(--white); display: flex; flex-direction: column; height: 100vh; border-right: 0.5px solid var(--line); overflow: hidden; z-index: 10; }
-.sidebar-header { background: var(--white); padding: 1.5rem 1.75rem 1rem; flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; }
+.sidebar-header { background: var(--white); padding: 1.5rem 1.75rem 1rem; flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; }
 .logo { font-family: 'Instrument Serif', serif; font-size: 1.5rem; color: var(--ink); letter-spacing: -0.01em; line-height: 1.1; }
 .logo em { color: var(--teal); font-style: italic; }
 .tagline { display: none; }
