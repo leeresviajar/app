@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
   --ink: #1a1a18; --forest: #1a3a2a; --forest-mid: #0f6e56;
@@ -6,12 +7,12 @@
   --muted: #9a948d; --route: #e8593c;
   --white: #ffffff; --paper: #f7f5f1; --line: #ece8e1;
 }
-html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--white); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--white); }
 .app { display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
 
 /* SIDEBAR */
 .sidebar { background: var(--white); display: flex; flex-direction: column; height: 100vh; border-right: 0.5px solid var(--line); overflow: hidden; z-index: 10; }
-.sidebar-header { background: var(--white); padding: 1.5rem 1.75rem 1rem; flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; }
+.sidebar-header { background: var(--white); padding: 1.5rem 1.75rem 1rem; flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; }
 .logo { font-family: 'Instrument Serif', serif; font-size: 1.5rem; color: var(--ink); letter-spacing: -0.01em; line-height: 1.1; }
 .logo em { color: var(--teal); font-style: italic; }
 .tagline { display: none; }
@@ -211,7 +212,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .diary-entry:last-child { border-bottom: none; }
 .diary-date { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.3rem; }
 .diary-text { font-family: 'Instrument Serif', serif; font-size: 0.92rem; color: var(--ink); line-height: 1.5; font-style: italic; }
-.diary-text .place { color: var(--teal); font-family: 'Instrument Serif', serif; font-style: italic; font-size: 1.15rem; }
+.diary-text .place { color: var(--teal); font-style: normal; font-weight: 600; }
 .diary-text .book-ref { color: var(--muted); font-size: 0.78rem; display: block; margin-top: 0.2rem; font-style: normal; font-family: 'Inter', sans-serif; }
 .diary-pioneer { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--teal); background: rgba(29,158,117,0.08); border: 1px solid rgba(29,158,117,0.25); border-radius: 20px; padding: 0.2rem 0.55rem; margin-top: 0.4rem; font-weight: 500; }
 
@@ -502,15 +503,35 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   color: var(--cream); line-height: 1.2;
 }
 .postal-place-name span { font-size: 0.9rem; opacity: 0.6; display: block; margin-top: 0.25rem; font-style: italic; }
+.postal-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.postal-heading { flex: 1; min-width: 0; }
+#postal-book-display { display: block; font-size: 0.7rem; font-style: normal; color: rgba(255,255,255,0.65); font-family: 'Inter', sans-serif; margin-top: 4px; }
+
+.postal-marks { display: flex; align-items: flex-start; gap: 0.75rem; flex-shrink: 0; }
+
+/* Matasellos: círculo pequeño con el país curvado, del tamaño de un sello real */
+.postal-cancel-mark { width: 84px; flex-shrink: 0; text-align: center; }
+.postal-cancel-svg { width: 84px; height: 84px; display: block; }
+.postal-cancel-svg circle { fill: none; stroke: rgba(255,255,255,0.55); stroke-width: 1; }
+.postal-arc-text, .postal-arc-dots { font-family: 'Inter', sans-serif; font-size: 8px; letter-spacing: 0.08em; fill: rgba(255,255,255,0.85); text-transform: uppercase; }
+.postal-stamp-date { font-size: 0.55rem; color: rgba(255,255,255,0.55); margin-top: 4px; text-align: center; }
+
+/* Sello rectangular "Leer es viajar" con marca de real/ficticio */
 .postal-stamp {
-  margin-top: auto;
-  border: 2px dashed rgba(159,217,192,0.3);
-  border-radius: 8px; padding: 0.6rem 0.8rem;
-  display: inline-flex; flex-direction: column; align-self: flex-start;
+  border: 1.5px dashed rgba(255,255,255,0.35);
+  border-radius: 6px; padding: 0.5rem 0.7rem;
+  display: inline-flex; align-self: flex-start; flex-shrink: 0;
+  width: 68px; height: 68px; box-sizing: border-box;
 }
-.postal-stamp-name { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal-light); opacity: 0.6; }
-.postal-stamp-place { font-size: 0.85rem; font-family: 'Instrument Serif', serif; color: var(--cream); font-style: italic; }
-.postal-stamp-date { font-size: 0.6rem; color: rgba(159,217,192,0.5); margin-top: 2px; }
+.postal-stamp-inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; }
+.stamp-symbol-real, .stamp-symbol-fictional { font-size: 0.7rem; color: rgba(255,255,255,0.85); }
+.stamp-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.7); }
+/* Solo se muestra el símbolo correspondiente (real u óctico ficticio); por
+   defecto ambos ocultos, y JS añade una clase al overlay según el tipo. */
+.stamp-symbol-real, .stamp-symbol-fictional { display: none; }
+.postal-overlay:not(.fictional) .stamp-symbol-real { display: inline; }
+.postal-overlay.fictional .stamp-symbol-fictional { display: inline; }
+.postal-stamp-brand { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 0.55rem; line-height: 1.15; color: rgba(255,255,255,0.75); text-align: center; }
 
 .postal-right { padding: 1.75rem; display: flex; flex-direction: column; gap: 1rem; background: var(--white); }
 .postal-right h3 { font-family: 'Inter', sans-serif; font-size: 0.62rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
@@ -557,21 +578,6 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 
 @media (max-width: 768px) {
   .app { display: block; height: auto; }
-
-  /* Área táctil ampliada SIN cambiar el tamaño visual: el icono se ve igual
-     de pequeño, pero un pseudo-elemento invisible amplía la zona que responde
-     al toque hasta ~44px. Así se mantiene la proporción del resto de la UI. */
-  .entry-edit, .entry-delete {
-    position: relative;
-    font-size: 0.75rem; /* igual que en escritorio */
-    padding: 2px 4px; margin-top: 2px;
-  }
-  .entry-edit::after, .entry-delete::after {
-    content: ''; position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 44px; height: 44px; /* zona táctil, invisible */
-  }
-  .confirm-delete button { padding: 5px 8px; }
   .map-wrap { position: fixed; inset: 0; z-index: 1; }
   #map { width: 100%; height: 100%; }
 
@@ -613,28 +619,3 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   .export-trigger { top: 0.75rem; left: 0.75rem; right: auto; }
   .pioneer-toast, .badge-unlock-toast { left: 0.75rem; right: 0.75rem; max-width: none; }
 }
-
-/* ===== MÉTODO DE UBICACIÓN FICTICIA: PESTAÑAS + MINI-MAPA ===== */
-.fic-method-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.9rem; }
-.fic-method-tab {
-  flex: 1; padding: 0.45rem 0.5rem; border: 0.5px solid var(--line); background: var(--white);
-  border-radius: 7px; font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 500;
-  color: var(--muted); cursor: pointer; transition: all 0.15s ease;
-}
-.fic-method-tab.active { background: rgba(29,158,117,0.08); border-color: rgba(29,158,117,0.35); color: var(--teal); }
-#fic-mini-map {
-  width: 100%; height: 240px; border-radius: 9px; overflow: hidden;
-  border: 0.5px solid var(--line); margin-bottom: 0.5rem; background: #e8e4dd;
-}
-#fic-mini-map .leaflet-container { font-family: 'Inter', sans-serif; }
-
-
-/* ===== X DE CIERRE Y BOTÓN ÚNICO EN MODAL FICTICIO ===== */
-.fic-close-x {
-  position: absolute; top: 0.9rem; right: 1rem; background: none; border: none;
-  font-size: 1.05rem; line-height: 1; color: var(--muted); cursor: pointer;
-  padding: 0.2rem; transition: color 0.15s ease;
-}
-.fic-close-x:hover { color: var(--ink); }
-.fic-btns-single { justify-content: center; }
-.fic-btns-single .btn-use-custom { min-width: 60%; }
