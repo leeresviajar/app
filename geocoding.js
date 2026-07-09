@@ -60,35 +60,10 @@ const FICTIONAL = {
   'limbhad':[49.0,10.0],'umadhun':[20.0,65.0],
 };
 
-// Normaliza para comparar sin depender de acentos ni mayúsculas
-function _normFic(s) {
-  return s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-// ¿La clave ficticia k aparece en lo que escribió el usuario?
-// - Claves cortas (<=4 letras): solo coincidencia exacta, para no secuestrar
-//   topónimos reales (Nin en Croacia, Awa en Japón, Oz en un futuro, etc.).
-// - Claves más largas: coincidencia por palabra(s) completa(s), nunca como
-//   fragmento pegado a otras letras ("region" no debe casar dentro de otra palabra).
-// Claves que exigen coincidencia exacta aunque sean largas, por ser también
-// palabras comunes del idioma (evita que "Región de Murcia" caiga en el
-// ficticio de Benet). Ampliable a medida que el uso de la beta lo pida.
-const FICTIONAL_EXACT_ONLY = new Set(['region', 'oceania', 'dune']);
-
-function _matchesFictional(userKey, k) {
-  const nk = _normFic(k);
-  const nu = _normFic(userKey);
-  if (nk.length <= 4 || FICTIONAL_EXACT_ONLY.has(nk)) return nu === nk;
-  if (nu === nk) return true;
-  // límite de palabra: la clave rodeada de principio/fin o de separadores
-  const escaped = nk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp('(^|[^\\p{L}\\p{N}])' + escaped + '($|[^\\p{L}\\p{N}])', 'u').test(nu);
-}
-
 async function geocode(place, askUser = false) {
   const key = place.toLowerCase().trim();
   for (const [k, v] of Object.entries(FICTIONAL)) {
-    if (_matchesFictional(key, k)) {
+    if (key === k || key.includes(k)) {
       if (askUser) {
         const overrides = loadPersonalOverrides();
         if (overrides[k]) {
@@ -96,7 +71,6 @@ async function geocode(place, askUser = false) {
         }
         return new Promise(resolve => {
           openFictionalModal(k, (lat, lng) => {
-            if (lat && lat.cancelled) { resolve({ cancelled: true }); return; }
             if (lat === null) { resolve(null); return; }
             resolve({ lat, lng, fictional: true, country: '', countryCode: '' });
           });
@@ -117,25 +91,12 @@ async function geocode(place, askUser = false) {
     clearTimeout(timeout);
     const d = await r.json();
     if (d.length === 0) {
-      // No es un ficticio conocido ni Nominatim lo encuentra.
-      // Preguntamos al usuario: ¿lugar real (con errata) o imaginario nuevo?
-      if (!askUser) return null; // en contextos sin interacción (origen/partida) no preguntamos
-      return new Promise(resolve => {
-        openUnknownPlaceModal(place, (choice) => {
-          if (choice === 'imaginary') {
-            const fkey = place.toLowerCase().trim();
-            openFictionalModal(fkey, (lat, lng) => {
-              if (lat && lat.cancelled) { resolve({ cancelled: true }); return; }
-              if (lat === null) { resolve(null); return; }
-              resolve({ lat, lng, fictional: true, country: '', countryCode: '' });
-            });
-          } else {
-            // "real" o cierre: el usuario va a corregir el nombre y reintentar.
-            // Señal para que addEntry no muestre el alert genérico de "no encontrado".
-            resolve({ cancelled: true });
-          }
+      if (askUser) {
+        return new Promise(resolve => {
+          openUnknownPlaceModal(place, (result) => resolve(result));
         });
-      });
+      }
+      return null;
     }
 
     const byCountry = {};
@@ -149,7 +110,16 @@ async function geocode(place, askUser = false) {
     if (needsPicker) {
       return new Promise(resolve => {
         openDisambigModal(place, candidates, (chosen) => {
-          if (!chosen) { resolve(null); return; }
+          if (!chosen) {
+            // Ninguno de los candidatos reales era el suyo: si venimos de
+            // addEntry (askUser), ofrecemos la vía de "es un lugar imaginario".
+            if (askUser) {
+              openUnknownPlaceModal(place, (result) => resolve(result));
+            } else {
+              resolve(null);
+            }
+            return;
+          }
           const country = chosen.address ? (chosen.address.country || '') : '';
           const countryCode = chosen.address ? (chosen.address.country_code || '').toUpperCase() : '';
           resolve({ lat: parseFloat(chosen.lat), lng: parseFloat(chosen.lon), fictional: false, country, countryCode });

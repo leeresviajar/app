@@ -10,7 +10,7 @@ function updateOriginNarrative() {
   }
   section.style.display = 'none';
   narrative.style.display = 'flex';
-  const last = currentEntry();
+  const last = entries.length > 0 ? entries[entries.length - 1] : null;
   let text = `Saliste de <strong>${origin.name}</strong>`;
   if (last) text += ` · Ahora estás en <strong>${last.dest}</strong>`;
   el.innerHTML = text;
@@ -84,25 +84,22 @@ async function addEntry() {
 
   try {
     let fromName, fromCoords;
-    if (departure === 'other') {
-      // "Otro lugar" manda siempre, también en el primer viaje.
+    if (departure === 'home' || entries.length === 0) {
+      if (!origin) { alert('Primero indica tu ciudad de origen.'); return; }
+      fromName = origin.name; fromCoords = { lat: origin.lat, lng: origin.lng };
+    } else if (departure === 'last') {
+      const last = entries[entries.length - 1];
+      fromName = last.dest; fromCoords = { lat: last.destLat, lng: last.destLng };
+    } else {
       const other = document.getElementById('dep-other-input').value.trim();
       if (!other) { alert('Indica el lugar de partida.'); return; }
       const geo = await geocode(other);
       if (!geo) { alert('No encontré ese lugar de partida.'); return; }
       fromName = other; fromCoords = { lat: geo.lat, lng: geo.lng };
-    } else if (departure === 'home' || entries.length === 0) {
-      // "Casa", o "Último destino" cuando aún no hay destino anterior.
-      if (!origin) { alert('Primero indica tu ciudad de origen.'); return; }
-      fromName = origin.name; fromCoords = { lat: origin.lat, lng: origin.lng };
-    } else {
-      // "Último destino"
-      const last = currentEntry();
-      fromName = last.dest; fromCoords = { lat: last.destLat, lng: last.destLng };
     }
 
     const destGeo = await geocode(dest, true);
-    if (destGeo && destGeo.cancelled) { return; } // el usuario corregirá el nombre
+    if (destGeo && destGeo.cancelled) { return; } // el usuario corrige el nombre o desiste; formulario intacto
     if (!destGeo) { alert(`No encontré "${dest}". Prueba con otro nombre.`); return; }
 
     const entry = {
@@ -187,18 +184,6 @@ function updateYearFilter() {
 }
 
 // ===================== LIST =====================
-// Entrada "actual": la de fecha más reciente (coherente entre local y nube).
-// Empate de fecha -> la última registrada de ese día.
-function currentEntry() {
-  if (!entries.length) return null;
-  let best = entries[0], bestIdx = 0;
-  entries.forEach((e, i) => {
-    const d = e.date || '', bd = best.date || '';
-    if (d > bd || (d === bd && i >= bestIdx)) { best = e; bestIdx = i; }
-  });
-  return best;
-}
-
 function sortedFiltered() {
   return (activeYear === 'all' ? entries : entries.filter(e => e.year === activeYear))
     .slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
@@ -223,11 +208,11 @@ function updateList() {
     div.innerHTML = `
       <div class="entry-line"><div class="${dotClass}"></div>${connector}</div>
       <div class="entry-content">
-        <div class="entry-route">${esc(e.fromName)} → ${esc(e.dest)}${e.fictional ? ' ✦' : ''}${e.country && !e.fictional ? ` <span style="opacity:0.7">· ${esc(e.country)}</span>` : ''}</div>
-        <div class="entry-book">${esc(e.book)}${e.author ? ` <span style="font-size:0.78rem;color:#aaa;font-style:normal">— ${esc(e.author)}</span>` : ''}</div>
+        <div class="entry-route">${e.fromName} → ${e.dest}${e.fictional ? ' ✦' : ''}${e.country && !e.fictional ? ` <span style="opacity:0.7">· ${e.country}</span>` : ''}</div>
+        <div class="entry-book">${e.book}${e.author ? ` <span style="font-size:0.78rem;color:#aaa;font-style:normal">— ${e.author}</span>` : ''}</div>
         <div class="entry-km">+${e.km.toLocaleString()} km</div>
         ${e.date ? `<div class="entry-date">${formatDate(e.date)}</div>` : ''}
-        ${e.note ? `<div class="entry-note">"${esc(e.note)}"</div>` : ''}
+        ${e.note ? `<div class="entry-note">"${e.note}"</div>` : ''}
       </div>
       <div style="display:flex;align-items:flex-start;gap:0.25rem" id="delete-wrap-${realIndex}">
         <button class="entry-edit" onclick="editEntry(${realIndex})" title="Editar">✏️</button>
@@ -253,11 +238,11 @@ function editEntry(i) {
   const form = document.createElement('div');
   form.className = 'entry-edit-form';
   form.innerHTML = `
-    <input type="text" id="edit-book-${i}" value="${esc(entry.book)}" placeholder="Título del libro…">
-    <input type="text" id="edit-author-${i}" value="${esc(entry.author)}" placeholder="Autor (opcional)…">
-    <input type="text" id="edit-note-${i}" value="${esc(entry.note)}" placeholder="Nota personal (opcional)…">
+    <input type="text" id="edit-book-${i}" value="${entry.book.replace(/"/g,'&quot;')}" placeholder="Título del libro…">
+    <input type="text" id="edit-author-${i}" value="${(entry.author||'').replace(/"/g,'&quot;')}" placeholder="Autor (opcional)…">
+    <input type="text" id="edit-note-${i}" value="${(entry.note||'').replace(/"/g,'&quot;')}" placeholder="Nota personal (opcional)…">
     <div class="entry-edit-location">
-      <input type="text" id="edit-dest-${i}" value="${esc(entry.dest)}" placeholder="Ubicación del destino…">
+      <input type="text" id="edit-dest-${i}" value="${entry.dest.replace(/"/g,'&quot;')}" placeholder="Ubicación del destino…">
       <button class="entry-edit-geo-btn" onclick="relocateEntry(${i})">Buscar</button>
     </div>
     <div class="entry-edit-geo-status" id="edit-geo-status-${i}"></div>

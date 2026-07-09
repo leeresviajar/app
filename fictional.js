@@ -182,100 +182,17 @@ function openFictionalModal(placeKey, onResolve) {
   }
 
   document.getElementById('fic-custom-input').value = '';
-  setFictionalMethod('write'); // siempre arranca en "escribir"
   document.getElementById('fictional-overlay').classList.add('visible');
   setTimeout(() => document.getElementById('fic-custom-input').focus(), 100);
 }
 
 function closeFictionalModal() {
   document.getElementById('fictional-overlay').classList.remove('visible');
-  document.getElementById('fictional-overlay').style.visibility = '';
-  destroyFicMiniMap();
   if (fictionalPending) {
     const { onResolve } = fictionalPending;
     fictionalPending = null;
-    // Cerrar el modal no cancela el viaje: devolvemos una señal para que
-    // addEntry no muestre error ni añada nada, dejando el formulario intacto.
-    onResolve({ cancelled: true });
+    onResolve(null, null);
   }
-}
-
-// ===================== MINI-MAPA PARA PINEAR FICTICIOS =====================
-let ficMiniMap = null;
-let ficMiniMarker = null;
-
-function setFictionalMethod(method) {
-  const tabWrite = document.getElementById('fic-tab-write');
-  const tabPin = document.getElementById('fic-tab-pin');
-  const paneWrite = document.getElementById('fic-method-write');
-  const panePin = document.getElementById('fic-method-pin');
-  const isPin = method === 'pin';
-
-  tabWrite.classList.toggle('active', !isPin);
-  tabPin.classList.toggle('active', isPin);
-  paneWrite.style.display = isPin ? 'none' : 'block';
-  panePin.style.display = isPin ? 'block' : 'none';
-
-  if (isPin) initFicMiniMap();
-}
-
-function initFicMiniMap() {
-  // Posición inicial: sugerencia de la comunidad si existe, si no el centro del mapa principal
-  let startLat, startLng, startZoom;
-  if (fictionalPending && fictionalPending.communityLat != null) {
-    startLat = fictionalPending.communityLat;
-    startLng = fictionalPending.communityLng;
-    startZoom = 5;
-  } else if (typeof map !== 'undefined' && map) {
-    const c = map.getCenter();
-    startLat = c.lat; startLng = c.lng; startZoom = Math.min(map.getZoom(), 5);
-  } else {
-    startLat = 30; startLng = 10; startZoom = 3;
-  }
-
-  if (!ficMiniMap) {
-    ficMiniMap = L.map('fic-mini-map', { zoomControl: true, attributionControl: false })
-      .setView([startLat, startLng], startZoom);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd', maxZoom: 19
-    }).addTo(ficMiniMap);
-
-    const icon = L.divIcon({
-      className: '',
-      html: `<div style="width:16px;height:16px;background:#e8913c;border-radius:50%;border:2.5px solid white;box-shadow:0 0 0 1.5px #e8913c,0 2px 6px rgba(0,0,0,0.3)"></div>`,
-      iconSize: [16,16], iconAnchor: [8,8]
-    });
-    ficMiniMarker = L.marker([startLat, startLng], { icon, draggable: true }).addTo(ficMiniMap);
-
-    // Tocar el mapa mueve el pin
-    ficMiniMap.on('click', (e) => { ficMiniMarker.setLatLng(e.latlng); });
-  } else {
-    ficMiniMap.setView([startLat, startLng], startZoom);
-    ficMiniMarker.setLatLng([startLat, startLng]);
-  }
-
-  // El mapa nace oculto: hay que recalcular su tamaño cuando se muestra
-  setTimeout(() => { if (ficMiniMap) ficMiniMap.invalidateSize(); }, 60);
-}
-
-function destroyFicMiniMap() {
-  if (ficMiniMap) {
-    ficMiniMap.remove();
-    ficMiniMap = null;
-    ficMiniMarker = null;
-  }
-}
-
-function usePinPosition() {
-  if (!fictionalPending || !ficMiniMarker) return;
-  const pos = ficMiniMarker.getLatLng();
-  const pendingKey = fictionalPending.placeKey;
-  const onResolve = fictionalPending.onResolve;
-  savePersonalOverride(pendingKey, pos.lat, pos.lng);
-  fictionalPending = null; // evita que closeFictionalModal resuelva null
-  document.getElementById('fictional-overlay').classList.remove('visible');
-  destroyFicMiniMap();
-  onResolve(pos.lat, pos.lng);
 }
 
 let disambigPending = null;
@@ -306,12 +223,54 @@ function closeDisambigModal() {
   if (disambigPending) { disambigPending.onResolve(null); disambigPending = null; }
 }
 
+// ===================== LUGAR NO ENCONTRADO: ¿REAL O IMAGINARIO? =====================
+// Se dispara cuando geocode() no puede resolver un nombre a coordenadas: bien
+// porque Nominatim no devolvió resultados, bien porque el usuario canceló la
+// desambiguación entre varios lugares reales sin que ninguno fuera el suyo.
+let unknownPlacePending = null;
+
+function openUnknownPlaceModal(placeName, onResolve) {
+  unknownPlacePending = { placeName, onResolve };
+  document.getElementById('unknown-place-name').textContent = placeName;
+  document.getElementById('unknown-place-overlay').classList.add('visible');
+}
+
+function closeUnknownPlaceModal() {
+  document.getElementById('unknown-place-overlay').classList.remove('visible');
+  if (unknownPlacePending) {
+    const { onResolve } = unknownPlacePending;
+    unknownPlacePending = null;
+    // Cerrar sin elegir no cancela el viaje: el formulario queda intacto.
+    onResolve({ cancelled: true });
+  }
+}
+
+function resolveUnknownPlace(kind) {
+  if (!unknownPlacePending) return;
+  const { placeName, onResolve } = unknownPlacePending;
+  document.getElementById('unknown-place-overlay').classList.remove('visible');
+  unknownPlacePending = null;
+
+  if (kind === 'real') {
+    // El usuario dice que sí es real: le devolvemos el control para que
+    // corrija el nombre y lo intente de nuevo (no añadimos nada ahora).
+    onResolve({ cancelled: true });
+    return;
+  }
+
+  // Es un lugar imaginario: reusamos el modal ficticio ya existente, igual
+  // que cuando el nombre coincide con uno conocido de FICTIONAL.
+  openFictionalModal(placeName.toLowerCase().trim(), (lat, lng) => {
+    if (lat && lat.cancelled) { onResolve({ cancelled: true }); return; }
+    if (lat === null) { onResolve({ cancelled: true }); return; }
+    onResolve({ lat, lng, fictional: true, country: '', countryCode: '' });
+  });
+}
+
 function useCommunityPosition() {
   if (!fictionalPending) return;
   const { communityLat, communityLng, onResolve } = fictionalPending;
-  fictionalPending = null; // evita que closeFictionalModal resuelva null
-  document.getElementById('fictional-overlay').classList.remove('visible');
-  destroyFicMiniMap();
+  closeFictionalModal();
   onResolve(communityLat, communityLng);
 }
 
@@ -323,77 +282,24 @@ async function useCustomPosition() {
   const btn = document.querySelector('.btn-use-custom');
   btn.textContent = 'Buscando…'; btn.disabled = true;
 
-  const pendingKey = fictionalPending.placeKey;
-  const onResolve = fictionalPending.onResolve;
-  const restoreBtn = () => { btn.textContent = 'Usar mi ubicación'; btn.disabled = false; };
-
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    // limit=5 + addressdetails: igual que el buscador principal, para poder
-    // desambiguar por país (¿qué Santander?) en vez de coger el primer
-    // resultado a ciegas (que podía ser una calle o un banco en otro país).
     const r = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input)}&format=json&limit=5&addressdetails=1`,
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input)}&format=json&limit=1`,
       { headers: { 'Accept-Language': 'es' }, signal: controller.signal }
     );
     clearTimeout(timeout);
     const d = await r.json();
-    if (!d.length) { alert('No encontré ese lugar. Prueba con otro nombre.'); restoreBtn(); return; }
-
-    // Agrupar por país y quedarnos con un candidato por país
-    const byCountry = {};
-    for (const res of d) {
-      const cc = res.address && res.address.country_code;
-      if (cc && !byCountry[cc]) byCountry[cc] = res;
-    }
-    const candidates = Object.values(byCountry);
-
-    const applyChosen = (chosen) => {
-      const lat = parseFloat(chosen.lat), lng = parseFloat(chosen.lon);
-      savePersonalOverride(pendingKey, lat, lng);
-      fictionalPending = null; // evita que closeFictionalModal resuelva null
-      const overlay = document.getElementById('fictional-overlay');
-      overlay.classList.remove('visible');
-      overlay.style.visibility = '';
-      destroyFicMiniMap();
-      onResolve(lat, lng);
-    };
-
-    if (candidates.length > 1) {
-      // Varios países: ocultamos este modal y mostramos el desambiguador reutilizando
-      // el mismo componente que el buscador principal.
-      const overlay = document.getElementById('fictional-overlay');
-      overlay.style.visibility = 'hidden';
-      restoreBtn();
-      openDisambigModal(input, candidates, (chosen) => {
-        if (!chosen) { overlay.style.visibility = ''; return; } // sigue en el modal ficticio
-        applyChosen(chosen);
-      });
-      return;
-    }
-
-    applyChosen(candidates[0] || d[0]);
+    if (!d.length) { alert('No encontré ese lugar. Prueba con otro nombre.'); return; }
+    const lat = parseFloat(d[0].lat), lng = parseFloat(d[0].lon);
+    savePersonalOverride(fictionalPending.placeKey, lat, lng);
+    const { onResolve } = fictionalPending;
+    closeFictionalModal();
+    onResolve(lat, lng);
   } catch(e) {
-    document.getElementById('fictional-overlay').style.visibility = '';
     alert('Error de conexión. Inténtalo de nuevo.');
-    restoreBtn();
+  } finally {
+    btn.textContent = 'Usar mi ubicación'; btn.disabled = false;
   }
-}
-
-// ===================== MODAL: LUGAR NO ENCONTRADO =====================
-let unknownPlacePending = null;
-
-function openUnknownPlaceModal(placeName, onResolve) {
-  unknownPlacePending = { onResolve };
-  document.getElementById('unknown-place-name').textContent = placeName;
-  document.getElementById('unknown-place-overlay').classList.add('visible');
-}
-
-function resolveUnknownPlace(choice) {
-  document.getElementById('unknown-place-overlay').classList.remove('visible');
-  if (!unknownPlacePending) return;
-  const { onResolve } = unknownPlacePending;
-  unknownPlacePending = null;
-  onResolve(choice);
 }
