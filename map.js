@@ -46,7 +46,7 @@ function drawRoute(entry) {
 function addDestMarker(entry) {
   const color = entry.fictional ? '#e8913c' : '#e8593c';
   const size = entry.fictional ? 12 : 10;
-  const isCurrent = entries.length > 0 && currentEntry() === entry;
+  const isCurrent = entries.length > 0 && typeof currentEntry === 'function' && currentEntry() === entry;
   const icon = L.divIcon({
     className: '',
     html: `<div style="width:${size}px;height:${size}px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 0 0 1.5px ${color}"></div>`,

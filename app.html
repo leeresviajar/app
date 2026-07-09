@@ -22,18 +22,16 @@
 <div class="app">
   <aside class="sidebar">
     <div class="sidebar-header">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;">
-        <div class="logo">Leer <em>es</em> viajar</div>
-        <span style="font-family:'Inter',sans-serif;font-size:0.58rem;font-weight:600;letter-spacing:0.12em;background:rgba(29,158,117,0.08);border:0.5px solid rgba(29,158,117,0.3);color:var(--teal);padding:0.2rem 0.45rem;border-radius:5px;font-style:normal;flex-shrink:0;">BETA</span>
-      </div>
-      <div id="user-badge" style="display:none;justify-content:space-between;align-items:center;width:100%;margin-top:0.5rem;font-family:'Inter',sans-serif;">
-        <div style="display:flex;align-items:center;gap:0.35rem;min-width:0;">
+      <div class="logo">Leer <em>es</em> viajar</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;">
+        <span style="font-family:'Inter',sans-serif;font-size:0.58rem;font-weight:600;letter-spacing:0.12em;background:rgba(29,158,117,0.08);border:0.5px solid rgba(29,158,117,0.3);color:var(--teal);padding:0.2rem 0.45rem;border-radius:5px;font-style:normal;">BETA</span>
+        <div id="user-badge" style="display:none;align-items:center;gap:0.35rem;font-family:'Inter',sans-serif;">
           <span id="user-avatar" style="width:18px;height:18px;border-radius:50%;background:rgba(29,158,117,0.12);color:var(--teal);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.6rem;flex-shrink:0;"></span>
-          <span id="user-email" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.62rem;font-weight:600;color:var(--teal);"></span>
+          <span id="user-email" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.62rem;color:var(--muted);"></span>
+          <button onclick="authSignOut()" style="background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:0.62rem;font-family:inherit;padding:0;">Salir</button>
         </div>
-        <button onclick="authSignOut()" style="background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:0.62rem;font-family:inherit;padding:0;flex-shrink:0;">Salir</button>
+        <button id="login-link" onclick="openAuthModal('login')" style="display:none;background:none;border:none;color:var(--teal);text-decoration:underline;cursor:pointer;font-size:0.62rem;font-family:'Inter',sans-serif;padding:0;">Iniciar sesión</button>
       </div>
-      <button id="login-link" onclick="openAuthModal('login')" style="display:none;background:none;border:none;color:var(--teal);text-decoration:underline;cursor:pointer;font-size:0.62rem;font-family:'Inter',sans-serif;padding:0;margin-top:0.5rem;align-self:flex-start;">Iniciar sesión</button>
     </div>
     <div class="stats-bar">
       <div class="stat"><div class="stat-val" id="stat-places">0</div><div class="stat-label">destinos</div></div>
@@ -268,7 +266,8 @@
 
 <!-- MODAL: LUGAR NO ENCONTRADO (¿real o imaginario?) -->
 <div class="fictional-overlay" id="unknown-place-overlay">
-  <div class="fictional-modal">
+  <div class="fictional-modal" style="position:relative;">
+    <button class="fic-close-x" onclick="closeUnknownPlaceModal()" aria-label="Cerrar">✕</button>
     <h3>✦ No encuentro "<span id="unknown-place-name"></span>"</h3>
     <p style="font-size:0.9rem; color:var(--muted); line-height:1.55; margin-bottom:1.25rem;">¿Es un lugar de este mundo o de otro?</p>
     <div class="fictional-btns" style="flex-direction:column; gap:0.6rem; margin:0;">
@@ -348,9 +347,9 @@
       <span id="auth-eyebrow" style="font-size:11px; letter-spacing:0.08em; color:#9a948d; font-weight:500;">· CREAR CUENTA</span>
     </div>
 
-    <div id="auth-tabs" style="display:flex; justify-content:center; gap:0.5rem; margin-bottom:1.25rem;">
-      <button id="auth-tab-login" onclick="setAuthMode('login')" class="auth-tab" style="background:none; border:none; padding:16px 16px 8px; -webkit-tap-highlight-color:transparent; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; color:#9a948d; border-bottom:2px solid transparent; cursor:pointer;">Iniciar sesión</button>
-      <button id="auth-tab-signup" onclick="setAuthMode('signup')" class="auth-tab active" style="background:none; border:none; padding:16px 16px 8px; -webkit-tap-highlight-color:transparent; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; color:#1a1a18; border-bottom:2px solid #1d9e75; cursor:pointer;">Registrarse</button>
+    <div id="auth-tabs" style="display:flex; justify-content:center; gap:1.5rem; margin-bottom:1.5rem;">
+      <button id="auth-tab-login" onclick="setAuthMode('login')" class="auth-tab" style="background:none; border:none; padding:0 0 6px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; color:#9a948d; border-bottom:2px solid transparent; cursor:pointer;">Iniciar sesión</button>
+      <button id="auth-tab-signup" onclick="setAuthMode('signup')" class="auth-tab active" style="background:none; border:none; padding:0 0 6px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; color:#1a1a18; border-bottom:2px solid #1d9e75; cursor:pointer;">Registrarse</button>
     </div>
 
     <div id="auth-error" style="display:none; background:#fdf1ef; color:#c14b34; font-size:12px; padding:0.6rem 0.75rem; border-radius:6px; margin-bottom:1rem; text-align:center;"></div>
@@ -366,18 +365,12 @@
       <div style="flex:1; height:0.5px; background:#ece8e1;"></div>
     </div>
 
-    <div id="auth-username-wrap" style="margin-bottom:1.5rem; display:none;">
-      <label style="display:block; font-size:11px; letter-spacing:0.06em; color:#9a948d; font-weight:500; margin-bottom:8px;">NOMBRE O ALIAS DE VIAJE</label>
-      <input type="text" id="auth-username" placeholder="Con este nombre te verá la comunidad" autocomplete="off" autocapitalize="none" spellcheck="false" oninput="onUsernameInput()" style="width:100%; padding:0 0 10px; border:none; border-bottom:0.5px solid #d8d3ca; font-family:'Inter',sans-serif; font-size:16px; color:#1a1a18; background:transparent; outline:none;">
-      <div id="auth-username-hint" style="font-size:11px; margin-top:0; min-height:0; color:#9a948d;"></div>
-    </div>
-
     <div id="auth-email-wrap" style="margin-bottom:1.5rem;">
       <label style="display:block; font-size:11px; letter-spacing:0.06em; color:#9a948d; font-weight:500; margin-bottom:8px;">EMAIL</label>
       <input type="email" id="auth-email" placeholder="tu@email.com" style="width:100%; padding:0 0 10px; border:none; border-bottom:0.5px solid #d8d3ca; font-family:'Inter',sans-serif; font-size:16px; color:#1a1a18; background:transparent; outline:none;">
     </div>
 
-    <div id="auth-password-wrap" style="margin-bottom:0.5rem;">
+    <div style="margin-bottom:0.5rem;">
       <label id="auth-password-label" style="display:block; font-size:11px; letter-spacing:0.06em; color:#9a948d; font-weight:500; margin-bottom:8px;">CONTRASEÑA</label>
       <div style="position:relative;">
         <input id="auth-password" type="password" placeholder="Tu contraseña" style="width:100%; padding:0 28px 10px 0; border:none; border-bottom:0.5px solid #d8d3ca; font-family:'Inter',sans-serif; font-size:16px; color:#1a1a18; background:transparent; outline:none;" onkeydown="if(event.key==='Enter') authSubmit()">
@@ -465,11 +458,11 @@
 <script src="auth.js"></script>
 <script src="geocoding.js"></script>
 <script src="fictional.js"></script>
-<script src="map.js"></script>
 <script src="autocomplete.js"></script>
 <script src="diary.js"></script>
 <script src="badges.js"></script>
 <script src="entries.js"></script>
+<script src="map.js"></script>
 <script src="storage.js"></script>
 <script src="export.js"></script>
 <script src="postal.js"></script>
