@@ -225,6 +225,7 @@ function updateList() {
 }
 
 function editEntry(i) {
+  Object.keys(editMiniMaps).forEach(k => destroyEditMiniMap(Number(k)));
   document.querySelectorAll('.entry-edit-form').forEach(el => el.remove());
   document.querySelectorAll('.confirm-delete').forEach(el => el.remove());
 
@@ -246,6 +247,11 @@ function editEntry(i) {
       <button class="entry-edit-geo-btn" onclick="relocateEntry(${i})">Buscar</button>
     </div>
     <div class="entry-edit-geo-status" id="edit-geo-status-${i}"></div>
+    <button type="button" class="entry-edit-map-toggle" id="edit-map-toggle-${i}" onclick="toggleEditMiniMap(${i})">📍 Ajustar en el mapa</button>
+    <div class="entry-edit-minimap" id="edit-minimap-wrap-${i}" style="display:none;">
+      <div id="edit-minimap-${i}" class="entry-edit-minimap-canvas"></div>
+      <div class="entry-edit-minimap-hint">Arrastra el pin hasta la ubicación correcta</div>
+    </div>
     <div class="entry-edit-actions">
       <button class="entry-edit-save" onclick="saveEditEntry(${i})">Guardar</button>
       <button class="entry-edit-cancel" onclick="cancelEdit(${i})">Cancelar</button>
@@ -253,6 +259,56 @@ function editEntry(i) {
   `;
   entryDiv.appendChild(form);
   document.getElementById(`edit-book-${i}`).focus();
+  // Base de partida del mini-mapa: la posición ya guardada del viaje, marcada
+  // como "auto" (no es una elección real del usuario todavía). Si el usuario
+  // escribe un destino distinto sin buscar ni tocar el mapa, este "auto" se
+  // ignora y se dispara la búsqueda por texto como antes.
+  if (!editGeoPending[i]) {
+    editGeoPending[i] = { name: entry.dest, lat: entry.destLat, lng: entry.destLng, country: entry.country, countryCode: entry.countryCode, fictional: entry.fictional, auto: true };
+  }
+}
+
+// ===================== MINI-MAPA PARA AJUSTAR EL PIN A MANO =====================
+const editMiniMaps = {}; // i -> { map, marker }
+
+function toggleEditMiniMap(i) {
+  const wrap = document.getElementById(`edit-minimap-wrap-${i}`);
+  if (!wrap) return;
+  const isOpen = wrap.style.display !== 'none';
+  if (isOpen) {
+    destroyEditMiniMap(i);
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  const pending = editGeoPending[i];
+  const lat = pending ? pending.lat : 40.4;
+  const lng = pending ? pending.lng : -3.7;
+  setTimeout(() => initEditMiniMap(i, lat, lng), 0);
+}
+
+function initEditMiniMap(i, lat, lng) {
+  const el = document.getElementById(`edit-minimap-${i}`);
+  if (!el || editMiniMaps[i]) return;
+  const m = L.map(el, { zoomControl: true, attributionControl: false }).setView([lat, lng], 5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    subdomains: 'abcd', maxZoom: 19
+  }).addTo(m);
+  const marker = L.marker([lat, lng], { draggable: true }).addTo(m);
+  marker.on('dragend', () => {
+    const pos = marker.getLatLng();
+    const prev = editGeoPending[i] || {};
+    editGeoPending[i] = Object.assign({}, prev, { lat: pos.lat, lng: pos.lng, auto: false });
+    const status = document.getElementById(`edit-geo-status-${i}`);
+    if (status) { status.textContent = 'Ubicación ajustada manualmente — guarda para aplicar'; status.style.color = 'var(--teal)'; }
+  });
+  editMiniMaps[i] = { map: m, marker };
+  setTimeout(() => m.invalidateSize(), 50);
+}
+
+function destroyEditMiniMap(i) {
+  const entry = editMiniMaps[i];
+  if (entry) { entry.map.remove(); delete editMiniMaps[i]; }
 }
 
 const editGeoPending = {};
@@ -265,7 +321,8 @@ async function saveEditEntry(i) {
   if (!book) return;
 
   const pending = editGeoPending[i];
-  if (!pending && destVal && destVal !== entries[i].dest) {
+  const pendingIsStaleAuto = pending && pending.auto && destVal !== entries[i].dest;
+  if ((!pending || pendingIsStaleAuto) && destVal && destVal !== entries[i].dest) {
     const status = document.getElementById(`edit-geo-status-${i}`);
     const saveBtn = document.querySelector(`#delete-wrap-${i}`)?.closest('.journey-entry')?.querySelector('.entry-edit-save');
     if (status) { status.textContent = 'Buscando…'; status.style.color = 'var(--muted)'; }
@@ -316,6 +373,7 @@ async function relocateEntry(i) {
 }
 
 function cancelEdit(i) {
+  destroyEditMiniMap(i);
   document.querySelectorAll('.entry-edit-form').forEach(el => el.remove());
 }
 
