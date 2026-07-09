@@ -502,8 +502,17 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .postal-modal {
   background: var(--white); border-radius: 16px; width: 680px; max-width: 95vw;
   box-shadow: 0 24px 64px rgba(0,0,0,0.3); overflow: hidden;
-  display: grid; grid-template-columns: 1fr 1.05fr;
+  position: relative;
 }
+/* Botón de cerrar: fuera del flujo del modal, flotando en la esquina.
+   Antes, al no tener estilo propio, CSS Grid lo convertía en una celda
+   entera de la rejilla (la caja gris gigante con la "×" que aparecía). */
+.postal-close {
+  position: absolute; top: 0.9rem; right: 1rem; z-index: 5;
+  background: none; border: none; font-size: 1.3rem; line-height: 1;
+  color: var(--muted); cursor: pointer; padding: 0.2rem;
+}
+.postal-close:hover { color: var(--ink); }
 .postal-left {
   background: var(--forest); padding: 2rem;
   display: flex; flex-direction: column; gap: 1rem;
@@ -514,7 +523,8 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   color: var(--cream); line-height: 1.2;
 }
 .postal-place-name span { font-size: 0.9rem; opacity: 0.6; display: block; margin-top: 0.25rem; font-style: italic; }
-.postal-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.postal-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 1.75rem 1.75rem 1.25rem; background: var(--forest); }
+.postal-body { padding: 1.5rem 1.75rem 1.75rem; }
 .postal-heading { flex: 1; min-width: 0; }
 #postal-book-display { display: block; font-size: 0.7rem; font-style: normal; color: rgba(255,255,255,0.65); font-family: 'Inter', sans-serif; margin-top: 4px; }
 
