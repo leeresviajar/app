@@ -186,8 +186,97 @@ function openFictionalModal(placeKey, onResolve) {
   setTimeout(() => document.getElementById('fic-custom-input').focus(), 100);
 }
 
+// ===================== PESTAÑAS: ESCRIBIR / SEÑALAR EN EL MAPA =====================
+let ficMiniMapState = null; // { map, marker }
+
+function setFictionalMethod(method) {
+  const tabWrite = document.getElementById('fic-tab-write');
+  const tabPin = document.getElementById('fic-tab-pin');
+  const panelWrite = document.getElementById('fic-method-write');
+  const panelPin = document.getElementById('fic-method-pin');
+
+  tabWrite.classList.toggle('active', method === 'write');
+  tabPin.classList.toggle('active', method === 'pin');
+  panelWrite.style.display = method === 'write' ? 'block' : 'none';
+  panelPin.style.display = method === 'pin' ? 'block' : 'none';
+
+  if (method === 'pin') {
+    initFicMiniMap();
+  } else {
+    destroyFicMiniMap();
+  }
+}
+
+function initFicMiniMap() {
+  const el = document.getElementById('fic-mini-map');
+  if (!el || ficMiniMapState) return;
+  // Punto de partida: la sugerencia de la comunidad si existe, si no el centro del mundo.
+  const start = (fictionalPending && fictionalPending.communityLat != null)
+    ? [fictionalPending.communityLat, fictionalPending.communityLng]
+    : [20, 0];
+  const zoom = (fictionalPending && fictionalPending.communityLat != null) ? 5 : 2;
+  const map = L.map(el, { zoomControl: true, attributionControl: false }).setView(start, zoom);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    subdomains: 'abcd', maxZoom: 19
+  }).addTo(map);
+  const marker = L.marker(start, { draggable: true }).addTo(map);
+  ficMiniMapState = { map, marker };
+  setTimeout(() => map.invalidateSize(), 50);
+}
+
+function destroyFicMiniMap() {
+  if (ficMiniMapState) { ficMiniMapState.map.remove(); ficMiniMapState = null; }
+}
+
+// ===================== LUGAR NO ENCONTRADO: ¿REAL O IMAGINARIO? =====================
+let unknownPlacePending = null;
+
+function openUnknownPlaceModal(placeName, onResolve) {
+  unknownPlacePending = { placeName, onResolve };
+  document.getElementById('unknown-place-name').textContent = placeName;
+  document.getElementById('unknown-place-overlay').classList.add('visible');
+}
+
+function closeUnknownPlaceModal() {
+  document.getElementById('unknown-place-overlay').classList.remove('visible');
+  if (unknownPlacePending) {
+    const { onResolve } = unknownPlacePending;
+    unknownPlacePending = null;
+    onResolve({ cancelled: true });
+  }
+}
+
+function resolveUnknownPlace(kind) {
+  if (!unknownPlacePending) return;
+  const { placeName, onResolve } = unknownPlacePending;
+  document.getElementById('unknown-place-overlay').classList.remove('visible');
+  unknownPlacePending = null;
+
+  if (kind === 'real') {
+    onResolve({ cancelled: true });
+    return;
+  }
+
+  openFictionalModal(placeName.toLowerCase().trim(), (lat, lng) => {
+    if (lat && lat.cancelled) { onResolve({ cancelled: true }); return; }
+    if (lat === null) { onResolve({ cancelled: true }); return; }
+    onResolve({ lat, lng, fictional: true, country: '', countryCode: '' });
+  });
+}
+
+function usePinPosition() {
+  if (!fictionalPending || !ficMiniMapState) return;
+  const { onResolve } = fictionalPending;
+  const pos = ficMiniMapState.marker.getLatLng();
+  document.getElementById('fictional-overlay').classList.remove('visible');
+  fictionalPending = null;
+  destroyFicMiniMap();
+  onResolve(pos.lat, pos.lng);
+}
+
 function closeFictionalModal() {
   document.getElementById('fictional-overlay').classList.remove('visible');
+  destroyFicMiniMap();
   if (fictionalPending) {
     const { onResolve } = fictionalPending;
     fictionalPending = null;
@@ -223,54 +312,15 @@ function closeDisambigModal() {
   if (disambigPending) { disambigPending.onResolve(null); disambigPending = null; }
 }
 
-// ===================== LUGAR NO ENCONTRADO: ¿REAL O IMAGINARIO? =====================
-// Se dispara cuando geocode() no puede resolver un nombre a coordenadas: bien
-// porque Nominatim no devolvió resultados, bien porque el usuario canceló la
-// desambiguación entre varios lugares reales sin que ninguno fuera el suyo.
-let unknownPlacePending = null;
-
-function openUnknownPlaceModal(placeName, onResolve) {
-  unknownPlacePending = { placeName, onResolve };
-  document.getElementById('unknown-place-name').textContent = placeName;
-  document.getElementById('unknown-place-overlay').classList.add('visible');
-}
-
-function closeUnknownPlaceModal() {
-  document.getElementById('unknown-place-overlay').classList.remove('visible');
-  if (unknownPlacePending) {
-    const { onResolve } = unknownPlacePending;
-    unknownPlacePending = null;
-    // Cerrar sin elegir no cancela el viaje: el formulario queda intacto.
-    onResolve({ cancelled: true });
-  }
-}
-
-function resolveUnknownPlace(kind) {
-  if (!unknownPlacePending) return;
-  const { placeName, onResolve } = unknownPlacePending;
-  document.getElementById('unknown-place-overlay').classList.remove('visible');
-  unknownPlacePending = null;
-
-  if (kind === 'real') {
-    // El usuario dice que sí es real: le devolvemos el control para que
-    // corrija el nombre y lo intente de nuevo (no añadimos nada ahora).
-    onResolve({ cancelled: true });
-    return;
-  }
-
-  // Es un lugar imaginario: reusamos el modal ficticio ya existente, igual
-  // que cuando el nombre coincide con uno conocido de FICTIONAL.
-  openFictionalModal(placeName.toLowerCase().trim(), (lat, lng) => {
-    if (lat && lat.cancelled) { onResolve({ cancelled: true }); return; }
-    if (lat === null) { onResolve({ cancelled: true }); return; }
-    onResolve({ lat, lng, fictional: true, country: '', countryCode: '' });
-  });
-}
-
 function useCommunityPosition() {
   if (!fictionalPending) return;
   const { communityLat, communityLng, onResolve } = fictionalPending;
-  closeFictionalModal();
+  // Ojo: NO llamamos a closeFictionalModal() aquí, porque esa función ya
+  // resuelve la promesa con (null, null) al cerrar — resolver dos veces
+  // hace que gane la primera llamada (cancelación) y esta se ignore.
+  // Cerramos el overlay directamente y limpiamos el estado nosotros mismos.
+  document.getElementById('fictional-overlay').classList.remove('visible');
+  fictionalPending = null;
   onResolve(communityLat, communityLng);
 }
 

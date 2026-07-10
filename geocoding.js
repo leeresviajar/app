@@ -60,9 +60,6 @@ const FICTIONAL = {
   'limbhad':[49.0,10.0],'umadhun':[20.0,65.0],
 };
 
-// Matching por palabra completa (no por subcadena) para evitar que nombres
-// ficticios cortos "secuestren" topónimos reales que los contienen
-// (ej. "región" no debe capturar "Región de Murcia").
 const FICTIONAL_EXACT_ONLY = new Set(['region', 'región', 'oceania', 'oceanía', 'dune', 'nin']);
 function _matchesFictional(key, k) {
   if (key === k) return true;
@@ -82,9 +79,6 @@ async function geocode(place, askUser = false) {
         }
         return new Promise(resolve => {
           openFictionalModal(k, (lat, lng) => {
-            // Si el modal se cierra sin elegir (X, o resolución intermedia),
-            // devolvemos la señal de cancelación en vez de null, para que
-            // addEntry no muestre error mientras el modal sigue en pantalla.
             if (lat && lat.cancelled) { resolve({ cancelled: true }); return; }
             if (lat === null) { resolve({ cancelled: true }); return; }
             resolve({ lat, lng, fictional: true, country: '', countryCode: '' });
@@ -105,7 +99,14 @@ async function geocode(place, askUser = false) {
     });
     clearTimeout(timeout);
     const d = await r.json();
-    if (d.length === 0) return null;
+    if (d.length === 0) {
+      if (askUser) {
+        return new Promise(resolve => {
+          openUnknownPlaceModal(place, (result) => resolve(result));
+        });
+      }
+      return null;
+    }
 
     const byCountry = {};
     for (const r of d) {
@@ -118,7 +119,14 @@ async function geocode(place, askUser = false) {
     if (needsPicker) {
       return new Promise(resolve => {
         openDisambigModal(place, candidates, (chosen) => {
-          if (!chosen) { resolve(null); return; }
+          if (!chosen) {
+            if (askUser) {
+              openUnknownPlaceModal(place, (result) => resolve(result));
+            } else {
+              resolve(null);
+            }
+            return;
+          }
           const country = chosen.address ? (chosen.address.country || '') : '';
           const countryCode = chosen.address ? (chosen.address.country_code || '').toUpperCase() : '';
           resolve({ lat: parseFloat(chosen.lat), lng: parseFloat(chosen.lon), fictional: false, country, countryCode });
