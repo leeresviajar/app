@@ -22,7 +22,7 @@ function closeExportModal() {
   document.getElementById('export-overlay').classList.remove('visible');
 }
 function syncExportButtons() {
-  ['stats','books','wrapped'].forEach(m =>
+  ['stats','books','wrapped','map'].forEach(m =>
     document.getElementById('em-' + m).classList.toggle('active', m === exportMode));
   ['story','feed'].forEach(f =>
     document.getElementById('ef-' + f).classList.toggle('active', f === exportFormat));
@@ -155,6 +155,13 @@ async function buildExportCanvas() {
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
+
+  // ===================== MODO MAPA =====================
+  // Dibuja el mapa de rutas del usuario. Fondo propio (papel limpio), no
+  // comparte el fondo con gradiente/círculos de los otros modos.
+  if (exportMode === 'map') {
+    return drawMapExport(ctx, canvas, W, H);
+  }
 
   function centerOffset(blockTop, blockBottom) {
     const availTop = 40, footerZone = 100;
@@ -404,6 +411,128 @@ async function buildExportCanvas() {
   return canvas;
 }
 
+// ===================== DIBUJO DEL MAPA (modo "map") =====================
+function drawMapExport(ctx, canvas, W, H) {
+  const paper='#faf7f2', ink='#1a1a18', teal='#1d9e75', forest='#0f6e56',
+        rojo='#e8593c', orange='#e8913c', muted='#9a948d';
+  const MAXR = 2.8; // tope de deformación aprobado
+
+  const exFiltered = getExportEntries();
+
+  ctx.fillStyle = paper;
+  ctx.fillRect(0, 0, W, H);
+
+  // Cabecera
+  ctx.textAlign = 'center';
+  ctx.font = "italic 60px 'Instrument Serif', serif";
+  const parts = [['Leer ', ink], ['es', teal], [' viajar', ink]];
+  let total = 0; parts.forEach(p => total += ctx.measureText(p[0]).width);
+  let sx = W/2 - total/2; ctx.textAlign = 'left';
+  parts.forEach(p => { ctx.fillStyle = p[1]; ctx.fillText(p[0], sx, 160); sx += ctx.measureText(p[0]).width; });
+  ctx.textAlign = 'center';
+  ctx.font = "500 26px 'Inter', sans-serif"; ctx.fillStyle = muted; ctx.letterSpacing = '4px';
+  ctx.fillText('MI MAPA LECTOR', W/2, 225); ctx.letterSpacing = '0px';
+
+  // Si no hay viajes, mensaje simple y salimos
+  if (!exFiltered.length) {
+    ctx.font = "italic 32px 'Instrument Serif', serif"; ctx.fillStyle = muted;
+    ctx.fillText('Aún no hay rutas que mostrar.', W/2, H/2);
+    return canvas;
+  }
+
+  const headerH = 330, footerH = 210;
+  const bX = 70, bY = headerH, bW = W - 140, bH = H - headerH - footerH;
+
+  // Rejilla de fondo
+  ctx.strokeStyle = 'rgba(29,158,117,0.10)'; ctx.lineWidth = 1.5;
+  for (let i = 0; i <= 6; i++) { ctx.beginPath(); ctx.moveTo(bX+bW/6*i, bY); ctx.lineTo(bX+bW/6*i, bY+bH); ctx.stroke(); }
+  for (let i = 0; i <= 10; i++) { ctx.beginPath(); ctx.moveTo(bX, bY+bH/10*i); ctx.lineTo(bX+bW, bY+bH/10*i); ctx.stroke(); }
+
+  // Construimos las "rutas" a partir de las entradas reales, en orden cronológico
+  const sorted = exFiltered.slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  const routes = sorted.map(en => ({
+    from: [en.fromLng, en.fromLat], fromName: en.fromName,
+    to: [en.destLng, en.destLat], toName: en.dest,
+    fict: !!en.fictional
+  }));
+
+  const lons = routes.flatMap(r => [r.from[0], r.to[0]]);
+  const lats = routes.flatMap(r => [r.from[1], r.to[1]]);
+  const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const latMid = (minLat+maxLat)/2 * Math.PI/180;
+  const geoW = Math.max((maxLon-minLon) * Math.cos(latMid), 0.0001);
+  const geoH = Math.max((maxLat-minLat), 0.0001);
+  const pad = 0.13, aW = bW*(1-2*pad), aH = bH*(1-2*pad);
+  let sxScale = aW/geoW, syScale = aH/geoH;
+  if (sxScale > syScale*MAXR) sxScale = syScale*MAXR;
+  if (syScale > sxScale*MAXR) syScale = sxScale*MAXR;
+  const dW = geoW*sxScale, dH = geoH*syScale;
+  const ox = bX + (bW-dW)/2, oy = bY + (bH-dH)/2;
+  function P(lon, lat) { return [ox + ((lon-minLon)*Math.cos(latMid))*sxScale, oy + dH - ((lat-minLat))*syScale]; }
+
+  // Rutas: mismo patrón de guion para reales y ficticias, solo cambia el color
+  routes.forEach(r => {
+    const a = P(r.from[0], r.from[1]), b = P(r.to[0], r.to[1]);
+    ctx.strokeStyle = r.fict ? orange : rojo; ctx.lineWidth = 4;
+    ctx.setLineDash([12, 8]);
+    const mmx = (a[0]+b[0])/2, mmy = (a[1]+b[1])/2 - Math.abs(b[0]-a[0])*0.08;
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(mmx, mmy, b[0], b[1]); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Puntos (todos visibles)
+  const uniq = {};
+  routes.flatMap(r => [
+    { lon: r.from[0], lat: r.from[1], name: r.fromName, fict: false },
+    { lon: r.to[0], lat: r.to[1], name: r.toName, fict: r.fict }
+  ]).forEach(p => { if (!uniq[p.name]) uniq[p.name] = p; });
+  const list = Object.values(uniq);
+  list.forEach(p => {
+    const xy = P(p.lon, p.lat);
+    ctx.beginPath(); ctx.arc(xy[0], xy[1], 10, 0, Math.PI*2);
+    ctx.fillStyle = p.fict ? orange : forest; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+  });
+
+  // Etiquetas: ficticios primero, luego los más lejanos de casa (origin), máx 6, sin solapes
+  const home = (typeof origin !== 'undefined' && origin) ? [origin.lng, origin.lat] : [list[0].lon, list[0].lat];
+  function dh(p) { const dx = p.lon-home[0], dy = p.lat-home[1]; return Math.sqrt(dx*dx+dy*dy); }
+  const fict = list.filter(p => p.fict).sort((a,b) => dh(b)-dh(a));
+  const real = list.filter(p => !p.fict).sort((a,b) => dh(b)-dh(a));
+  const chosen = [...fict.slice(0,6)];
+  for (const r of real) { if (chosen.length >= 6) break; chosen.push(r); }
+  const placed = [];
+  function ov(a,b) { return !(a.x+a.w<b.x || b.x+b.w<a.x || a.y+a.h<b.y || b.y+b.h<a.y); }
+  chosen.forEach(p => {
+    const xy = P(p.lon, p.lat);
+    ctx.font = p.fict ? "italic 32px 'Instrument Serif', serif" : "500 28px 'Inter', sans-serif";
+    const label = p.fict ? ('✦ ' + p.name) : p.name;
+    const tw = ctx.measureText(label).width, th = 36;
+    const right = xy[0] > bX + bW*0.7;
+    const off = right ? -18 : 18;
+    const tx = right ? xy[0]+off-tw : xy[0]+off;
+    const ty = xy[1] + 10;
+    const box = { x: tx-6, y: ty-th+6, w: tw+12, h: th };
+    if (placed.some(b => ov(box, b))) return;
+    placed.push(box);
+    ctx.fillStyle = p.fict ? orange : ink;
+    ctx.textAlign = right ? 'right' : 'left';
+    ctx.fillText(label, xy[0]+off, ty);
+  });
+
+  // Pie: km y nº de destinos reales (calculados de verdad, no de ejemplo)
+  const km = Math.round(exFiltered.reduce((s,e) => s+e.km, 0));
+  const places = new Set(exFiltered.map(e => e.dest.toLowerCase())).size;
+  ctx.textAlign = 'center';
+  ctx.font = "italic 34px 'Instrument Serif', serif"; ctx.fillStyle = 'rgba(29,158,117,0.85)';
+  ctx.fillText(km.toLocaleString('es-ES') + ' km · ' + places + ' destino' + (places===1?'':'s'), W/2, H-160);
+  ctx.font = "400 24px 'Inter', sans-serif"; ctx.fillStyle = muted;
+  ctx.fillText('leeresviajar.app', W/2, H-100);
+
+  return canvas;
+}
+
 function downloadExport() {
   if (!exportCanvas) return;
   const dataUrl = exportCanvas.toDataURL('image/png');
@@ -414,7 +543,7 @@ function downloadExport() {
     return;
   }
   const link = document.createElement('a');
-  const modeLabel = { stats: 'stats', books: 'lecturas', wrapped: 'wrapped' }[exportMode] || exportMode;
+  const modeLabel = { stats: 'stats', books: 'lecturas', wrapped: 'wrapped', map: 'mapa' }[exportMode] || exportMode;
   const fmtLabel = { story: 'historia', feed: 'feed' }[exportFormat] || exportFormat;
   const periodLabel = exportPeriod === 'total' ? 'todo' : String(exportPeriodValue);
   link.download = `leer-es-viajar-${modeLabel}-${fmtLabel}-${periodLabel}.png`;
