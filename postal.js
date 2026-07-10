@@ -8,7 +8,6 @@ function openPostalFromEl(el) {
     el.getAttribute('data-fictional') === 'true'
   );
 }
-
 function openPostal(dest, book, fictional) {
   const overlay = document.getElementById('postal-overlay');
   const today = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -24,11 +23,9 @@ function openPostal(dest, book, fictional) {
   document.getElementById('postal-sent-side').style.display = 'none';
   overlay.classList.add('open');
 }
-
 function closePostal() {
   document.getElementById('postal-overlay').classList.remove('open');
 }
-
 async function sendPostal() {
   const name = document.getElementById('postal-to-name').value.trim();
   const email = document.getElementById('postal-to-email').value.trim();
@@ -36,23 +33,19 @@ async function sendPostal() {
   const book = document.getElementById('postal-book-display').textContent.replace('Leyendo: ', '').trim();
   const quote = document.getElementById('postal-quote').value.trim();
   const date = document.getElementById('postal-stamp-date').textContent;
-
   if (!email || !email.includes('@')) {
     alert('Introduce un email válido.');
     return;
   }
-
   const btn = document.querySelector('.postal-btn-send');
   btn.disabled = true;
   btn.textContent = 'Enviando…';
-
   try {
     const res = await fetch('https://leer-es-viajar-postal.paula-7a6.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ toName: name, toEmail: email, fromPlace: place, book, quote, date })
     });
-
     if (res.ok) {
       document.getElementById('postal-form-side').style.display = 'none';
       document.getElementById('postal-sent-side').style.display = 'flex';
