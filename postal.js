@@ -33,16 +33,12 @@ function closePostal() {
   document.getElementById('postal-overlay').classList.remove('open');
 }
 
-// Km acumulados del lector, leídos de la estadística ya calculada del sidebar.
-// A partir de 1000 km el sidebar abrevia con sufijo "k" (updateStats(), entries.js);
-// por debajo de 1000 muestra el número tal cual.
+// Km acumulados del lector: total histórico exacto, sumado directamente de las
+// entradas (no del texto del sidebar, que redondea a un decimal de millar y
+// además puede estar filtrado por año en la vista de "Viajes").
 function getKmAcumulados() {
-  const el = document.getElementById('stat-km');
-  if (!el) return 0;
-  const txt = el.textContent.trim();
-  const n = txt.endsWith('k')
-    ? Math.round(parseFloat(txt) * 1000)
-    : parseInt(txt.replace(/[.\s]/g, ''), 10);
+  if (typeof entries === 'undefined') return 0;
+  const n = Math.round(entries.reduce((s, e) => s + e.km, 0));
   return (!isNaN(n) && n > 0) ? n : 0;
 }
 
