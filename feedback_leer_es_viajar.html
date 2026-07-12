@@ -490,6 +490,33 @@ textarea { min-height: 90px; line-height: 1.6; }
         <textarea name="audiencia" placeholder="Creo que esto le gustaría especialmente a…" style="min-height:70px"></textarea>
       </div>
 
+      <div class="question">
+        <label class="q-label">¿Llevas registro de tus lecturas en alguna de estas plataformas?</label>
+        <div class="checklist">
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" name="plataformas[]" value="Goodreads">
+            <div class="check-item-text">Goodreads</div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" name="plataformas[]" value="StoryGraph">
+            <div class="check-item-text">StoryGraph</div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" name="plataformas[]" value="Otra" onchange="toggleOtraPlataforma(this)">
+            <div class="check-item-text">Otra</div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" name="plataformas[]" value="No llevo registro">
+            <div class="check-item-text">No llevo registro</div>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" name="plataformas[]" value="No me interesa importar">
+            <div class="check-item-text">No me interesa importar</div>
+          </label>
+        </div>
+        <input type="text" name="plataforma_otra" id="plataforma-otra-input" placeholder="¿Cuál?" disabled style="display:none;margin-top:0.6rem">
+      </div>
+
       <div class="q-divider"></div>
 
       <div class="question">
@@ -544,6 +571,19 @@ function toggleCheck(el) {
     if (cb.checked) el.classList.add('checked');
     else el.classList.remove('checked');
   }, 0);
+}
+
+function toggleOtraPlataforma(cb) {
+  const input = document.getElementById('plataforma-otra-input');
+  if (cb.checked) {
+    input.disabled = false;
+    input.style.display = 'block';
+    input.focus();
+  } else {
+    input.disabled = true;
+    input.style.display = 'none';
+    input.value = '';
+  }
 }
 
 async function submitForm(e) {
