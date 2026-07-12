@@ -9,6 +9,7 @@ function switchTab(name) {
   });
   if (name === 'logros') { const lt = document.getElementById('tab-logros'); if (lt) lt.textContent = 'Logros'; renderBadges(); }
   if (name === 'diario') renderDiary();
+  if (name === 'itinerario') updateList();
 }
 
 // ===================== MÓVIL =====================

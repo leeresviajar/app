@@ -232,6 +232,8 @@ function updateList() {
     `;
     list.appendChild(div);
   });
+  const panel = document.getElementById('panel-itinerario');
+  if (panel) panel.scrollTop = panel.scrollHeight;
   updateYearFilter();
 }
 
