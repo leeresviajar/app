@@ -269,8 +269,8 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .badges-section-title::after { content: ''; flex: 1; height: 0.5px; background: var(--line); }
 
 /* CELEBRACIÓN primer viajero */
-.pioneer-toast { position: fixed; top: 8rem; right: 1.5rem; z-index: 9999; background: linear-gradient(135deg, #1a3a2a, #0f6e56); color: white; border-radius: 12px; padding: 1rem 1.25rem; max-width: 300px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); display: flex; gap: 0.75rem; align-items: flex-start; transform: translateY(-20px); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: auto; cursor: pointer; }
-.pioneer-toast.show { transform: translateY(0); opacity: 1; }
+.pioneer-toast { position: fixed; top: 8rem; right: 1.5rem; z-index: 9999; background: linear-gradient(135deg, #1a3a2a, #0f6e56); color: white; border-radius: 12px; padding: 1rem 1.25rem; max-width: 300px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); display: flex; gap: 0.75rem; align-items: flex-start; transform: translateY(-20px); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: none; cursor: pointer; }
+.pioneer-toast.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
 .pioneer-toast .p-icon { font-size: 1.6rem; flex-shrink: 0; }
 .pioneer-toast .p-title { font-size: 0.82rem; font-weight: 600; color: var(--teal-light); margin-bottom: 0.2rem; letter-spacing: 0.02em; }
 .pioneer-toast .p-text { font-size: 0.77rem; color: rgba(255,255,255,0.85); line-height: 1.4; }
