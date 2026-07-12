@@ -345,7 +345,9 @@ async function useCustomPosition() {
     const lat = parseFloat(d[0].lat), lng = parseFloat(d[0].lon);
     savePersonalOverride(fictionalPending.placeKey, lat, lng);
     const { onResolve } = fictionalPending;
-    closeFictionalModal();
+    document.getElementById('fictional-overlay').classList.remove('visible');
+    fictionalPending = null;
+    destroyFicMiniMap();
     onResolve(lat, lng);
   } catch(e) {
     alert('Error de conexión. Inténtalo de nuevo.');
