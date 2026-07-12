@@ -163,7 +163,6 @@ function updateStats() {
 
   document.querySelector('[id="stat-places"]').nextElementSibling.textContent = places === 1 ? 'destino' : 'destinos';
   document.querySelector('[id="stat-countries"]').nextElementSibling.textContent = countries === 1 ? 'país' : 'países';
-  document.querySelector('[id="stat-countries"]').closest('.stat').style.display = countries === 0 ? 'none' : '';
   document.querySelector('[id="stat-books"]').nextElementSibling.textContent = books === 1 ? 'lectura' : 'lecturas';
 }
 
