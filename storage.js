@@ -53,7 +53,8 @@ async function saveStateToCloud() {
         country_code: e.countryCode || null,
         date: e.date,
         year: e.year || null,
-        pioneer: !!e.pioneer
+        pioneer: !!e.pioneer,
+        book_ref: e.bookRef || null
       }));
       const { error: insertError } = await supabaseClient.from('entries').insert(rows);
       if (insertError) throw insertError;
@@ -167,7 +168,8 @@ async function loadStateFromCloud() {
     fromName: row.from_name, fromLat: row.from_lat, fromLng: row.from_lng,
     km: row.km, fictional: row.fictional,
     country: row.country || '', countryCode: row.country_code || '',
-    date: row.date, year: row.year, pioneer: row.pioneer
+    date: row.date, year: row.year, pioneer: row.pioneer,
+    bookRef: row.book_ref || null
   }));
 
   redrawMap();

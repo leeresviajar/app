@@ -149,7 +149,8 @@ async function migrateLocalToCloud() {
       country_code: e.countryCode || null,
       date: e.date,
       year: e.year || null,
-      pioneer: !!e.pioneer
+      pioneer: !!e.pioneer,
+      book_ref: e.bookRef || null
     }));
     await supabaseClient.from('entries').insert(rows);
 

@@ -104,6 +104,7 @@ async function addEntry() {
 
     const entry = {
       book, author, dest, note, fromName,
+      bookRef: selectedBookRef,
       fromLat: fromCoords.lat, fromLng: fromCoords.lng,
       destLat: destGeo.lat, destLng: destGeo.lng,
       km: haversineKm(fromCoords.lat, fromCoords.lng, destGeo.lat, destGeo.lng),
@@ -133,6 +134,7 @@ async function addEntry() {
     document.getElementById('destination').value = '';
     document.getElementById('book-note').value = '';
     document.getElementById('dep-other-input').value = '';
+    selectedBookRef = null;
     closeDropdown(); resetDate();
     switchTab('itinerario');
 

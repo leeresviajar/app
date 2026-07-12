@@ -2,6 +2,7 @@
 let acResults = [], acIndex = -1, acTimer = null;
 
 function onBookInput(val) {
+  selectedBookRef = null;
   clearTimeout(acTimer);
   if (val.length < 3) { closeDropdown(); return; }
   acTimer = setTimeout(() => searchBooks(val), 350);
@@ -20,18 +21,28 @@ async function fetchJSON(url, ms = 5000) {
 }
 
 function normOpenLibrary(d) {
-  return (d.docs || []).slice(0, 6).map(b => ({
-    title: b.title,
-    author: b.author_name ? b.author_name[0] : '',
-    cover: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-S.jpg` : null,
-  })).filter(b => b.title);
+  return (d.docs || []).slice(0, 6).map(b => {
+    const isbns = b.isbn || [];
+    const isbn13 = isbns.find(x => x.length === 13);
+    const isbn10 = isbns.find(x => x.length === 10);
+    return {
+      title: b.title,
+      author: b.author_name ? b.author_name[0] : '',
+      cover: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-S.jpg` : null,
+      ref: isbn13 ? `isbn:${isbn13}` : (isbn10 ? `isbn:${isbn10}` : null),
+    };
+  }).filter(b => b.title);
 }
 function normGoogleBooks(d) {
   return (d.items || []).slice(0, 6).map(it => {
     const v = it.volumeInfo || {};
     let cover = v.imageLinks ? (v.imageLinks.smallThumbnail || v.imageLinks.thumbnail) : null;
     if (cover) cover = cover.replace(/^http:\/\//, 'https://');
-    return { title: v.title || '', author: v.authors ? v.authors[0] : '', cover: cover || null };
+    const ids = v.industryIdentifiers || [];
+    const isbn13 = ids.find(x => x.type === 'ISBN_13');
+    const isbn10 = ids.find(x => x.type === 'ISBN_10');
+    const ref = isbn13 ? `isbn:${isbn13.identifier}` : (isbn10 ? `isbn:${isbn10.identifier}` : (it.id ? `gbooks:${it.id}` : null));
+    return { title: v.title || '', author: v.authors ? v.authors[0] : '', cover: cover || null, ref };
   }).filter(b => b.title);
 }
 
@@ -40,7 +51,7 @@ async function searchBooks(q) {
   dd.innerHTML = '<div class="ac-loading">Buscando…</div>'; dd.classList.add('visible');
 
   try {
-    const d = await fetchJSON(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=6&fields=title,author_name,cover_i`);
+    const d = await fetchJSON(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=6&fields=title,author_name,cover_i,isbn`);
     const res = normOpenLibrary(d);
     if (res.length) { acResults = res; acIndex = -1; renderDropdown(); return; }
   } catch (e) {}
@@ -74,6 +85,7 @@ function selectBook(i) {
   const b = acResults[i]; if (!b) return;
   document.getElementById('book-title').value = b.title;
   document.getElementById('book-author').value = b.author || '';
+  selectedBookRef = b.ref || null;
   closeDropdown(); document.getElementById('destination').focus();
 }
 

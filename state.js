@@ -5,6 +5,7 @@ let departure = 'last';
 let activeYear = 'all';
 let selectedDate = todayStr();
 let markersLayer = null;
+let selectedBookRef = null;
 
 // ===================== ESCAPE HTML (seguridad) =====================
 // Escapa texto de usuario antes de insertarlo en HTML, para no romper la
