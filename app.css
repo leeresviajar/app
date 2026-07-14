@@ -173,7 +173,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 /* FICTIONAL PLACE MODAL */
 .fictional-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.55); z-index: 9000; display: none; align-items: center; justify-content: center; }
 .fictional-overlay.visible { display: flex; }
-.disambig-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.55); z-index: 9100; display: none; align-items: center; justify-content: center; }
+.disambig-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.55); z-index: 9000; display: none; align-items: center; justify-content: center; }
 .disambig-overlay.visible { display: flex; }
 .disambig-modal { background: var(--white); border-radius: 12px; padding: 1.5rem 1.6rem; max-width: 400px; width: 92%; box-shadow: 0 12px 44px rgba(0,0,0,0.18); font-family: 'Inter', sans-serif; }
 .disambig-modal h3 { font-family: 'Instrument Serif', serif; font-size: 1.15rem; color: var(--ink); margin-bottom: 0.35rem; }

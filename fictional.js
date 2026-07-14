@@ -150,7 +150,42 @@ function savePersonalOverride(key, lat, lng) {
 // ===================== FICTIONAL PLACE MODAL =====================
 let fictionalPending = null;
 
+// Como máximo una de las tres resoluciones (ficticio, lugar desconocido,
+// desambiguación) puede estar pendiente a la vez. Recoge y limpia el estado
+// de las que hubiera pendientes, pero NO llama a sus onResolve todavía —
+// eso se hace desde open*Modal() después de fijar su propio estado nuevo.
+// Importante: resolver una promesa puede disparar, de forma síncrona y en
+// cascada, otra llamada a open*Modal() (p. ej. cancelar el picker de países
+// abre a su vez el modal de "lugar desconocido"). Si resolviéramos aquí
+// mismo, esa llamada reentrante vería el hueco todavía vacío y su propio
+// estado quedaría luego pisado por el de la llamada original — la promesa
+// más antigua de las dos se quedaría colgada para siempre, que es
+// exactamente el bug que esto corrige. Por eso primero se toma todo lo
+// pendiente, cada open*Modal() fija su propio estado, y solo al final se
+// resuelve lo recogido.
+function takeAllPendingModals() {
+  const toResolve = [];
+  if (fictionalPending) {
+    toResolve.push([fictionalPending.onResolve, [null, null]]);
+    fictionalPending = null;
+    destroyFicMiniMap();
+    document.getElementById('fictional-overlay').classList.remove('visible');
+  }
+  if (unknownPlacePending) {
+    toResolve.push([unknownPlacePending.onResolve, [{ cancelled: true }]]);
+    unknownPlacePending = null;
+    document.getElementById('unknown-place-overlay').classList.remove('visible');
+  }
+  if (disambigPending) {
+    toResolve.push([disambigPending.onResolve, [null]]);
+    disambigPending = null;
+    document.getElementById('disambig-overlay').classList.remove('visible');
+  }
+  return toResolve;
+}
+
 function openFictionalModal(placeKey, onResolve) {
+  const toResolve = takeAllPendingModals();
   const community = getCommunityData(placeKey);
   fictionalPending = { placeKey, onResolve, communityLat: null, communityLng: null };
 
@@ -184,6 +219,7 @@ function openFictionalModal(placeKey, onResolve) {
   document.getElementById('fic-custom-input').value = '';
   document.getElementById('fictional-overlay').classList.add('visible');
   setTimeout(() => document.getElementById('fic-custom-input').focus(), 100);
+  toResolve.forEach(([resolve, args]) => resolve(...args));
 }
 
 // ===================== PESTAÑAS: ESCRIBIR / SEÑALAR EN EL MAPA =====================
@@ -232,9 +268,11 @@ function destroyFicMiniMap() {
 let unknownPlacePending = null;
 
 function openUnknownPlaceModal(placeName, onResolve) {
+  const toResolve = takeAllPendingModals();
   unknownPlacePending = { placeName, onResolve };
   document.getElementById('unknown-place-name').textContent = placeName;
   document.getElementById('unknown-place-overlay').classList.add('visible');
+  toResolve.forEach(([resolve, args]) => resolve(...args));
 }
 
 function closeUnknownPlaceModal() {
@@ -287,6 +325,7 @@ function closeFictionalModal() {
 let disambigPending = null;
 
 function openDisambigModal(placeName, candidates, fieldLabel, onResolve) {
+  const toResolve = takeAllPendingModals();
   disambigPending = { onResolve };
   const overlay = document.getElementById('disambig-overlay');
   const title = document.getElementById('disambig-title');
@@ -307,6 +346,7 @@ function openDisambigModal(placeName, candidates, fieldLabel, onResolve) {
     list.appendChild(btn);
   });
   overlay.classList.add('visible');
+  toResolve.forEach(([resolve, args]) => resolve(...args));
 }
 
 function closeDisambigModal() {
