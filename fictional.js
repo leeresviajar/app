@@ -323,6 +323,7 @@ function useCommunityPosition() {
   // Cerramos el overlay directamente y limpiamos el estado nosotros mismos.
   document.getElementById('fictional-overlay').classList.remove('visible');
   fictionalPending = null;
+  destroyFicMiniMap();
   onResolve(communityLat, communityLng);
 }
 
