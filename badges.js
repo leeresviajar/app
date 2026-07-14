@@ -150,3 +150,13 @@ function showBadgeUnlockToast(badge) {
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 7000);
 }
+
+function showEntryAddedToast(destName, fictional) {
+  const toast = document.getElementById('entry-added-toast');
+  toast.classList.toggle('toast-fictional', !!fictional);
+  toast.classList.toggle('toast-real', !fictional);
+  document.getElementById('entry-added-icon').textContent = fictional ? '✦' : '🗺';
+  document.getElementById('entry-added-text').textContent = `${destName} ya está en tu mapa.`;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 6000);
+}
