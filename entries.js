@@ -37,16 +37,19 @@ async function setOrigin() {
   const btn = document.querySelector('#origin-input-wrap .add-btn');
   const prevText = btn.textContent;
   btn.textContent = 'Buscando…'; btn.disabled = true;
-  const geo = await geocode(val, false, 'origen');
-  btn.textContent = prevText; btn.disabled = false;
-  if (!geo) { alert('No encontré ese lugar. Prueba con otro nombre.'); return; }
-  origin = { name: val, lat: geo.lat, lng: geo.lng };
-  document.getElementById('origin-input-wrap').classList.remove('visible');
-  document.getElementById('origin-input').value = '';
-  addOriginMarker();
-  updateOriginNarrative();
-  map.setView([origin.lat, origin.lng], 4);
-  saveState();
+  try {
+    const geo = await geocode(val, false, 'origen');
+    if (!geo) { alert('No encontré ese lugar. Prueba con otro nombre.'); return; }
+    origin = { name: val, lat: geo.lat, lng: geo.lng };
+    document.getElementById('origin-input-wrap').classList.remove('visible');
+    document.getElementById('origin-input').value = '';
+    addOriginMarker();
+    updateOriginNarrative();
+    map.setView([origin.lat, origin.lng], 4);
+    saveState();
+  } finally {
+    btn.textContent = prevText; btn.disabled = false;
+  }
 }
 
 function addOriginMarker() {
