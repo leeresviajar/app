@@ -37,7 +37,7 @@ async function setOrigin() {
   const btn = document.querySelector('#origin-input-wrap .add-btn');
   const prevText = btn.textContent;
   btn.textContent = 'Buscando…'; btn.disabled = true;
-  const geo = await geocode(val);
+  const geo = await geocode(val, false, 'origen');
   btn.textContent = prevText; btn.disabled = false;
   if (!geo) { alert('No encontré ese lugar. Prueba con otro nombre.'); return; }
   origin = { name: val, lat: geo.lat, lng: geo.lng };
@@ -93,7 +93,7 @@ async function addEntry() {
     } else {
       const other = document.getElementById('dep-other-input').value.trim();
       if (!other) { alert('Indica el lugar de partida.'); return; }
-      const geo = await geocode(other);
+      const geo = await geocode(other, false, 'origen');
       if (!geo) { alert('No encontré ese lugar de partida.'); return; }
       fromName = other; fromCoords = { lat: geo.lat, lng: geo.lng };
     }

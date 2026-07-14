@@ -286,12 +286,14 @@ function closeFictionalModal() {
 
 let disambigPending = null;
 
-function openDisambigModal(placeName, candidates, onResolve) {
+function openDisambigModal(placeName, candidates, fieldLabel, onResolve) {
   disambigPending = { onResolve };
   const overlay = document.getElementById('disambig-overlay');
   const title = document.getElementById('disambig-title');
+  const hint = document.getElementById('disambig-hint');
   const list = document.getElementById('disambig-list');
   title.textContent = placeName;
+  hint.textContent = `Encontramos este nombre en varios lugares. ¿Cuál es tu ${fieldLabel}?`;
   list.innerHTML = '';
   candidates.forEach((c, i) => {
     const addr = c.address || {};

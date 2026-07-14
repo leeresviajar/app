@@ -68,7 +68,7 @@ function _matchesFictional(key, k) {
   return re.test(key);
 }
 
-async function geocode(place, askUser = false) {
+async function geocode(place, askUser = false, fieldLabel = 'destino') {
   const key = place.toLowerCase().trim();
   for (const [k, v] of Object.entries(FICTIONAL)) {
     if (_matchesFictional(key, k)) {
@@ -116,15 +116,11 @@ async function geocode(place, askUser = false) {
     const candidates = Object.values(byCountry);
     const needsPicker = candidates.length > 1;
 
-    if (needsPicker) {
+    if (needsPicker && askUser) {
       return new Promise(resolve => {
-        openDisambigModal(place, candidates, (chosen) => {
+        openDisambigModal(place, candidates, fieldLabel, (chosen) => {
           if (!chosen) {
-            if (askUser) {
-              openUnknownPlaceModal(place, (result) => resolve(result));
-            } else {
-              resolve(null);
-            }
+            openUnknownPlaceModal(place, (result) => resolve(result));
             return;
           }
           const country = chosen.address ? (chosen.address.country || '') : '';
