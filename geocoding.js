@@ -114,6 +114,13 @@ async function geocode(place, askUser = false, fieldLabel = 'destino') {
       if (cc && !byCountry[cc]) byCountry[cc] = r;
     }
     const candidates = Object.values(byCountry);
+    // Lugares reales sin país (Antártida, océanos…): Nominatim los devuelve
+    // sin country_code y el agrupado por país los dejaría fuera. Son válidos:
+    // usamos el mejor resultado tal cual, con país vacío.
+    if (candidates.length === 0) {
+      const best = d[0];
+      return { lat: parseFloat(best.lat), lng: parseFloat(best.lon), fictional: false, country: '', countryCode: '' };
+    }
     const needsPicker = candidates.length > 1;
 
     if (needsPicker && askUser) {

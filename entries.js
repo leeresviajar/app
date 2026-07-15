@@ -103,7 +103,7 @@ async function addEntry() {
 
     const destGeo = await geocode(dest, true);
     if (destGeo && destGeo.cancelled) { return; } // el usuario corrige el nombre o desiste; formulario intacto
-    if (!destGeo) { alert(`No encontré "${dest}". Prueba con otro nombre.`); return; }
+    if (!destGeo) { alert('No se pudo conectar con el buscador de lugares. Inténtalo de nuevo.'); return; }
 
     const entry = {
       book, author, dest, note, fromName,
