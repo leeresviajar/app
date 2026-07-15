@@ -18,7 +18,9 @@ App web en español: mapa literario donde lectores registran libros ligados a de
 
 ## Arquitectura
 
-- Frontend estático: `app.html` (shell) + `css/app.css` + 14 módulos JS.
+- Frontend estático: `app.html` (shell) + `app.css` (raíz del repo) + 15 módulos JS.
+- Punto de entrada público: `index.html` — bienvenida de la beta (GitHub Pages la sirve en la raíz); enlaza a `app.html` (la app real) y a `feedback_leer_es_viajar.html`. No es legacy.
+- `leer_es_viajar_v5.html` es LEGACY: copia monolítica antigua con todo inline, sin referencias desde ningún otro archivo. No editarla nunca — los cambios van siempre en `app.html` + módulos.
 - **NO usar ES modules** (import/export): romperían GitHub Pages sin bundler. Los módulos se cargan con `<script>` clásicos y comparten scope global.
 - Backend: Supabase (auth Google OAuth + email/contraseña, tablas `profiles` y `entries` con RLS).
 - El "diario" NO es una tabla aparte: es `entries` ordenado por fecha descendente.
