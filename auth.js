@@ -13,6 +13,12 @@ let authMode = 'signup'; // 'signup' | 'login'
 let lastLoadedUserId = null;
 let currentUsername = null; // nombre de viajero del usuario en sesión
 
+// El enlace de recuperación de contraseña llega con type=recovery en la URL.
+// Lo capturamos aquí, en la carga síncrona del script, porque la librería
+// consume y limpia la URL durante su inicialización y para cuando corre
+// initAuth puede no quedar rastro.
+const cameFromRecoveryLink = /type=recovery/.test(window.location.hash + window.location.search);
+
 // Se llama una vez al arrancar la app, antes de loadState()
 async function initAuth() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -31,6 +37,11 @@ async function initAuth() {
       // Se mostrará la pantalla de elegir nombre; no seguimos hasta que elija.
       return;
     }
+    // ¿Llegamos desde el enlace de recuperación de contraseña? El evento
+    // PASSWORD_RECOVERY se emite durante la inicialización del cliente,
+    // antes de registrar el listener de abajo, así que se pierde — misma
+    // compensación de arranque que la del username de justo arriba.
+    if (cameFromRecoveryLink) openAuthModal('recovery');
   }
 
   supabaseClient.auth.onAuthStateChange((event, session) => {
