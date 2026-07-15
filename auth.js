@@ -21,13 +21,12 @@ async function initAuth() {
   // este usuario como ya cargado para que el SIGNED_IN de arranque no duplique.
   lastLoadedUserId = currentUser ? currentUser.id : null;
   updateUserBadge();
-  refreshCurrentUsername(); // carga y muestra el nombre de viajero si lo hay
 
   // Si arrancamos con sesión ya activa (p. ej. volviendo del redirect de Google),
   // el evento SIGNED_IN podría no dispararse o quedar descartado por el guardia.
   // Comprobamos aquí mismo que el usuario tenga nombre; si no, se lo pedimos.
   if (currentUser) {
-    const hasUsername = await ensureUsername();
+    const hasUsername = await ensureUsername(); // consulta, cachea y muestra el username en una sola llamada
     if (!hasUsername) {
       // Se mostrará la pantalla de elegir nombre; no seguimos hasta que elija.
       return;
@@ -60,8 +59,6 @@ async function initAuth() {
           // hasta que el usuario elija un nombre.
           return;
         }
-        refreshCurrentUsername();
-
         closeAuthModal();
         await migrateLocalToCloud();
         loadState(); // recarga desde la nube al iniciar sesión
@@ -90,9 +87,10 @@ function updateUserBadge() {
   }
 }
 
-// Carga el username del perfil y refresca el badge. Se llama tras iniciar sesión.
+// Carga el username del perfil (una sola consulta), lo cachea en
+// currentUsername, refresca el badge y devuelve si el usuario tiene nombre.
 async function refreshCurrentUsername() {
-  if (!currentUser) { currentUsername = null; return; }
+  if (!currentUser) { currentUsername = null; return false; }
   try {
     const { data } = await supabaseClient
       .from('profiles')
@@ -104,6 +102,7 @@ async function refreshCurrentUsername() {
     currentUsername = null;
   }
   updateUserBadge();
+  return !!currentUsername;
 }
 
 // ===================== MIGRACIÓN LOCAL → NUBE =====================
@@ -256,25 +255,11 @@ async function saveUsername(v) {
   return { ok: true };
 }
 
-// ¿El usuario con sesión tiene ya un username en su perfil?
-async function currentUserHasUsername() {
-  try {
-    const { data } = await supabaseClient
-      .from('profiles')
-      .select('username')
-      .eq('id', currentUser.id)
-      .single();
-    return !!(data && data.username);
-  } catch (e) {
-    return false;
-  }
-}
-
 // Garantiza que el usuario tenga username. Si hay uno pendiente (registro por
 // email), lo asigna. Si no tiene ninguno (Google), abre el modo para elegirlo.
 // Devuelve true si ya tiene (o se le acaba de asignar) username.
 async function ensureUsername() {
-  if (await currentUserHasUsername()) return true;
+  if (await refreshCurrentUsername()) return true;
 
   // ¿Había un nombre pendiente del registro por email?
   const pending = localStorage.getItem('lev_pending_username');
@@ -283,7 +268,7 @@ async function ensureUsername() {
     if (fmt.ok) {
       const res = await saveUsername(pending);
       localStorage.removeItem('lev_pending_username');
-      if (res.ok) return true;
+      if (res.ok) { currentUsername = pending; updateUserBadge(); return true; }
       // Si el pendiente ya no está disponible, caemos a pedirlo de nuevo.
     } else {
       localStorage.removeItem('lev_pending_username');
