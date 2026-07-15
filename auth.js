@@ -34,7 +34,7 @@ async function initAuth() {
     }
   }
 
-  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
     currentUser = session ? session.user : null;
     updateUserBadge();
     if (event === 'PASSWORD_RECOVERY') {
@@ -46,19 +46,26 @@ async function initAuth() {
     if (event === 'SIGNED_IN' && currentUser && currentUser.id !== lastLoadedUserId) {
       lastLoadedUserId = currentUser.id;
 
-      // ¿Falta el nombre de viajero? (usuarios de Google, o registros por email
-      // cuyo nombre quedó pendiente hasta confirmar el correo)
-      const hasUsername = await ensureUsername();
-      if (!hasUsername) {
-        // ensureUsername ya ha abierto el modo choose-username; no seguimos
-        // hasta que el usuario elija un nombre.
-        return;
-      }
-      refreshCurrentUsername();
+      // Nada de `await` de llamadas de Supabase dentro del propio callback:
+      // el SIGNED_IN que emite el cliente al procesar el token del callback
+      // de OAuth llega con su candado interno aún cogido, y una consulta
+      // esperada aquí puede quedarse colgada para siempre (username sin
+      // cargar, estado sin recargar). Despachamos el trabajo fuera.
+      setTimeout(async () => {
+        // ¿Falta el nombre de viajero? (usuarios de Google, o registros por email
+        // cuyo nombre quedó pendiente hasta confirmar el correo)
+        const hasUsername = await ensureUsername();
+        if (!hasUsername) {
+          // ensureUsername ya ha abierto el modo choose-username; no seguimos
+          // hasta que el usuario elija un nombre.
+          return;
+        }
+        refreshCurrentUsername();
 
-      closeAuthModal();
-      await migrateLocalToCloud();
-      loadState(); // recarga desde la nube al iniciar sesión
+        closeAuthModal();
+        await migrateLocalToCloud();
+        loadState(); // recarga desde la nube al iniciar sesión
+      }, 0);
     }
   });
 }
