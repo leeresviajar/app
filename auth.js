@@ -298,10 +298,11 @@ function openAuthModal(mode) {
   document.getElementById('auth-overlay').classList.add('open');
 }
 function closeAuthModal(force) {
-  // En modo choose-username el nombre es obligatorio: no se puede cerrar con la X
-  // ni clic fuera. Pero cuando lo cerramos nosotros tras guardar el nombre,
-  // pasamos force=true para saltarnos ese candado.
-  if (authMode === 'choose-username' && !force) return;
+  // En modo choose-username el nombre es obligatorio, y en modo recovery un
+  // cierre accidental dejaría al usuario logueado sin poder cambiar la
+  // contraseña ni reabrir el formulario: en ambos, ni X ni clic fuera.
+  // Cuando cerramos nosotros tras guardar, pasamos force=true.
+  if ((authMode === 'choose-username' || authMode === 'recovery') && !force) return;
   document.getElementById('auth-overlay').classList.remove('open');
 }
 
@@ -428,7 +429,7 @@ async function authSubmit() {
       if (error) { showAuthError(traduceErrorAuth(error.message)); return; }
       document.getElementById('auth-password').value = '';
       showAuthInfo('Contraseña actualizada. ¡Buen viaje!');
-      setTimeout(closeAuthModal, 1600);
+      setTimeout(() => closeAuthModal(true), 1600);
       return;
     }
     if (authMode === 'signup') {
