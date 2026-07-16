@@ -131,6 +131,7 @@ async function addEntry() {
     checkNewBadges(stats);
 
     updateList(); updateStats(); updateOriginNarrative(); saveState();
+    invalidateCommunityCache();
 
     document.getElementById('book-title').value = '';
     document.getElementById('book-author').value = '';

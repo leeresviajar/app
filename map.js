@@ -62,12 +62,12 @@ function addDestMarker(entry) {
       const vData = PLACE_VISITORS[key];
       if (vData) {
         const others = vData.books.filter(b => b !== entry.book).slice(0,2);
-        const nowCount = COMMUNITY_ROUTES.filter(r => r.toName.toLowerCase() === key && r.now >= 2).reduce((s,r) => s + r.now, 0);
         const highlightColor = entry.fictional ? '#e8913c' : 'var(--teal)';
+        // Sin otros libros que listar, todas esas lecturas son de este mismo libro.
+        const suffix = others.length ? 'leyendo:' : 'leyendo este libro';
         return `<div class="popup-community">
-          <strong style="color:${highlightColor}">${vData.count.toLocaleString()} lectores</strong> también han llegado hasta aquí leyendo:
+          ${communityCountHtml(vData.count, highlightColor, suffix, true)}
           ${others.length ? '<br>' + others.map(b => `<span style="font-size:0.7rem;color:#aaa;font-style:italic">· ${b}</span>`).join(' ') : ''}
-          ${nowCount >= 2 ? `<br><span style="color:${highlightColor};font-weight:500">● ${nowCount} leyendo aquí ahora mismo</span>` : ''}
         </div>`;
       }
       return '';
@@ -89,20 +89,71 @@ function redrawMap() {
 }
 
 // ===================== RUTAS DE COMUNIDAD =====================
-const COMMUNITY_ROUTES = [
-  { from: [40.4,-3.7],  to: [41.4,2.17],  book: 'La sombra del viento',              reader: 'Elena',    fromName: 'Madrid',      toName: 'Barcelona',    fictional: false, visitors: 312,  now: 4  },
-  { from: [51.5,-0.1],  to: [53.3,-6.26], book: 'Ulises',                             reader: 'Carlos',   fromName: 'Londres',     toName: 'Dublín',       fictional: false, visitors: 429,  now: 6  },
-  { from: [48.8,2.35],  to: [55.7,12.6],  book: 'La señorita Smilla',                 reader: 'Marc',     fromName: 'París',       toName: 'Copenhague',   fictional: false, visitors: 203,  now: 2  },
-  { from: [52.5,13.4],  to: [48.2,16.4],  book: 'El proceso',                         reader: 'Nina',     fromName: 'Berlín',      toName: 'Viena',        fictional: false, visitors: 387,  now: 5  },
-  { from: [48.8,2.35],  to: [43.8,11.2],  book: 'Inferno',                            reader: 'Laura',    fromName: 'París',       toName: 'Florencia',    fictional: false, visitors: 521,  now: 8  },
-  { from: [41.4,2.17],  to: [38.7,-9.1],  book: 'Sostiene Pereira',                   reader: 'Tomás',    fromName: 'Barcelona',   toName: 'Lisboa',       fictional: false, visitors: 298,  now: 3  },
-  { from: [59.9,10.7],  to: [60.2,24.9],  book: 'Los juegos del hambre',              reader: 'Ingrid',   fromName: 'Oslo',        toName: 'Helsinki',     fictional: false, visitors: 167,  now: 2  },
-  { from: [51.5,-0.1],  to: [57.0,-4.0],  book: 'Harry Potter y la piedra filosofal', reader: 'Marcos',   fromName: 'Londres',     toName: 'Hogwarts',     fictional: true,  visitors: 1847, now: 23 },
-  { from: [52.5,13.4],  to: [52.7,-1.8],  book: 'El Señor de los Anillos',            reader: 'Nina',     fromName: 'Berlín',      toName: 'La Comarca',   fictional: true,  visitors: 1842, now: 19 },
-  { from: [43.3,-1.9],  to: [55.0,-2.0],  book: 'Canción de hielo y fuego',           reader: 'Iker',     fromName: 'San Sebastián', toName: 'Winterfell', fictional: true,  visitors: 2891, now: 39 },
-  { from: [59.9,10.7],  to: [46.5,8.0],   book: 'El Señor de los Anillos',            reader: 'Ingrid',   fromName: 'Oslo',        toName: 'Rivendell',    fictional: true,  visitors: 1102, now: 12 },
-  { from: [53.3,-6.26], to: [48.5,17.0],  book: 'Memorias de Idhún',                  reader: 'Rían',     fromName: 'Dublín',      toName: 'Nanetten',     fictional: true,  visitors: 143,  now: 2  },
-];
+// Datos reales agregados desde la vista public_community_routes de Supabase
+// (sin user_id ni note por construcción — ver sql/2026-07-16-public-community-routes.sql).
+// Parámetros ajustables sin tocar el motor: se giran según crezca la comunidad.
+const COMMUNITY_CONFIG = {
+  maxRoutes: 40,          // tope absoluto de rutas dibujadas
+  windowDays: null,       // null = sin filtro de fecha; número = solo últimos N días
+  oneLatestPerBook: false // true = máx. 1 ruta por libro+destino (evita saturar con relecturas)
+};
+const COMMUNITY_CACHE_TTL = 5 * 60 * 1000;
+let communityCache = { routes: null, ts: 0 };
+let PLACE_VISITORS = {};
+
+function invalidateCommunityCache() { communityCache = { routes: null, ts: 0 }; }
+
+async function fetchCommunityRoutes() {
+  let query = supabaseClient.from('public_community_routes').select('*');
+  if (COMMUNITY_CONFIG.windowDays) {
+    const since = new Date(Date.now() - COMMUNITY_CONFIG.windowDays * 86400000).toISOString().slice(0, 10);
+    query = query.gte('date', since);
+  }
+  query = query.order('date', { ascending: false }).limit(COMMUNITY_CONFIG.maxRoutes);
+  const { data, error } = await query;
+  if (error) { console.warn('Error cargando rutas de comunidad:', error); return []; }
+  return data || [];
+}
+
+// Agrupa las filas por (origen, destino, libro): lecturas iguales suman
+// visitors. Las lecturas del propio usuario se descuentan (el mapa ya las
+// dibuja en rojo y su popup dice "también han llegado"); una ruta que se
+// queda a 0 no se dibuja. Reconstruye PLACE_VISITORS con los datos reales.
+function aggregateCommunityRoutes(rows) {
+  const normalize = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const ownCounts = {};
+  entries.forEach(e => {
+    const k = [normalize(e.fromName), normalize(e.dest), normalize(e.book)].join('|');
+    ownCounts[k] = (ownCounts[k] || 0) + 1;
+  });
+  const routes = new Map();
+  rows.forEach(row => {
+    const fullKey = [normalize(row.from_name), normalize(row.dest), normalize(row.book)].join('|');
+    const key = COMMUNITY_CONFIG.oneLatestPerBook
+      ? [normalize(row.dest), normalize(row.book)].join('|')
+      : fullKey;
+    let r = routes.get(key);
+    if (!r) {
+      r = { from: [row.from_lat, row.from_lng], to: [row.dest_lat, row.dest_lng],
+            fromName: row.from_name, toName: row.dest, book: row.book,
+            fictional: !!row.fictional, visitors: 0 };
+      routes.set(key, r);
+    }
+    r.visitors++;
+    if (ownCounts[fullKey]) { r.visitors--; ownCounts[fullKey]--; }
+  });
+  PLACE_VISITORS = {};
+  const list = [];
+  routes.forEach(r => {
+    if (r.visitors <= 0) return; // solo lecturas propias: ya están en el mapa
+    const pk = r.toName.toLowerCase();
+    if (!PLACE_VISITORS[pk]) PLACE_VISITORS[pk] = { count: 0, books: [] };
+    PLACE_VISITORS[pk].count += r.visitors;
+    if (!PLACE_VISITORS[pk].books.some(b => normalize(b) === normalize(r.book))) PLACE_VISITORS[pk].books.push(r.book);
+    list.push(r);
+  });
+  return list.slice(0, COMMUNITY_CONFIG.maxRoutes);
+}
 
 const communityLayer = L.layerGroup();
 let communityVisible = localStorage.getItem('lev_show_community') !== 'false';
@@ -128,21 +179,36 @@ function updateCommunityToggleUI() {
 }
 updateCommunityToggleUI();
 
-const PLACE_VISITORS = {};
-COMMUNITY_ROUTES.forEach(r => {
-  const key = r.toName.toLowerCase();
-  if (!PLACE_VISITORS[key]) PLACE_VISITORS[key] = { count: 0, books: [] };
-  PLACE_VISITORS[key].count += r.visitors;
-  if (!PLACE_VISITORS[key].books.includes(r.book)) PLACE_VISITORS[key].books.push(r.book);
-});
-
-function drawCommunityRoutes() {
+// Consulta (si la caché caducó) y dibuja. La llaman el init, redrawMap y
+// el toggle; los objetos agregados mantienen la forma del array antiguo,
+// así que drawCommunityRoute no cambia ni en geometría ni en estilos.
+async function drawCommunityRoutes() {
   if (!communityVisible) return;
+  const stale = !communityCache.routes || (Date.now() - communityCache.ts > COMMUNITY_CACHE_TTL);
+  if (stale) {
+    const rows = await fetchCommunityRoutes();
+    communityCache = { routes: aggregateCommunityRoutes(rows), ts: Date.now() };
+  }
+  renderCommunityRoutes();
+}
+
+// Solo redibuja desde la caché: nunca lanza la consulta (moveend/zoomend).
+function renderCommunityRoutes() {
   communityLayer.clearLayers();
+  if (!communityVisible || !communityCache.routes) return;
   const drawnDestinations = new Set();
   const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const userDestinations = new Set(entries.map(e => normalize(e.dest)));
-  COMMUNITY_ROUTES.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize));
+  communityCache.routes.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize));
+}
+
+// «Una persona ha llegado…» / «N lectores han llegado…»: con pocos
+// testers habrá recuentos de 1 y "1 lectores" no puede aparecer.
+function communityCountHtml(n, color, suffix, tambien) {
+  const strong = t => `<strong style="color:${color}">${t}</strong>`;
+  return n === 1
+    ? `${strong('Una persona')} ${tambien ? 'también ' : ''}ha llegado hasta aquí ${suffix}`
+    : `${strong(n.toLocaleString() + ' lectores')} ${tambien ? 'también ' : ''}han llegado hasta aquí ${suffix}`;
 }
 
 function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
@@ -173,8 +239,7 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
         <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
         <div class="popup-place" style="font-size:0.75rem;color:#888">${r.fromName} → ${r.toName} · <em>${r.book}</em></div>
         <div class="popup-community">
-          <strong style="color:${highlightColor}">${r.visitors.toLocaleString()} lectores</strong> han llegado hasta aquí leyendo:
-          ${r.now >= 2 ? `<br><span style="color:${highlightColor};font-weight:500">● ${r.now} leyendo aquí ahora mismo</span>` : ''}
+          ${communityCountHtml(r.visitors, highlightColor, 'leyendo este libro')}
         </div>
       `);
     L.polyline(points, { color, weight: 2, opacity: 1, dashArray: '5 5' }).addTo(communityLayer);
@@ -209,12 +274,11 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
       L.marker(r.to, { icon }).addTo(communityLayer).bindPopup(`
         <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
         <div class="popup-community">
-          <strong style="color:${highlightColor}">${vData ? vData.count.toLocaleString() : r.visitors} lectores</strong> han llegado hasta aquí leyendo:
+          ${communityCountHtml(vData ? vData.count : r.visitors, highlightColor, 'leyendo:')}
           ${booksHtml}
-          ${r.now >= 2 ? `<br><span style="color:${highlightColor};font-weight:500">● ${r.now} leyendo aquí ahora mismo</span>` : ''}
         </div>
       `);
     }
 }
 
-map.on('moveend zoomend', drawCommunityRoutes);
+map.on('moveend zoomend', renderCommunityRoutes);
