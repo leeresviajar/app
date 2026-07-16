@@ -52,7 +52,7 @@ function addDestMarker(entry) {
     html: `<div style="width:${size}px;height:${size}px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 0 0 1.5px ${color}"></div>`,
     iconSize: [size,size], iconAnchor: [size/2,size/2]
   });
-  L.marker([entry.destLat, entry.destLng], { icon }).addTo(markersLayer).bindPopup(`
+  L.marker([entry.destLat, entry.destLng], { icon }).addTo(markersLayer).on('click', () => showDestinationDetail(entry.dest)).bindPopup(`
     <div class="popup-book">${esc(entry.book)}${entry.author ? ` <span style="font-weight:400;font-style:normal;font-size:0.8rem;color:#888">— ${esc(entry.author)}</span>` : ''}</div>
     <div class="popup-place">${entry.fictional ? '✦ ' : ''}${esc(entry.dest)}</div>
     <div class="popup-km">+${entry.km.toLocaleString()} km desde ${esc(entry.fromName)}</div>
@@ -168,6 +168,7 @@ function toggleCommunityLayer() {
     drawCommunityRoutes();
   } else {
     map.removeLayer(communityLayer);
+    hideDestinationDetail(); // el detalle activo se cierra con la capa
   }
 }
 
@@ -226,6 +227,42 @@ function communityCountHtml(n, color, suffix, tambien) {
     : `${strong(n.toLocaleString() + ' lectores')} ${tambien ? 'también ' : ''}han llegado hasta aquí ${suffix}`;
 }
 
+// Rutas históricas completas hacia un destino, mostradas solo mientras
+// ese punto está seleccionado. Capa aparte para no interferir con el
+// ciclo de vida de la capa de ambiente (communityLayer).
+const detailLayer = L.layerGroup().addTo(map);
+let detailDestKey = null;
+
+async function showDestinationDetail(destName) {
+  if (!communityVisible) return; // el toggle manda sobre ambiente y detalle por igual
+  const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const key = normalize(destName);
+  if (detailDestKey === key) { hideDestinationDetail(); return; } // pinchar el mismo punto lo cierra
+  detailDestKey = key;
+  detailLayer.clearLayers();
+
+  const { data, error } = await supabaseClient
+    .from('public_community_routes')   // vista existente, histórico completo
+    .select('*')
+    .ilike('dest', destName);          // insensible a mayúsculas, no a tildes (espec §3.3)
+  if (error) { console.warn('Error cargando detalle de destino:', error); return; }
+  if (detailDestKey !== key) return;   // se pinchó otro punto mientras cargaba
+
+  const saved = PLACE_VISITORS;        // aggregate reconstruye PLACE_VISITORS como efecto
+  const rows = aggregateCommunityRoutes(data); // lateral; aquí solo queremos la lista
+  PLACE_VISITORS = saved;
+  const drawnDestinations = new Set([key]); // el punto ya existe en la capa de ambiente
+  const userDestinations = new Set(entries.map(e => normalize(e.dest)));
+  rows.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, detailLayer));
+}
+
+function hideDestinationDetail() {
+  detailDestKey = null;
+  detailLayer.clearLayers();
+}
+
+map.on('click', hideDestinationDetail); // pinchar fuera cierra el detalle
+
 // targetLayer permite reutilizar la función desde el detalle (detailLayer);
 // markersOnly dibuja solo los puntos, para el histórico sin líneas.
 function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, targetLayer, markersOnly) {
@@ -252,7 +289,10 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
     const color = r.fictional ? 'rgba(232,145,60,0.6)' : 'rgba(29,158,117,0.55)';
     const highlightColor = r.fictional ? '#e8913c' : 'var(--teal)';
     if (!markersOnly) {
-      L.polyline(points, { color: 'transparent', weight: 12, opacity: 1 })
+      // bubblingMouseEvents:false — que abrir el popup de una línea no dispare
+      // el click del mapa (cerraría el detalle activo). La línea visible no es
+      // interactiva: los clicks pasan a esta línea ancha, que tiene el popup.
+      L.polyline(points, { color: 'transparent', weight: 12, opacity: 1, bubblingMouseEvents: false })
         .addTo(targetLayer)
         .bindPopup(`
           <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
@@ -261,7 +301,7 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
             ${communityCountHtml(r.visitors, highlightColor, 'leyendo este libro')}
           </div>
         `);
-      L.polyline(points, { color, weight: 2, opacity: 1, dashArray: '5 5' }).addTo(targetLayer);
+      L.polyline(points, { color, weight: 2, opacity: 1, dashArray: '5 5', interactive: false }).addTo(targetLayer);
     }
 
     if (!drawnDestinations.has(fromKey) && !userDestinations.has(fromKey)) {
@@ -291,7 +331,7 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
           : `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
         iconSize: r.fictional ? [10,10] : [7,7], iconAnchor: r.fictional ? [5,5] : [3.5,3.5]
       });
-      L.marker(r.to, { icon }).addTo(targetLayer).bindPopup(`
+      L.marker(r.to, { icon }).addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(`
         <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
         <div class="popup-community">
           ${communityCountHtml(vData ? vData.count : r.visitors, highlightColor, 'leyendo:')}
