@@ -162,6 +162,11 @@ function aggregateCommunityRoutes(rows) {
 }
 
 const communityLayer = L.layerGroup();
+// Pane para las zonas de click ampliadas de los puntos de comunidad:
+// por encima del SVG de las rutas (overlayPane, 400) para ganar a la línea
+// invisible ancha, pero por debajo de markerPane (600) para que el click
+// exacto sobre un punto visible siga ganando al halo de un punto vecino.
+map.createPane('communityHit').style.zIndex = 450;
 let communityVisible = localStorage.getItem('lev_show_community') !== 'false';
 if (communityVisible) communityLayer.addTo(map);
 
@@ -320,10 +325,15 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
         html: `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
         iconSize: [7,7], iconAnchor: [3.5,3.5]
       });
-      L.marker(r.from, { icon: fromIcon }).addTo(targetLayer).bindPopup(`
+      const fromPopup = `
         <div class="popup-book" style="font-size:0.85rem">${r.fromName}</div>
         <div class="popup-place" style="font-size:0.75rem;color:#888">Punto de partida de lectores de la comunidad</div>
-      `);
+      `;
+      L.marker(r.from, { icon: fromIcon }).addTo(targetLayer).bindPopup(fromPopup);
+      // Zona de click ampliada: círculo invisible con el mismo popup, para que
+      // un click cerca del punto no se lo lleve la línea ancha de la ruta.
+      L.circleMarker(r.from, { pane: 'communityHit', radius: 11, stroke: false, fillOpacity: 0, bubblingMouseEvents: false })
+        .addTo(targetLayer).bindPopup(fromPopup);
     }
 
     const vData = PLACE_VISITORS[destKey];
@@ -340,13 +350,17 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
           : `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
         iconSize: r.fictional ? [10,10] : [7,7], iconAnchor: r.fictional ? [5,5] : [3.5,3.5]
       });
-      L.marker(r.to, { icon }).addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(`
+      const destPopup = `
         <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
         <div class="popup-community">
           ${communityCountHtml(vData ? vData.count : r.visitors, highlightColor, 'leyendo:')}
           ${booksHtml}
         </div>
-      `);
+      `;
+      L.marker(r.to, { icon }).addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(destPopup);
+      // Zona de click ampliada del destino: mismo popup y mismo detalle.
+      L.circleMarker(r.to, { pane: 'communityHit', radius: 11, stroke: false, fillOpacity: 0, bubblingMouseEvents: false })
+        .addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(destPopup);
     }
 }
 
