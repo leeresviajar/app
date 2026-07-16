@@ -58,7 +58,7 @@ function addDestMarker(entry) {
     <div class="popup-km">+${entry.km.toLocaleString()} km desde ${esc(entry.fromName)}</div>
     ${entry.note ? `<div style="font-size:0.75rem;color:#888;font-style:italic;margin-top:4px;">"${esc(entry.note)}"</div>` : ''}
     ${(() => {
-      const key = entry.dest.toLowerCase();
+      const key = normalizeName(entry.dest);
       const vData = PLACE_VISITORS[key];
       if (vData) {
         const others = vData.books.filter(b => b !== entry.book).slice(0,2);
@@ -102,6 +102,9 @@ const COMMUNITY_CONFIG = {
 };
 const COMMUNITY_CACHE_TTL = 5 * 60 * 1000;
 let communityCache = { ambient: null, history: null, ts: 0 };
+// Clave canónica de nombres de lugar y libro: minúsculas y sin diacríticos.
+// Única definición compartida — PLACE_VISITORS se escribe y se lee con ella.
+const normalizeName = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 let PLACE_VISITORS = {};
 // Lugares que son destino de alguna ruta de comunidad: el rol destino
 // tiene prioridad — nunca se dibujan como simple "punto de partida".
@@ -126,7 +129,7 @@ async function fetchCommunityRoutes(viewName) {
 // dibuja en rojo y su popup dice "también han llegado"); una ruta que se
 // queda a 0 no se dibuja. Reconstruye PLACE_VISITORS con los datos reales.
 function aggregateCommunityRoutes(rows) {
-  const normalize = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const normalize = normalizeName;
   const ownCounts = {};
   entries.forEach(e => {
     const k = [normalize(e.fromName), normalize(e.dest), normalize(e.book)].join('|');
@@ -149,7 +152,7 @@ function aggregateCommunityRoutes(rows) {
   const list = [];
   routes.forEach(r => {
     if (r.visitors <= 0) return; // solo lecturas propias: ya están en el mapa
-    const pk = r.toName.toLowerCase();
+    const pk = normalize(r.toName);
     if (!PLACE_VISITORS[pk]) PLACE_VISITORS[pk] = { count: 0, books: [] };
     PLACE_VISITORS[pk].count += r.visitors;
     if (!PLACE_VISITORS[pk].books.some(b => normalize(b) === normalize(r.book))) PLACE_VISITORS[pk].books.push(r.book);
@@ -206,7 +209,7 @@ function renderCommunityRoutes() {
   communityLayer.clearLayers();
   if (!communityVisible || !communityCache.ambient) return;
   const drawnDestinations = new Set();
-  const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const normalize = normalizeName;
   const userDestinations = new Set(entries.map(e => normalize(e.dest)));
   // Desde los datos, no desde lo dibujado: un destino que no se dibuja
   // (p. ej. destino propio) también veta el marcador de partida.
@@ -241,7 +244,7 @@ let detailDestKey = null;
 
 async function showDestinationDetail(destName) {
   if (!communityVisible) return; // el toggle manda sobre ambiente y detalle por igual
-  const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const normalize = normalizeName;
   const key = normalize(destName);
   if (detailDestKey === key) { hideDestinationDetail(); return; } // pinchar el mismo punto lo cierra
   detailDestKey = key;
@@ -272,7 +275,7 @@ map.on('click', hideDestinationDetail); // pinchar fuera cierra el detalle
 // targetLayer permite reutilizar la función desde el detalle (detailLayer);
 // markersOnly dibuja solo los puntos, para el histórico sin líneas.
 function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, targetLayer, markersOnly) {
-  normalize = normalize || (s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+  normalize = normalize || normalizeName;
   targetLayer = targetLayer || communityLayer;
   const fromKey = normalize(r.fromName);
   const destKey = normalize(r.toName);
