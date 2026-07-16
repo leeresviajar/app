@@ -490,7 +490,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 
 /* TOGGLE CAPA COMUNIDAD */
 .community-toggle {
-  position: absolute; right: 10px; bottom: 118px; z-index: 1000;
+  position: absolute; right: 60px; bottom: 52px; z-index: 1000;
   display: flex; align-items: center; gap: 0.5rem;
   background: rgba(255,255,255,0.92); backdrop-filter: blur(4px);
   border: 0.5px solid var(--line); border-radius: 8px;
@@ -723,7 +723,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   /* overlays sobre el mapa */
   .activity-strip { display: none; }
   .map-legend { bottom: 76px; }
-  .community-toggle { bottom: 142px; }
+  .community-toggle { right: 10px; bottom: 142px; }
   .map-title { top: 0.75rem; right: 0.75rem; }
   .export-trigger { top: 0.75rem; left: 0.75rem; right: auto; }
   .pioneer-toast, .badge-unlock-toast { left: 0.75rem; right: 0.75rem; max-width: none; }
