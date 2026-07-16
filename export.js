@@ -196,11 +196,16 @@ async function buildExportCanvas() {
 
   if (exportMode === 'stats' || exportMode === 'books') {
     // Diseño renovado (mockup aprobado jul 2026): papel liso, Inter + Instrument Serif
-    const L = {
+    const L = exportFormat === 'story' ? {
       brandY: 190, brandSize: 60, periodoY: 250, kmY: 560, kmSize: 240,
       kmLabelY: 640, kmLabelSize: 52, sep1Y: 720, statNumY: 870, statNumSize: 64,
       statLabelY: 910, sep2Y: 1010, lecturasY: 1100, booksY: 1170, bookLH: 64,
       bookSize: 40, restSize: 34, maxTitulos: 6, taglineY: H - 160, urlY: H - 100
+    } : {
+      brandY: 150, brandSize: 54, periodoY: 205, kmY: 470, kmSize: 200,
+      kmLabelY: 545, kmLabelSize: 46, sep1Y: 615, statNumY: 730, statNumSize: 56,
+      statLabelY: 768, sep2Y: 850, lecturasY: 915, booksY: 975, bookLH: 52,
+      bookSize: 34, restSize: 29, maxTitulos: 4, taglineY: H - 120, urlY: H - 75
     };
 
     // Fondo papel liso
