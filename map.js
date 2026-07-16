@@ -103,6 +103,9 @@ const COMMUNITY_CONFIG = {
 const COMMUNITY_CACHE_TTL = 5 * 60 * 1000;
 let communityCache = { ambient: null, history: null, ts: 0 };
 let PLACE_VISITORS = {};
+// Lugares que son destino de alguna ruta de comunidad: el rol destino
+// tiene prioridad — nunca se dibujan como simple "punto de partida".
+let communityDestKeys = new Set();
 
 function invalidateCommunityCache() { communityCache = { ambient: null, history: null, ts: 0 }; }
 
@@ -205,6 +208,9 @@ function renderCommunityRoutes() {
   const drawnDestinations = new Set();
   const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const userDestinations = new Set(entries.map(e => normalize(e.dest)));
+  // Desde los datos, no desde lo dibujado: un destino que no se dibuja
+  // (p. ej. destino propio) también veta el marcador de partida.
+  communityDestKeys = new Set([...communityCache.ambient, ...communityCache.history].map(r => normalize(r.toName)));
   // El popup de la línea usa el recuento del histórico para la misma ruta:
   // la línea no puede decir «Una persona» cuando su punto dice «5 lectores».
   const keyOf = r => [normalize(r.fromName), normalize(r.toName), normalize(r.book)].join('|');
@@ -304,7 +310,7 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
       L.polyline(points, { color, weight: 2, opacity: 1, dashArray: '5 5', interactive: false }).addTo(targetLayer);
     }
 
-    if (!drawnDestinations.has(fromKey) && !userDestinations.has(fromKey)) {
+    if (!drawnDestinations.has(fromKey) && !userDestinations.has(fromKey) && !communityDestKeys.has(fromKey)) {
       drawnDestinations.add(fromKey);
       const fromIcon = L.divIcon({
         className: '',
