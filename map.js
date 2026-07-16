@@ -89,22 +89,25 @@ function redrawMap() {
 }
 
 // ===================== RUTAS DE COMUNIDAD =====================
-// Datos reales agregados desde la vista public_community_routes de Supabase
-// (sin user_id ni note por construcción — ver sql/2026-07-16-public-community-routes.sql).
+// Datos reales agregados desde dos vistas de Supabase, ambas anónimas
+// (sin user_id ni note por construcción — ver sql/):
+//  · community_routes_latest_per_user → líneas de ambiente (última ruta
+//    de cada usuario; rotación orgánica cuando alguien añade una entrada)
+//  · public_community_routes → histórico completo (puntos, PLACE_VISITORS
+//    y detalle al pinchar un destino)
 // Parámetros ajustables sin tocar el motor: se giran según crezca la comunidad.
 const COMMUNITY_CONFIG = {
   maxRoutes: 40,          // tope absoluto de rutas dibujadas
-  windowDays: null,       // null = sin filtro de fecha; número = solo últimos N días
-  oneLatestPerBook: false // true = máx. 1 ruta por libro+destino (evita saturar con relecturas)
+  windowDays: null        // null = sin filtro de fecha; número = solo últimos N días
 };
 const COMMUNITY_CACHE_TTL = 5 * 60 * 1000;
-let communityCache = { routes: null, ts: 0 };
+let communityCache = { ambient: null, history: null, ts: 0 };
 let PLACE_VISITORS = {};
 
-function invalidateCommunityCache() { communityCache = { routes: null, ts: 0 }; }
+function invalidateCommunityCache() { communityCache = { ambient: null, history: null, ts: 0 }; }
 
-async function fetchCommunityRoutes() {
-  let query = supabaseClient.from('public_community_routes').select('*');
+async function fetchCommunityRoutes(viewName) {
+  let query = supabaseClient.from(viewName).select('*');
   if (COMMUNITY_CONFIG.windowDays) {
     const since = new Date(Date.now() - COMMUNITY_CONFIG.windowDays * 86400000).toISOString().slice(0, 10);
     query = query.gte('date', since);
@@ -129,15 +132,12 @@ function aggregateCommunityRoutes(rows) {
   const routes = new Map();
   rows.forEach(row => {
     const fullKey = [normalize(row.from_name), normalize(row.dest), normalize(row.book)].join('|');
-    const key = COMMUNITY_CONFIG.oneLatestPerBook
-      ? [normalize(row.dest), normalize(row.book)].join('|')
-      : fullKey;
-    let r = routes.get(key);
+    let r = routes.get(fullKey);
     if (!r) {
       r = { from: [row.from_lat, row.from_lng], to: [row.dest_lat, row.dest_lng],
             fromName: row.from_name, toName: row.dest, book: row.book,
             fictional: !!row.fictional, visitors: 0 };
-      routes.set(key, r);
+      routes.set(fullKey, r);
     }
     r.visitors++;
     if (ownCounts[fullKey]) { r.visitors--; ownCounts[fullKey]--; }
@@ -184,10 +184,15 @@ updateCommunityToggleUI();
 // así que drawCommunityRoute no cambia ni en geometría ni en estilos.
 async function drawCommunityRoutes() {
   if (!communityVisible) return;
-  const stale = !communityCache.routes || (Date.now() - communityCache.ts > COMMUNITY_CACHE_TTL);
+  const stale = !communityCache.ambient || (Date.now() - communityCache.ts > COMMUNITY_CACHE_TTL);
   if (stale) {
-    const rows = await fetchCommunityRoutes();
-    communityCache = { routes: aggregateCommunityRoutes(rows), ts: Date.now() };
+    const [latestRows, historyRows] = await Promise.all([
+      fetchCommunityRoutes('community_routes_latest_per_user'),
+      fetchCommunityRoutes('public_community_routes')
+    ]);
+    const ambient = aggregateCommunityRoutes(latestRows);
+    const history = aggregateCommunityRoutes(historyRows); // la última: deja PLACE_VISITORS con el histórico
+    communityCache = { ambient, history, ts: Date.now() };
   }
   renderCommunityRoutes();
 }
@@ -195,11 +200,21 @@ async function drawCommunityRoutes() {
 // Solo redibuja desde la caché: nunca lanza la consulta (moveend/zoomend).
 function renderCommunityRoutes() {
   communityLayer.clearLayers();
-  if (!communityVisible || !communityCache.routes) return;
+  if (!communityVisible || !communityCache.ambient) return;
   const drawnDestinations = new Set();
   const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const userDestinations = new Set(entries.map(e => normalize(e.dest)));
-  communityCache.routes.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize));
+  // El popup de la línea usa el recuento del histórico para la misma ruta:
+  // la línea no puede decir «Una persona» cuando su punto dice «5 lectores».
+  const keyOf = r => [normalize(r.fromName), normalize(r.toName), normalize(r.book)].join('|');
+  const historyCounts = new Map(communityCache.history.map(r => [keyOf(r), r.visitors]));
+  communityCache.ambient.forEach(r => {
+    r.visitors = historyCounts.get(keyOf(r)) || r.visitors;
+    drawCommunityRoute(r, drawnDestinations, userDestinations, normalize);
+  });
+  // Puntos del histórico completo, sin líneas: siempre visibles aunque
+  // sus rutas no estén en el ambiente rotatorio.
+  communityCache.history.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, communityLayer, true));
 }
 
 // «Una persona ha llegado…» / «N lectores han llegado…»: con pocos
@@ -211,8 +226,11 @@ function communityCountHtml(n, color, suffix, tambien) {
     : `${strong(n.toLocaleString() + ' lectores')} ${tambien ? 'también ' : ''}han llegado hasta aquí ${suffix}`;
 }
 
-function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
+// targetLayer permite reutilizar la función desde el detalle (detailLayer);
+// markersOnly dibuja solo los puntos, para el histórico sin líneas.
+function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, targetLayer, markersOnly) {
   normalize = normalize || (s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+  targetLayer = targetLayer || communityLayer;
   const fromKey = normalize(r.fromName);
   const destKey = normalize(r.toName);
     const p1 = { lat: r.from[0], lng: r.from[1] };
@@ -233,16 +251,18 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
     }
     const color = r.fictional ? 'rgba(232,145,60,0.6)' : 'rgba(29,158,117,0.55)';
     const highlightColor = r.fictional ? '#e8913c' : 'var(--teal)';
-    L.polyline(points, { color: 'transparent', weight: 12, opacity: 1 })
-      .addTo(communityLayer)
-      .bindPopup(`
-        <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
-        <div class="popup-place" style="font-size:0.75rem;color:#888">${r.fromName} → ${r.toName} · <em>${r.book}</em></div>
-        <div class="popup-community">
-          ${communityCountHtml(r.visitors, highlightColor, 'leyendo este libro')}
-        </div>
-      `);
-    L.polyline(points, { color, weight: 2, opacity: 1, dashArray: '5 5' }).addTo(communityLayer);
+    if (!markersOnly) {
+      L.polyline(points, { color: 'transparent', weight: 12, opacity: 1 })
+        .addTo(targetLayer)
+        .bindPopup(`
+          <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
+          <div class="popup-place" style="font-size:0.75rem;color:#888">${r.fromName} → ${r.toName} · <em>${r.book}</em></div>
+          <div class="popup-community">
+            ${communityCountHtml(r.visitors, highlightColor, 'leyendo este libro')}
+          </div>
+        `);
+      L.polyline(points, { color, weight: 2, opacity: 1, dashArray: '5 5' }).addTo(targetLayer);
+    }
 
     if (!drawnDestinations.has(fromKey) && !userDestinations.has(fromKey)) {
       drawnDestinations.add(fromKey);
@@ -251,7 +271,7 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
         html: `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
         iconSize: [7,7], iconAnchor: [3.5,3.5]
       });
-      L.marker(r.from, { icon: fromIcon }).addTo(communityLayer).bindPopup(`
+      L.marker(r.from, { icon: fromIcon }).addTo(targetLayer).bindPopup(`
         <div class="popup-book" style="font-size:0.85rem">${r.fromName}</div>
         <div class="popup-place" style="font-size:0.75rem;color:#888">Punto de partida de lectores de la comunidad</div>
       `);
@@ -271,7 +291,7 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize) {
           : `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
         iconSize: r.fictional ? [10,10] : [7,7], iconAnchor: r.fictional ? [5,5] : [3.5,3.5]
       });
-      L.marker(r.to, { icon }).addTo(communityLayer).bindPopup(`
+      L.marker(r.to, { icon }).addTo(targetLayer).bindPopup(`
         <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
         <div class="popup-community">
           ${communityCountHtml(vData ? vData.count : r.visitors, highlightColor, 'leyendo:')}
