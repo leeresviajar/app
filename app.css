@@ -490,7 +490,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 
 /* TOGGLE CAPA COMUNIDAD */
 .community-toggle {
-  position: absolute; right: 60px; bottom: 52px; z-index: 1000;
+  position: absolute; right: 60px; bottom: 92px; z-index: 1000;
   display: flex; align-items: center; gap: 0.5rem;
   background: rgba(255,255,255,0.92); backdrop-filter: blur(4px);
   border: 0.5px solid var(--line); border-radius: 8px;
