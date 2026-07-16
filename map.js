@@ -104,7 +104,29 @@ const COMMUNITY_ROUTES = [
   { from: [53.3,-6.26], to: [48.5,17.0],  book: 'Memorias de Idhún',                  reader: 'Rían',     fromName: 'Dublín',      toName: 'Nanetten',     fictional: true,  visitors: 143,  now: 2  },
 ];
 
-const communityLayer = L.layerGroup().addTo(map);
+const communityLayer = L.layerGroup();
+let communityVisible = localStorage.getItem('lev_show_community') !== 'false';
+if (communityVisible) communityLayer.addTo(map);
+
+function toggleCommunityLayer() {
+  communityVisible = !communityVisible;
+  localStorage.setItem('lev_show_community', communityVisible);
+  updateCommunityToggleUI();
+  if (communityVisible) {
+    communityLayer.addTo(map);
+    drawCommunityRoutes();
+  } else {
+    map.removeLayer(communityLayer);
+  }
+}
+
+function updateCommunityToggleUI() {
+  const btn = document.getElementById('community-toggle');
+  if (!btn) return;
+  btn.classList.toggle('off', !communityVisible);
+  btn.title = communityVisible ? 'Ocultar las rutas de la comunidad' : 'Mostrar las rutas de la comunidad';
+}
+updateCommunityToggleUI();
 
 const PLACE_VISITORS = {};
 COMMUNITY_ROUTES.forEach(r => {
@@ -115,6 +137,7 @@ COMMUNITY_ROUTES.forEach(r => {
 });
 
 function drawCommunityRoutes() {
+  if (!communityVisible) return;
   communityLayer.clearLayers();
   const drawnDestinations = new Set();
   const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');

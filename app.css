@@ -488,6 +488,19 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   border-top: 2px dashed rgba(232,145,60,0.7);
 }
 
+/* TOGGLE CAPA COMUNIDAD */
+.community-toggle {
+  position: absolute; right: 10px; bottom: 118px; z-index: 1000;
+  display: flex; align-items: center; gap: 0.5rem;
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(4px);
+  border: 0.5px solid var(--line); border-radius: 8px;
+  padding: 0.45rem 0.7rem; cursor: pointer;
+  font-size: 0.68rem; color: var(--muted);
+  font-family: 'Inter', sans-serif; letter-spacing: 0.02em; white-space: nowrap;
+}
+.community-toggle.off { opacity: 0.45; }
+.community-toggle.off .legend-line.community { border-top-style: solid; border-top-color: #bbb; }
+
 /* TOOLTIP BIENVENIDA */
 .welcome-tooltip {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -710,6 +723,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   /* overlays sobre el mapa */
   .activity-strip { display: none; }
   .map-legend { bottom: 76px; }
+  .community-toggle { bottom: 142px; }
   .map-title { top: 0.75rem; right: 0.75rem; }
   .export-trigger { top: 0.75rem; left: 0.75rem; right: auto; }
   .pioneer-toast, .badge-unlock-toast { left: 0.75rem; right: 0.75rem; max-width: none; }
