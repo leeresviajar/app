@@ -225,7 +225,7 @@ function updateList() {
     div.innerHTML = `
       <div class="entry-line"><div class="${dotClass}"></div>${connector}</div>
       <div class="entry-content">
-        <div class="entry-route">${e.fromName} → ${e.dest}${e.fictional ? ' ✦' : ''}${e.country && !e.fictional ? ` <span style="opacity:0.7">· ${e.country}</span>` : ''}</div>
+        <div class="entry-route">${e.fromName} → ${e.fictional ? '✦ ' : ''}${e.dest}${e.country && !e.fictional ? ` <span style="opacity:0.7">· ${e.country}</span>` : ''}</div>
         <div class="entry-book">${e.book}${e.author ? ` <span style="font-size:0.78rem;color:#aaa;font-style:normal">— ${e.author}</span>` : ''}</div>
         <div class="entry-km">+${e.km.toLocaleString()} km</div>
         ${e.date ? `<div class="entry-date">${formatDate(e.date)}</div>` : ''}
