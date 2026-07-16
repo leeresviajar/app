@@ -151,6 +151,7 @@ async function renderExportPreview() {
 
 async function buildExportCanvas() {
   const { W, H } = EXPORT_FORMATS[exportFormat] || EXPORT_FORMATS.feed;
+  await document.fonts.ready;
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -169,41 +170,6 @@ async function buildExportCanvas() {
     const blockH = blockBottom - blockTop;
     const desiredTop = availTop + (availBottom - availTop - blockH) / 2;
     return desiredTop - blockTop;
-  }
-
-  function roundRect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x+r, y);
-    ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-    ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-    ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-    ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
-    ctx.closePath();
-  }
-
-  // Fondo
-  const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0,   '#faf8f4');
-  bg.addColorStop(0.5, '#f5f2ec');
-  bg.addColorStop(1,   '#f2eee7');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-
-  // Textura: líneas de latitud/longitud fantasma
-  ctx.strokeStyle = 'rgba(29,158,117,0.06)';
-  ctx.lineWidth = 1;
-  for (let x = 0; x <= W; x += W/8) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-  }
-  for (let y = 0; y <= H; y += H/8) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-  }
-
-  // Círculos decorativos
-  ctx.strokeStyle = 'rgba(29,158,117,0.07)';
-  ctx.lineWidth = 1.5;
-  for (const r of [180, 300, 420]) {
-    ctx.beginPath(); ctx.arc(W/2, H*0.42, r, 0, Math.PI*2); ctx.stroke();
   }
 
   function drawBrandLogo(cx, cy, size) {
@@ -229,101 +195,123 @@ async function buildExportCanvas() {
   const fictional = new Set(exFiltered.filter(e=>e.fictional).map(e=>e.dest.toLowerCase())).size;
 
   if (exportMode === 'stats' || exportMode === 'books') {
-    const bookList = [...new Set(exFiltered.map(e => e.book))].slice(0, 6);
-    const lastContentY = bookList.length ? (638 + (bookList.length - 1) * 28) : 495;
-    const offsetY = centerOffset(50, lastContentY + 20);
+    // Diseño renovado (mockup aprobado jul 2026): papel liso, Inter + Instrument Serif
+    const L = {
+      brandY: 190, brandSize: 60, periodoY: 250, kmY: 560, kmSize: 240,
+      kmLabelY: 640, kmLabelSize: 52, sep1Y: 720, statNumY: 870, statNumSize: 64,
+      statLabelY: 910, sep2Y: 1010, lecturasY: 1100, booksY: 1170, bookLH: 64,
+      bookSize: 40, restSize: 34, maxTitulos: 6, taglineY: H - 160, urlY: H - 100
+    };
+
+    // Fondo papel liso
+    ctx.fillStyle = '#faf7f2';
+    ctx.fillRect(0, 0, W, H);
+
+    // Solo stats con valor > 0: las de cero se omiten y el resto se recentra
+    const statList = [
+      { val: places,    label: places === 1 ? 'destino' : 'destinos' },
+      { val: countries, label: countries === 1 ? 'país' : 'países' },
+      { val: fictional, label: fictional === 1 ? 'imaginario' : 'imaginarios' },
+      { val: pioneers,  label: pioneers === 1 ? '1ª llegada' : '1as llegadas' },
+      { val: books,     label: books === 1 ? 'libro' : 'libros' },
+    ].filter(s => s.val > 0);
+
+    const allBooks = [...new Set(exFiltered.map(e => e.book))];
+    const shown = allBooks.slice(0, L.maxTitulos);
+    const rest = allBooks.length - shown.length;
+
+    let blockBottom = L.sep1Y;
+    if (shown.length) {
+      blockBottom = L.booksY + (shown.length - 1) * L.bookLH;
+      if (rest > 0) blockBottom += L.bookLH + 10;
+    }
+    const offsetY = centerOffset(L.brandY - L.brandSize, blockBottom + 20);
 
     ctx.save();
     ctx.translate(0, offsetY);
 
-    drawBrandLogo(W/2, 72, 28);
+    drawBrandSerif(ctx, W, L.brandY, L.brandSize);
 
-    ctx.fillStyle = '#9a948d';
-    ctx.font = '500 13px Inter, sans-serif';
-    ctx.letterSpacing = '0.12em';
     ctx.textAlign = 'center';
-    ctx.fillText(exportPeriodSubtitle().toUpperCase(), W/2, 100);
+    ctx.font = "500 26px 'Inter', sans-serif";
+    ctx.fillStyle = '#9a948d'; ctx.letterSpacing = '4px';
+    ctx.fillText(exportPeriodSubtitle().toUpperCase(), W/2, L.periodoY);
+    ctx.letterSpacing = '0px';
 
-    ctx.fillStyle = '#1a1a18';
-    ctx.font = 'bold 110px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(km.toLocaleString(), W/2, 260);
+    ctx.font = `700 ${L.kmSize}px 'Inter', sans-serif`; ctx.fillStyle = '#1a1a18';
+    ctx.fillText(km.toLocaleString('es-ES'), W/2, L.kmY);
+    ctx.font = `italic ${L.kmLabelSize}px 'Instrument Serif', serif`; ctx.fillStyle = '#1d9e75';
+    ctx.fillText('kilómetros leídos', W/2, L.kmLabelY);
 
-    ctx.fillStyle = '#1d9e75';
-    ctx.font = '400 20px Inter, sans-serif';
-    ctx.fillText('KILÓMETROS LEÍDOS', W/2, 298);
+    ctx.strokeStyle = '#ece8e1'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(140, L.sep1Y); ctx.lineTo(W - 140, L.sep1Y); ctx.stroke();
 
-    const sepG = ctx.createLinearGradient(120, 0, W-120, 0);
-    sepG.addColorStop(0, 'transparent');
-    sepG.addColorStop(0.3, '#1d9e75');
-    sepG.addColorStop(0.7, '#1d9e75');
-    sepG.addColorStop(1, 'transparent');
-    ctx.strokeStyle = sepG;
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(120, 330); ctx.lineTo(W-120, 330); ctx.stroke();
-
-    const stats = [
-      { val: places,   label: places === 1 ? 'destino' : 'destinos' },
-      { val: countries,label: countries === 1 ? 'país' : 'países' },
-      { val: books,    label: books === 1 ? 'libro' : 'libros' },
-      { val: fictional,label: 'lugares imaginarios' },
-      { val: pioneers, label: pioneers === 1 ? 'primera llegada' : 'primeras llegadas' },
-    ];
-
-    const colW = W / stats.length;
-    const statY = 420;
-    stats.forEach((s, i) => {
-      const x = colW * i + colW / 2;
-      roundRect(colW*i + 20, statY - 55, colW - 40, 130, 10);
-      ctx.fillStyle = 'rgba(29,158,117,0.05)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(29,158,117,0.18)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      ctx.fillStyle = '#0f6e56';
-      ctx.font = 'bold 44px Georgia, serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(String(s.val), x, statY + 8);
-
-      ctx.fillStyle = '#9a948d';
-      ctx.font = '400 12px Inter, sans-serif';
-      const labelLines = s.label.split('\n');
-      labelLines.forEach((l, li) => ctx.fillText(l.toUpperCase(), x, statY + 30 + li*16));
+    const colW = Math.min(220, (W - 160) / Math.max(statList.length, 1));
+    const startX = (W - colW * statList.length) / 2;
+    statList.forEach((s, i) => {
+      const cx = startX + colW * i + colW / 2;
+      ctx.font = `700 ${L.statNumSize}px 'Inter', sans-serif`; ctx.fillStyle = '#0f6e56';
+      ctx.fillText(s.val.toLocaleString('es-ES'), cx, L.statNumY);
+      ctx.font = "500 20px 'Inter', sans-serif"; ctx.fillStyle = '#9a948d'; ctx.letterSpacing = '1px';
+      ctx.fillText(s.label.toUpperCase(), cx, L.statLabelY);
+      ctx.letterSpacing = '0px';
     });
 
-    if (bookList.length) {
-      ctx.fillStyle = '#b8b2a8';
-      ctx.font = '400 12px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('LECTURAS', W/2, 610);
+    if (shown.length) {
+      ctx.strokeStyle = '#ece8e1'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(140, L.sep2Y); ctx.lineTo(W - 140, L.sep2Y); ctx.stroke();
 
-      ctx.fillStyle = '#55504a';
-      ctx.font = 'italic 17px Georgia, serif';
-      bookList.forEach((b, i) => {
-        const text = b.length > 42 ? b.slice(0,40)+'…' : b;
-        ctx.fillText(text, W/2, 638 + i * 28);
+      ctx.font = "500 24px 'Inter', sans-serif"; ctx.fillStyle = '#9a948d'; ctx.letterSpacing = '3px';
+      ctx.fillText('LECTURAS', W/2, L.lecturasY);
+      ctx.letterSpacing = '0px';
+
+      ctx.font = `italic ${L.bookSize}px 'Instrument Serif', serif`; ctx.fillStyle = '#55504a';
+      shown.forEach((b, i) => {
+        const t = b.length > 42 ? b.slice(0, 40) + '…' : b;
+        ctx.fillText(t, W/2, L.booksY + i * L.bookLH);
       });
+      if (rest > 0) {
+        ctx.font = `italic ${L.restSize}px 'Instrument Serif', serif`; ctx.fillStyle = '#9a948d';
+        ctx.fillText('…y ' + rest + ' más', W/2, L.booksY + shown.length * L.bookLH + 10);
+      }
     }
 
     ctx.restore();
 
-    const taglines = [
-      '"Leer es la forma más barata de viajar."',
-      '"Cada libro, un pasaporte."',
-      '"Sin maletas. Sin límites."',
-    ];
-    ctx.fillStyle = 'rgba(29,158,117,0.75)';
-    ctx.font = 'italic 15px Georgia, serif';
     ctx.textAlign = 'center';
-    ctx.fillText(taglines[books % taglines.length], W/2, H - 50);
-
-    ctx.fillStyle = '#b8b2a8';
-    ctx.font = '400 12px Inter, sans-serif';
-    ctx.fillText('leeresviajar.app', W/2, H - 25);
+    ctx.font = "italic 34px 'Instrument Serif', serif";
+    ctx.fillStyle = 'rgba(29,158,117,0.85)';
+    ctx.fillText('Cada libro, un pasaporte.', W/2, L.taglineY);
+    ctx.font = "400 24px 'Inter', sans-serif"; ctx.fillStyle = '#9a948d';
+    ctx.fillText('leeresviajar.app', W/2, L.urlY);
 
   } else {
     // MODO WRAPPED
+    // Fondo del diseño antiguo (vive aquí para mantener Wrapped idéntico)
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0,   '#faf8f4');
+    bg.addColorStop(0.5, '#f5f2ec');
+    bg.addColorStop(1,   '#f2eee7');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Textura: líneas de latitud/longitud fantasma
+    ctx.strokeStyle = 'rgba(29,158,117,0.06)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= W; x += W/8) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y <= H; y += H/8) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    // Círculos decorativos
+    ctx.strokeStyle = 'rgba(29,158,117,0.07)';
+    ctx.lineWidth = 1.5;
+    for (const r of [180, 300, 420]) {
+      ctx.beginPath(); ctx.arc(W/2, H*0.42, r, 0, Math.PI*2); ctx.stroke();
+    }
+
     const phrase = document.getElementById('export-phrase')?.value?.trim() || generatePhrase();
     ctx.font = 'italic 30px Georgia, serif';
     const words = phrase.split(' ');
@@ -411,6 +399,16 @@ async function buildExportCanvas() {
   return canvas;
 }
 
+// Marca "Leer es viajar" en Instrument Serif, centrada por medición de tramos.
+function drawBrandSerif(ctx, W, baselineY, sizePx) {
+  ctx.font = `italic ${sizePx}px 'Instrument Serif', serif`;
+  const parts = [['Leer ', '#1a1a18'], ['es', '#1d9e75'], [' viajar', '#1a1a18']];
+  let total = 0; parts.forEach(p => total += ctx.measureText(p[0]).width);
+  let sx = W/2 - total/2; ctx.textAlign = 'left';
+  parts.forEach(p => { ctx.fillStyle = p[1]; ctx.fillText(p[0], sx, baselineY); sx += ctx.measureText(p[0]).width; });
+  ctx.textAlign = 'center';
+}
+
 // ===================== DIBUJO DEL MAPA (modo "map") =====================
 function drawMapExport(ctx, canvas, W, H) {
   const paper='#faf7f2', ink='#1a1a18', teal='#1d9e75', forest='#0f6e56',
@@ -423,13 +421,7 @@ function drawMapExport(ctx, canvas, W, H) {
   ctx.fillRect(0, 0, W, H);
 
   // Cabecera
-  ctx.textAlign = 'center';
-  ctx.font = "italic 60px 'Instrument Serif', serif";
-  const parts = [['Leer ', ink], ['es', teal], [' viajar', ink]];
-  let total = 0; parts.forEach(p => total += ctx.measureText(p[0]).width);
-  let sx = W/2 - total/2; ctx.textAlign = 'left';
-  parts.forEach(p => { ctx.fillStyle = p[1]; ctx.fillText(p[0], sx, 160); sx += ctx.measureText(p[0]).width; });
-  ctx.textAlign = 'center';
+  drawBrandSerif(ctx, W, 160, 60);
   ctx.font = "500 26px 'Inter', sans-serif"; ctx.fillStyle = muted; ctx.letterSpacing = '4px';
   ctx.fillText('MI MAPA LECTOR', W/2, 225); ctx.letterSpacing = '0px';
 
