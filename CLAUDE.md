@@ -50,6 +50,7 @@ App web en español: mapa literario donde lectores registran libros ligados a de
 - **Migración localStorage → Supabase**: `migrateLocalToCloud()` en `auth.js`; solo primera vez con cuenta vacía.
 - **Diario**: `diary.js`; compone el libro como "Título, de Autor" cuando hay autor.
 - **Destinos ficticios**: objetos `FICTIONAL` y `COMMUNITY_POSITIONS`; modal con mensaje de comunidad.
-- **Logros / Pionero**: pionero es comunitario — primera persona de TODOS los usuarios en llegar a un destino, consultado en `entries`.
+- **Rutas de comunidad**: reales, agregadas y anónimas desde la vista `public_community_routes` de Supabase (SQL documentado en `sql/`, se aplica a mano en el dashboard; visible sin login). En `map.js`: caché de 5 min, volumen ajustable con `COMMUNITY_CONFIG`, agregación por origen+destino+libro con descuento de las lecturas propias, toggle persistido en `lev_show_community`.
+- **Logros / Pionero**: `isPioneer()` (diary.js) es LOCAL — solo compara contra las entradas del propio usuario y la lista fija `KNOWN_DESTINATIONS`; NO consulta a otros usuarios. Hacerlo comunitario de verdad quedó aplazado a propósito (16 jul 2026); cuando se haga, puede reutilizar la vista `public_community_routes`.
 - **Onboarding spotlight**: 5 pasos desktop / 3 móvil, motor compartido con `spanAll`.
 - **Solicitud de beta**: vive en el repo `landing` (no en este) → worker `leer-es-viajar-beta-requests` → tabla `beta_requests` → Resend (`expediciones@`).
