@@ -106,7 +106,7 @@ async function addEntry() {
     if (!destGeo) { alert('No se pudo conectar con el buscador de lugares. Inténtalo de nuevo.'); return; }
 
     const entry = {
-      book, author, dest, note, fromName,
+      book, author, dest: destGeo.fictional ? dest : titleCaseDestino(dest), note, fromName,
       bookRef: selectedBookRef,
       departureMode: departure,
       fromLat: fromCoords.lat, fromLng: fromCoords.lng,
@@ -125,7 +125,7 @@ async function addEntry() {
     redrawMap();
 
     addDiaryEntry(entry, pioneer);
-    if (pioneer) { showPioneerToast(dest); } else { showEntryAddedToast(dest, entry.fictional); }
+    if (pioneer) { showPioneerToast(entry.dest); } else { showEntryAddedToast(entry.dest, entry.fictional); }
     if (wasFirstEntry) showAuthCtaToast();
 
     const stats = getBadgeStats();
@@ -200,6 +200,28 @@ function currentEntry() {
     if (d > bd || (d === bd && i >= bestIdx)) { best = e; bestIdx = i; }
   });
   return best;
+}
+
+// Conectores españoles de topónimos: en minúscula salvo que sean la
+// primera palabra del nombre ("La Coruña", "Las Palmas de Gran Canaria").
+const DEST_CONNECTORS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'en']);
+
+// Capitaliza tras el inicio de palabra, un guion o un apóstrofo, para
+// nombres compuestos ("Vitoria-Gasteiz", "L'Hospitalet").
+function capitalizeWord(word) {
+  return word.replace(/(^|[-'])(\p{L})/gu, (_, sep, letter) => sep + letter.toUpperCase());
+}
+
+// Se fuerza siempre (no se respeta la capitalización del usuario, ver
+// espec §decisiones): "madrid", "MADRID" y "Madrid" dan el mismo resultado.
+// No tocar si el destino es ficticio (se llama condicionalmente desde
+// addEntry() y saveEditEntry()). Idempotente.
+function titleCaseDestino(str) {
+  if (!str) return str;
+  return str.trim().toLowerCase().split(/\s+/).map((word, i) => {
+    if (i > 0 && DEST_CONNECTORS.has(word)) return word;
+    return capitalizeWord(word);
+  }).join(' ');
 }
 
 function sortedFiltered() {
@@ -406,7 +428,7 @@ async function saveEditEntry(i) {
 
   const finalPending = editGeoPending[i];
   if (finalPending) {
-    entries[i].dest = finalPending.name;
+    entries[i].dest = finalPending.fictional ? finalPending.name : titleCaseDestino(finalPending.name);
     entries[i].destLat = finalPending.lat;
     entries[i].destLng = finalPending.lng;
     entries[i].country = finalPending.country;
