@@ -207,6 +207,47 @@ function sortedFiltered() {
     .slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
 }
 
+// Devuelve una copia de la lista con el origen (fromName/fromLat/fromLng)
+// y el km recalculados para las entradas 'last' (encadenan por fecha),
+// contra la entrada inmediatamente anterior en orden cronológico REAL,
+// no la que tenía en el momento de crearla. Las de 'home'/'other' (o sin
+// departureMode: entradas antiguas) se devuelven sin tocar — su origen
+// es fijo a propósito.
+// El punto de cadena avanza al destino de CADA entrada, sea cual sea su
+// modo: la entrada 'last' que sigue a un 'home'/'other' encadena desde
+// ese punto de ruptura.
+function resolveEntries(list) {
+  const sorted = list.slice().sort((a, b) => (a.date||'').localeCompare(b.date||''));
+  let chainPoint = origin ? { name: origin.name, lat: origin.lat, lng: origin.lng } : null;
+  return sorted.map(e => {
+    if (e.departureMode !== 'last' || !chainPoint) {
+      chainPoint = { name: e.dest, lat: e.destLat, lng: e.destLng };
+      return e;
+    }
+    const resolved = {
+      ...e,
+      fromName: chainPoint.name,
+      fromLat: chainPoint.lat,
+      fromLng: chainPoint.lng,
+      km: haversineKm(chainPoint.lat, chainPoint.lng, e.destLat, e.destLng)
+    };
+    // Referencia no enumerable a la entrada real: editar/borrar y las
+    // comparaciones de identidad siguen operando sobre ella, y no se
+    // cuela en JSON.stringify.
+    Object.defineProperty(resolved, '__original', { value: e });
+    chainPoint = { name: e.dest, lat: e.destLat, lng: e.destLng };
+    return resolved;
+  });
+}
+
+// sortedFiltered() en versión resuelta: la cadena se calcula sobre la
+// lista COMPLETA y el filtro de año se aplica después, para que el
+// enlace entre años no se rompa al filtrar.
+function resolvedFiltered() {
+  const resolved = resolveEntries(entries);
+  return activeYear === 'all' ? resolved : resolved.filter(e => e.year === activeYear);
+}
+
 function updateList() {
   const list = document.getElementById('journey-list');
   const filtered = sortedFiltered();
