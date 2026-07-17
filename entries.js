@@ -379,7 +379,7 @@ function initEditMiniMap(i, lat, lng) {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     subdomains: 'abcd', maxZoom: 19
   }).addTo(m);
-  const marker = L.marker([lat, lng], { draggable: true }).addTo(m);
+  const marker = L.marker([lat, lng], { draggable: true, icon: coloredPinIcon('#1d9e75') }).addTo(m);
   marker.on('dragend', () => {
     const pos = marker.getLatLng();
     const prev = editGeoPending[i] || {};

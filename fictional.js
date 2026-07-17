@@ -255,7 +255,7 @@ function initFicMiniMap() {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     subdomains: 'abcd', maxZoom: 19
   }).addTo(map);
-  const marker = L.marker(start, { draggable: true }).addTo(map);
+  const marker = L.marker(start, { draggable: true, icon: coloredPinIcon('#e8913c') }).addTo(map);
   ficMiniMapState = { map, marker };
   setTimeout(() => map.invalidateSize(), 50);
 }
