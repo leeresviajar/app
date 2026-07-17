@@ -504,7 +504,13 @@ function traduceErrorAuth(msg) {
   if (/already registered/i.test(msg)) return 'Ese email ya tiene una cuenta. Prueba a iniciar sesión.';
   if (/invalid login credentials/i.test(msg)) return 'Email o contraseña incorrectos.';
   if (/password.*least/i.test(msg)) return 'La contraseña necesita al menos 6 caracteres.';
-  return msg;
+  const mSec = msg.match(/only request this after (\d+) seconds/i);
+  if (mSec) return `Por seguridad, espera ${mSec[1]} segundos antes de volver a intentarlo.`;
+  if (/email rate limit exceeded/i.test(msg)) return 'Hemos enviado demasiados correos a esta dirección. Espera unos minutos e inténtalo de nuevo.';
+  if (/email not confirmed/i.test(msg)) return 'Tu cuenta aún no está confirmada. Revisa el correo que te enviamos.';
+  if (/unable to validate email|invalid.*email/i.test(msg)) return 'Ese email no parece válido. Revísalo.';
+  console.warn('[auth] error sin traducir:', msg);
+  return 'Algo no ha ido bien. Inténtalo de nuevo en unos segundos.';
 }
 
 async function authSignOut() {
