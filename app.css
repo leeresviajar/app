@@ -499,7 +499,11 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   font-family: 'Inter', sans-serif; letter-spacing: 0.02em; white-space: nowrap;
 }
 .community-toggle.off { opacity: 0.45; }
-.community-toggle.off .legend-line.community { border-top-style: solid; border-top-color: #bbb; }
+/* Icono ojo: hereda color vía currentColor; el estado off ya atenúa el botón */
+.community-toggle .eye-open, .community-toggle .eye-off { vertical-align: middle; }
+.community-toggle .eye-off { display: none; }
+.community-toggle.off .eye-open { display: none; }
+.community-toggle.off .eye-off { display: inline; }
 
 /* TOOLTIP BIENVENIDA */
 .welcome-tooltip {
