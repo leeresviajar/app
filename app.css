@@ -728,7 +728,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   /* overlays sobre el mapa */
   .activity-strip { display: none; }
   .map-legend { bottom: 76px; }
-  .community-toggle { right: 10px; bottom: 142px; }
+  .community-toggle { top: 3rem; right: 0.75rem; bottom: auto; } /* bajo la insignia "Mapa lector · 2026" */
   .map-title { top: 0.75rem; right: 0.75rem; }
   .export-trigger { top: 0.75rem; left: 0.75rem; right: auto; }
   .pioneer-toast, .badge-unlock-toast { left: 0.75rem; right: 0.75rem; max-width: none; }
