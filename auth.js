@@ -52,6 +52,14 @@ async function initAuth() {
 
   supabaseClient.auth.onAuthStateChange((event, session) => {
     currentUser = session ? session.user : null;
+    if (!currentUser) {
+      // Sesión perdida sin recarga de página (p. ej. logout sincronizado
+      // desde otra pestaña, o expiración de token): limpiar el username
+      // cacheado para que un login posterior en la misma pestaña no
+      // arranque mostrando el del usuario anterior.
+      currentUsername = null;
+      usernameLoaded = false;
+    }
     updateUserBadge();
     if (event === 'PASSWORD_RECOVERY') {
       // El usuario llega desde el enlace del email de recuperación:
