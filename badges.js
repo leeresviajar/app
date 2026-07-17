@@ -71,7 +71,7 @@ function getBadgeStats() {
   const pioneersCount = diary.filter(e => e.pioneer).length;
   const booksCount = entries.length;
   const fictionalCount = entries.filter(e => e.fictional).length;
-  const totalKm = entries.reduce((s,e) => s + e.km, 0);
+  const totalKm = resolveEntries(entries).reduce((s,e) => s + e.km, 0);
   const countries = new Set(entries.filter(e => !e.fictional).map(e => e.countryCode || e.country || '').filter(Boolean));
   return { pioneersCount, booksCount, fictionalCount, totalKm, countriesCount: countries.size };
 }
