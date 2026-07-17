@@ -142,10 +142,11 @@ function aggregateCommunityRoutes(rows) {
     if (!r) {
       r = { from: [row.from_lat, row.from_lng], to: [row.dest_lat, row.dest_lng],
             fromName: row.from_name, toName: row.dest, book: row.book,
-            fictional: !!row.fictional, visitors: 0 };
+            fictional: !!row.fictional, visitors: 0, date: row.date };
       routes.set(fullKey, r);
     }
     r.visitors++;
+    if (row.date > r.date) r.date = row.date; // ISO YYYY-MM-DD: la más reciente al fusionar
     if (ownCounts[fullKey]) { r.visitors--; ownCounts[fullKey]--; }
   });
   PLACE_VISITORS = {};
@@ -231,13 +232,17 @@ function renderCommunityRoutes() {
     drawCommunityRoute(r, drawnDestinations, userDestinations, normalize);
   });
   // Histórico completo: puntos + línea sombra por par de lugares. El Map
-  // par origen|destino → nº de rutas colapsadas gobierna el dedupe (una
-  // sombra por par) y el escalado de opacidad; es local a cada render.
+  // par origen|destino → timestamp más reciente gobierna el dedupe (una
+  // sombra por par) y el gradiente temporal de opacidad; es local a cada
+  // render. minTs/maxTs viajan en el propio Map para no ensanchar la firma.
   const shadowPairs = new Map();
   communityCache.history.forEach(r => {
     const pk = normalize(r.fromName) + '|' + normalize(r.toName);
-    shadowPairs.set(pk, (shadowPairs.get(pk) || 0) + 1);
+    const ts = new Date(r.date).getTime();
+    if (!shadowPairs.has(pk) || ts > shadowPairs.get(pk)) shadowPairs.set(pk, ts);
   });
+  shadowPairs.minTs = Math.min(...shadowPairs.values());
+  shadowPairs.maxTs = Math.max(...shadowPairs.values());
   communityCache.history.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, communityLayer, shadowPairs));
 }
 
@@ -287,7 +292,7 @@ function hideDestinationDetail() {
 map.on('click', hideDestinationDetail); // pinchar fuera cierra el detalle
 
 // targetLayer permite reutilizar la función desde el detalle (detailLayer);
-// shadowPairs (Map par → nº de rutas colapsadas) marca el modo histórico:
+// shadowPairs (Map par → timestamp de la ruta más reciente) marca el modo histórico:
 // puntos + línea sombra tenue no interactiva en vez de la línea viva.
 function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, targetLayer, shadowPairs) {
   normalize = normalize || normalizeName;
@@ -314,10 +319,13 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
     const highlightColor = r.fictional ? '#e8913c' : 'var(--teal)';
     if (shadowPairs) {
       const pairKey = fromKey + '|' + destKey;
-      const collapsed = shadowPairs.get(pairKey);
-      if (collapsed) {
+      const pairTs = shadowPairs.get(pairKey);
+      if (pairTs) {
         shadowPairs.delete(pairKey); // una sola sombra por par de lugares
-        const alpha = Math.min(0.16 + 0.03 * (collapsed - 1), 0.28);
+        // t ∈ [0,1]: 0 = par más antiguo del histórico, 1 = más reciente
+        const span = shadowPairs.maxTs - shadowPairs.minTs;
+        const t = span > 0 ? (pairTs - shadowPairs.minTs) / span : 1;
+        const alpha = 0.16 + 0.24 * t * t; // cuadrática: base 0.16, techo 0.40
         L.polyline(points, {
           pane: 'communityFaint',
           color: r.fictional ? `rgba(232,145,60,${alpha})` : `rgba(29,158,117,${alpha})`,
