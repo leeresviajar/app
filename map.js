@@ -167,6 +167,9 @@ const communityLayer = L.layerGroup();
 // invisible ancha, pero por debajo de markerPane (600) para que el click
 // exacto sobre un punto visible siga ganando al halo de un punto vecino.
 map.createPane('communityHit').style.zIndex = 450;
+// Pane de las sombras del histórico: bajo overlayPane (400), para que las
+// líneas vivas de ambiente y el detalle queden siempre por encima.
+map.createPane('communityFaint').style.zIndex = 390;
 let communityVisible = localStorage.getItem('lev_show_community') !== 'false';
 if (communityVisible) communityLayer.addTo(map);
 
@@ -227,9 +230,15 @@ function renderCommunityRoutes() {
     r.visitors = historyCounts.get(keyOf(r)) || r.visitors;
     drawCommunityRoute(r, drawnDestinations, userDestinations, normalize);
   });
-  // Puntos del histórico completo, sin líneas: siempre visibles aunque
-  // sus rutas no estén en el ambiente rotatorio.
-  communityCache.history.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, communityLayer, true));
+  // Histórico completo: puntos + línea sombra por par de lugares. El Map
+  // par origen|destino → nº de rutas colapsadas gobierna el dedupe (una
+  // sombra por par) y el escalado de opacidad; es local a cada render.
+  const shadowPairs = new Map();
+  communityCache.history.forEach(r => {
+    const pk = normalize(r.fromName) + '|' + normalize(r.toName);
+    shadowPairs.set(pk, (shadowPairs.get(pk) || 0) + 1);
+  });
+  communityCache.history.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, communityLayer, shadowPairs));
 }
 
 // «Una persona ha llegado…» / «N lectores han llegado…»: con pocos
@@ -278,8 +287,9 @@ function hideDestinationDetail() {
 map.on('click', hideDestinationDetail); // pinchar fuera cierra el detalle
 
 // targetLayer permite reutilizar la función desde el detalle (detailLayer);
-// markersOnly dibuja solo los puntos, para el histórico sin líneas.
-function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, targetLayer, markersOnly) {
+// shadowPairs (Map par → nº de rutas colapsadas) marca el modo histórico:
+// puntos + línea sombra tenue no interactiva en vez de la línea viva.
+function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, targetLayer, shadowPairs) {
   normalize = normalize || normalizeName;
   targetLayer = targetLayer || communityLayer;
   const fromKey = normalize(r.fromName);
@@ -302,7 +312,21 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
     }
     const color = r.fictional ? 'rgba(232,145,60,0.6)' : 'rgba(29,158,117,0.55)';
     const highlightColor = r.fictional ? '#e8913c' : 'var(--teal)';
-    if (!markersOnly) {
+    if (shadowPairs) {
+      const pairKey = fromKey + '|' + destKey;
+      const collapsed = shadowPairs.get(pairKey);
+      if (collapsed) {
+        shadowPairs.delete(pairKey); // una sola sombra por par de lugares
+        const alpha = Math.min(0.10 + 0.02 * (collapsed - 1), 0.18);
+        L.polyline(points, {
+          pane: 'communityFaint',
+          color: r.fictional ? `rgba(232,145,60,${alpha})` : `rgba(29,158,117,${alpha})`,
+          weight: 1.25,
+          interactive: false
+        }).addTo(targetLayer);
+      }
+    }
+    if (!shadowPairs) {
       // bubblingMouseEvents:false — que abrir el popup de una línea no dispare
       // el click del mapa (cerraría el detalle activo). La línea visible no es
       // interactiva: los clicks pasan a esta línea ancha, que tiene el popup.
