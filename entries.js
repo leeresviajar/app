@@ -152,7 +152,7 @@ async function addEntry() {
 
 // ===================== STATS =====================
 function updateStats() {
-  const filtered = sortedFiltered();
+  const filtered = resolvedFiltered();
   const books = new Set(filtered.map(e => e.book.toLowerCase().trim())).size;
   const km = filtered.reduce((s,e) => s+e.km, 0);
   const places = new Set(filtered.map(e => e.dest.toLowerCase())).size;
@@ -250,7 +250,7 @@ function resolvedFiltered() {
 
 function updateList() {
   const list = document.getElementById('journey-list');
-  const filtered = sortedFiltered();
+  const filtered = resolvedFiltered();
   if (filtered.length === 0) {
     list.innerHTML = entries.length === 0
       ? `<div class="empty-state"><div class="compass">🧭</div><p>Tu viaje lector empieza aquí.<br>Añade 2 o 3 libros que estés leyendo<br>o hayas leído recientemente.<br><br><em>El mundo entero te espera.</em></p></div>`
@@ -259,7 +259,9 @@ function updateList() {
   }
   list.innerHTML = '';
   filtered.forEach((e, i) => {
-    const realIndex = entries.indexOf(e);
+    // e puede ser una copia resuelta: el índice de editar/borrar se
+    // calcula siempre contra la entrada real (__original).
+    const realIndex = entries.indexOf(e.__original || e);
     const div = document.createElement('div');
     div.className = 'journey-entry';
     const connector = i < filtered.length - 1 ? '<div class="entry-connector"></div>' : '';

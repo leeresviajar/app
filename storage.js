@@ -110,7 +110,7 @@ function loadStateFromLocal() {
   if (o) { origin = JSON.parse(o); document.getElementById('origin-name').textContent = origin.name; addOriginMarker(); map.setView([origin.lat, origin.lng], 4); }
   if (e) {
     entries = JSON.parse(e);
-    sortedFiltered().forEach(en => { drawRoute(en); addDestMarker(en); });
+    resolvedFiltered().forEach(en => { drawRoute(en); addDestMarker(en); });
     migrateDiary();
     updateList(); updateStats();
   }
