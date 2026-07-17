@@ -12,6 +12,12 @@ let authMode = 'signup'; // 'signup' | 'login'
 // de token): solo cargamos cuando cambia de verdad el usuario con sesión.
 let lastLoadedUserId = null;
 let currentUsername = null; // nombre de viajero del usuario en sesión
+// true tras el primer refreshCurrentUsername() (con o sin username real).
+// Evita el parpadeo de mostrar el email un instante mientras se consulta
+// profiles: con sesión detectada pero username aún sin resolver, el badge
+// se queda oculto (mismo estado que antes de que cargue el JS) en vez de
+// caer al email como relleno.
+let usernameLoaded = false;
 
 // El enlace de recuperación de contraseña llega con type=recovery en la URL.
 // Lo capturamos aquí, en la carga síncrona del script, porque la librería
@@ -84,6 +90,13 @@ function updateUserBadge() {
   const badge = document.getElementById('user-badge');
   const loginLink = document.getElementById('login-link');
   if (!badge || !loginLink) return;
+  if (currentUser && !usernameLoaded) {
+    // Sesión detectada pero username aún sin resolver: no mostrar nada
+    // todavía (ni email ni username) para evitar el parpadeo.
+    badge.style.display = 'none';
+    loginLink.style.display = 'none';
+    return;
+  }
   if (currentUser) {
     const email = currentUser.email || '';
     // Mostramos el nombre de viajero si lo tenemos; si no, caemos al email.
@@ -112,6 +125,7 @@ async function refreshCurrentUsername() {
   } catch (e) {
     currentUsername = null;
   }
+  usernameLoaded = true;
   updateUserBadge();
   return !!currentUsername;
 }
