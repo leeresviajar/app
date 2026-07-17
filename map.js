@@ -232,7 +232,7 @@ function renderCommunityRoutes() {
     drawCommunityRoute(r, drawnDestinations, userDestinations, normalize);
   });
   // Histórico completo: puntos + línea sombra por par de lugares. El Map
-  // par origen|destino → timestamp más reciente gobierna el dedupe (una
+  // par origen|destino → rango ordinal por fecha gobierna el dedupe (una
   // sombra por par) y el gradiente temporal de opacidad; es local a cada
   // render. minTs/maxTs viajan en el propio Map para no ensanchar la firma.
   const shadowPairs = new Map();
@@ -241,8 +241,13 @@ function renderCommunityRoutes() {
     const ts = new Date(r.date).getTime();
     if (!shadowPairs.has(pk) || ts > shadowPairs.get(pk)) shadowPairs.set(pk, ts);
   });
-  shadowPairs.minTs = Math.min(...shadowPairs.values());
-  shadowPairs.maxTs = Math.max(...shadowPairs.values());
+  // Rango ordinal en vez de fecha absoluta: t equiespaciado por posición.
+  // Rangos 1..N (el 0 sería falsy en el dedupe); con minTs=1 y maxTs=N la
+  // normalización existente da t = índice/(N-1), y N===1 cae en t=1 (span 0).
+  [...shadowPairs.entries()].sort((a, b) => a[1] - b[1])
+    .forEach(([pk], i) => shadowPairs.set(pk, i + 1));
+  shadowPairs.minTs = 1;
+  shadowPairs.maxTs = shadowPairs.size;
   communityCache.history.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, communityLayer, shadowPairs));
 }
 
