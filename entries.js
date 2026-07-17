@@ -108,6 +108,7 @@ async function addEntry() {
     const entry = {
       book, author, dest, note, fromName,
       bookRef: selectedBookRef,
+      departureMode: departure,
       fromLat: fromCoords.lat, fromLng: fromCoords.lng,
       destLat: destGeo.lat, destLng: destGeo.lng,
       km: haversineKm(fromCoords.lat, fromCoords.lng, destGeo.lat, destGeo.lng),

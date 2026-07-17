@@ -54,7 +54,8 @@ async function saveStateToCloud() {
         date: e.date,
         year: e.year || null,
         pioneer: !!e.pioneer,
-        book_ref: e.bookRef || null
+        book_ref: e.bookRef || null,
+        departure_mode: e.departureMode || null
       }));
       const { error: insertError } = await supabaseClient.from('entries').insert(rows);
       if (insertError) throw insertError;
@@ -169,7 +170,8 @@ async function loadStateFromCloud() {
     km: row.km, fictional: row.fictional,
     country: row.country || '', countryCode: row.country_code || '',
     date: row.date, year: row.year, pioneer: row.pioneer,
-    bookRef: row.book_ref || null
+    bookRef: row.book_ref || null,
+    departureMode: row.departure_mode || null
   }));
 
   redrawMap();
