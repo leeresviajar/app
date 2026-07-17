@@ -191,7 +191,7 @@ function updateCommunityToggleUI() {
   const btn = document.getElementById('community-toggle');
   if (!btn) return;
   btn.classList.toggle('off', !communityVisible);
-  btn.title = communityVisible ? 'Ocultar las rutas de la comunidad' : 'Mostrar las rutas de la comunidad';
+  btn.title = communityVisible ? 'Ocultar las rutas de otros viajeros' : 'Mostrar las rutas de otros viajeros';
 }
 updateCommunityToggleUI();
 
