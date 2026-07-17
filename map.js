@@ -317,7 +317,7 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
       const collapsed = shadowPairs.get(pairKey);
       if (collapsed) {
         shadowPairs.delete(pairKey); // una sola sombra por par de lugares
-        const alpha = Math.min(0.10 + 0.02 * (collapsed - 1), 0.18);
+        const alpha = Math.min(0.16 + 0.03 * (collapsed - 1), 0.28);
         L.polyline(points, {
           pane: 'communityFaint',
           color: r.fictional ? `rgba(232,145,60,${alpha})` : `rgba(29,158,117,${alpha})`,
