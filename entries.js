@@ -202,6 +202,28 @@ function currentEntry() {
   return best;
 }
 
+// Conectores españoles de topónimos: en minúscula salvo que sean la
+// primera palabra del nombre ("La Coruña", "Las Palmas de Gran Canaria").
+const DEST_CONNECTORS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'en']);
+
+// Capitaliza tras el inicio de palabra, un guion o un apóstrofo, para
+// nombres compuestos ("Vitoria-Gasteiz", "L'Hospitalet").
+function capitalizeWord(word) {
+  return word.replace(/(^|[-'])(\p{L})/gu, (_, sep, letter) => sep + letter.toUpperCase());
+}
+
+// Se fuerza siempre (no se respeta la capitalización del usuario, ver
+// espec §decisiones): "madrid", "MADRID" y "Madrid" dan el mismo resultado.
+// No tocar si el destino es ficticio (se llama condicionalmente desde
+// addEntry() y saveEditEntry()). Idempotente.
+function titleCaseDestino(str) {
+  if (!str) return str;
+  return str.trim().toLowerCase().split(/\s+/).map((word, i) => {
+    if (i > 0 && DEST_CONNECTORS.has(word)) return word;
+    return capitalizeWord(word);
+  }).join(' ');
+}
+
 function sortedFiltered() {
   return (activeYear === 'all' ? entries : entries.filter(e => e.year === activeYear))
     .slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
