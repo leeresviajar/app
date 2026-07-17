@@ -435,6 +435,12 @@ async function authSubmit() {
     if (authMode === 'signup') {
       const { data, error } = await supabaseClient.auth.signUp({ email, password });
       if (error) { showAuthError(traduceErrorAuth(error.message)); return; }
+      // Con confirmación de email activada, Supabase no devuelve error si el
+      // correo ya está registrado: responde con user.identities vacío.
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        showAuthInfo('Ya existe una cuenta con este correo. Inicia sesión, o restablece la contraseña si no la recuerdas.');
+        return;
+      }
       // Guardamos el username elegido. Si hay sesión inmediata (confirmación de
       // email desactivada), lo guardamos ya; si no, lo dejamos pendiente para
       // guardarlo cuando confirme el correo y entre.
