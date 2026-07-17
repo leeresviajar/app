@@ -68,7 +68,7 @@ function renderDiary() {
     return `<div class="diary-entry">
       <div class="diary-date">${dateStr}</div>
       <div class="diary-text">
-        Llegada a <span class="place">${fictionalTag}${esc(e.dest)}</span>
+        Llegada a <span class="place${e.fictional ? ' fictional' : ''}">${fictionalTag}${esc(e.dest)}</span>
         <span class="book-ref">📖 ${esc(e.book)}${e.author ? ' — ' + esc(e.author) : ''}${km != null && fromName ? ` · +${km.toLocaleString()} km desde ${esc(fromName)}` : ''}</span>
       </div>
       ${pioneerBadge}
