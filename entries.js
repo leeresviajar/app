@@ -108,6 +108,7 @@ async function addEntry() {
     const entry = {
       book, author, dest, note, fromName,
       bookRef: selectedBookRef,
+      departureMode: departure,
       fromLat: fromCoords.lat, fromLng: fromCoords.lng,
       destLat: destGeo.lat, destLng: destGeo.lng,
       km: haversineKm(fromCoords.lat, fromCoords.lng, destGeo.lat, destGeo.lng),
@@ -151,7 +152,7 @@ async function addEntry() {
 
 // ===================== STATS =====================
 function updateStats() {
-  const filtered = sortedFiltered();
+  const filtered = resolvedFiltered();
   const books = new Set(filtered.map(e => e.book.toLowerCase().trim())).size;
   const km = filtered.reduce((s,e) => s+e.km, 0);
   const places = new Set(filtered.map(e => e.dest.toLowerCase())).size;
@@ -206,9 +207,50 @@ function sortedFiltered() {
     .slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
 }
 
+// Devuelve una copia de la lista con el origen (fromName/fromLat/fromLng)
+// y el km recalculados para las entradas 'last' (encadenan por fecha),
+// contra la entrada inmediatamente anterior en orden cronológico REAL,
+// no la que tenía en el momento de crearla. Las de 'home'/'other' (o sin
+// departureMode: entradas antiguas) se devuelven sin tocar — su origen
+// es fijo a propósito.
+// El punto de cadena avanza al destino de CADA entrada, sea cual sea su
+// modo: la entrada 'last' que sigue a un 'home'/'other' encadena desde
+// ese punto de ruptura.
+function resolveEntries(list) {
+  const sorted = list.slice().sort((a, b) => (a.date||'').localeCompare(b.date||''));
+  let chainPoint = origin ? { name: origin.name, lat: origin.lat, lng: origin.lng } : null;
+  return sorted.map(e => {
+    if (e.departureMode !== 'last' || !chainPoint) {
+      chainPoint = { name: e.dest, lat: e.destLat, lng: e.destLng };
+      return e;
+    }
+    const resolved = {
+      ...e,
+      fromName: chainPoint.name,
+      fromLat: chainPoint.lat,
+      fromLng: chainPoint.lng,
+      km: haversineKm(chainPoint.lat, chainPoint.lng, e.destLat, e.destLng)
+    };
+    // Referencia no enumerable a la entrada real: editar/borrar y las
+    // comparaciones de identidad siguen operando sobre ella, y no se
+    // cuela en JSON.stringify.
+    Object.defineProperty(resolved, '__original', { value: e });
+    chainPoint = { name: e.dest, lat: e.destLat, lng: e.destLng };
+    return resolved;
+  });
+}
+
+// sortedFiltered() en versión resuelta: la cadena se calcula sobre la
+// lista COMPLETA y el filtro de año se aplica después, para que el
+// enlace entre años no se rompa al filtrar.
+function resolvedFiltered() {
+  const resolved = resolveEntries(entries);
+  return activeYear === 'all' ? resolved : resolved.filter(e => e.year === activeYear);
+}
+
 function updateList() {
   const list = document.getElementById('journey-list');
-  const filtered = sortedFiltered();
+  const filtered = resolvedFiltered();
   if (filtered.length === 0) {
     list.innerHTML = entries.length === 0
       ? `<div class="empty-state"><div class="compass">🧭</div><p>Tu viaje lector empieza aquí.<br>Añade 2 o 3 libros que estés leyendo<br>o hayas leído recientemente.<br><br><em>El mundo entero te espera.</em></p></div>`
@@ -217,7 +259,9 @@ function updateList() {
   }
   list.innerHTML = '';
   filtered.forEach((e, i) => {
-    const realIndex = entries.indexOf(e);
+    // e puede ser una copia resuelta: el índice de editar/borrar se
+    // calcula siempre contra la entrada real (__original).
+    const realIndex = entries.indexOf(e.__original || e);
     const div = document.createElement('div');
     div.className = 'journey-entry';
     const connector = i < filtered.length - 1 ? '<div class="entry-connector"></div>' : '';

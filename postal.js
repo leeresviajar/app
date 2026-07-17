@@ -38,7 +38,7 @@ function closePostal() {
 // además puede estar filtrado por año en la vista de "Viajes").
 function getKmAcumulados() {
   if (typeof entries === 'undefined') return 0;
-  const n = Math.round(entries.reduce((s, e) => s + e.km, 0));
+  const n = Math.round(resolveEntries(entries).reduce((s, e) => s + e.km, 0));
   return (!isNaN(n) && n > 0) ? n : 0;
 }
 

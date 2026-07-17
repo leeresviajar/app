@@ -58,11 +58,14 @@ function monthLabel(ym) {
     .toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
 }
 function getExportEntries() {
+  // Cadena resuelta sobre la lista completa; el filtro de período se
+  // aplica después para no romper el enlace entre años/meses.
+  const resolved = resolveEntries(entries);
   if (exportPeriod === 'year' && exportPeriodValue != null)
-    return entries.filter(e => e.year === Number(exportPeriodValue));
+    return resolved.filter(e => e.year === Number(exportPeriodValue));
   if (exportPeriod === 'month' && exportPeriodValue != null)
-    return entries.filter(e => (e.date || '').slice(0,7) === exportPeriodValue);
-  return entries.slice();
+    return resolved.filter(e => (e.date || '').slice(0,7) === exportPeriodValue);
+  return resolved;
 }
 function exportPeriodSubtitle() {
   if (exportPeriod === 'year' && exportPeriodValue != null) return 'MI AÑO LECTOR ' + exportPeriodValue;

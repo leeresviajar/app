@@ -46,7 +46,9 @@ function drawRoute(entry) {
 function addDestMarker(entry) {
   const color = entry.fictional ? '#e8913c' : '#e8593c';
   const size = entry.fictional ? 12 : 10;
-  const isCurrent = entries.length > 0 && typeof currentEntry === 'function' && currentEntry() === entry;
+  // entry puede ser una copia resuelta (resolveEntries): la identidad se
+  // comprueba contra la entrada real vía __original.
+  const isCurrent = entries.length > 0 && typeof currentEntry === 'function' && currentEntry() === (entry.__original || entry);
   const icon = L.divIcon({
     className: '',
     html: `<div style="width:${size}px;height:${size}px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 0 0 1.5px ${color}"></div>`,
@@ -84,7 +86,7 @@ function redrawMap() {
   markersLayer.clearLayers();
   map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
   if (origin) addOriginMarker();
-  sortedFiltered().forEach(e => { drawRoute(e); addDestMarker(e); });
+  resolvedFiltered().forEach(e => { drawRoute(e); addDestMarker(e); });
   drawCommunityRoutes();
 }
 
@@ -131,7 +133,9 @@ async function fetchCommunityRoutes(viewName) {
 function aggregateCommunityRoutes(rows) {
   const normalize = normalizeName;
   const ownCounts = {};
-  entries.forEach(e => {
+  // Resuelto: el descuento de lecturas propias compara contra el origen
+  // real actual de cada entrada, no contra uno viudo.
+  resolveEntries(entries).forEach(e => {
     const k = [normalize(e.fromName), normalize(e.dest), normalize(e.book)].join('|');
     ownCounts[k] = (ownCounts[k] || 0) + 1;
   });
