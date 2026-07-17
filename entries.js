@@ -106,7 +106,7 @@ async function addEntry() {
     if (!destGeo) { alert('No se pudo conectar con el buscador de lugares. Inténtalo de nuevo.'); return; }
 
     const entry = {
-      book, author, dest, note, fromName,
+      book, author, dest: destGeo.fictional ? dest : titleCaseDestino(dest), note, fromName,
       bookRef: selectedBookRef,
       departureMode: departure,
       fromLat: fromCoords.lat, fromLng: fromCoords.lng,
@@ -125,7 +125,7 @@ async function addEntry() {
     redrawMap();
 
     addDiaryEntry(entry, pioneer);
-    if (pioneer) { showPioneerToast(dest); } else { showEntryAddedToast(dest, entry.fictional); }
+    if (pioneer) { showPioneerToast(entry.dest); } else { showEntryAddedToast(entry.dest, entry.fictional); }
     if (wasFirstEntry) showAuthCtaToast();
 
     const stats = getBadgeStats();
@@ -428,7 +428,7 @@ async function saveEditEntry(i) {
 
   const finalPending = editGeoPending[i];
   if (finalPending) {
-    entries[i].dest = finalPending.name;
+    entries[i].dest = finalPending.fictional ? finalPending.name : titleCaseDestino(finalPending.name);
     entries[i].destLat = finalPending.lat;
     entries[i].destLng = finalPending.lng;
     entries[i].country = finalPending.country;
