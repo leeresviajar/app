@@ -495,11 +495,11 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   background: rgba(255,255,255,0.92); backdrop-filter: blur(4px);
   border: 0.5px solid var(--line); border-radius: 8px;
   padding: 0.45rem 0.7rem; cursor: pointer;
-  font-size: 0.68rem; color: var(--muted);
+  font-size: 0.68rem; color: var(--teal);
   font-family: 'Inter', sans-serif; letter-spacing: 0.02em; white-space: nowrap;
 }
-.community-toggle.off { opacity: 0.45; }
-/* Icono ojo: hereda color vía currentColor; el estado off ya atenúa el botón */
+.community-toggle.off { color: #9a948d; }
+/* Icono ojo: hereda color vía currentColor (teal activo, gris apagado) */
 .community-toggle .eye-open, .community-toggle .eye-off { vertical-align: middle; }
 .community-toggle .eye-off { display: none; }
 .community-toggle.off .eye-open { display: none; }
