@@ -1,7 +1,7 @@
 // ===================== PRIMERAS LLEGADAS =====================
 const KNOWN_DESTINATIONS = new Set([
   'paris','london','roma','madrid','barcelona','berlin','amsterdam','lisboa',
-  'tokyo','new york','buenos aires','ciudad de mexico','bogotá','lima',
+  'tokyo','new york','buenos aires','ciudad de mexico','bogota','lima',
   'cairo','istanbul','beijing','mumbai','sydney','toronto',
   // Ficticios populares
   'mordor','hogwarts','macondo','arrakis','westeros','narnia','la comarca','hobbiton',
@@ -9,14 +9,14 @@ const KNOWN_DESTINATIONS = new Set([
 ]);
 
 function isPioneer(destName) {
-  const key = destName.toLowerCase().trim();
+  const key = normalizeName(destName).trim();
   if (KNOWN_DESTINATIONS.has(key)) return false;
-  if (entries.some(e => e.dest.toLowerCase() === key)) return false;
+  if (entries.some(e => normalizeName(e.dest) === key)) return false;
   return true;
 }
 
 function markDestinationKnown(destName) {
-  KNOWN_DESTINATIONS.add(destName.toLowerCase().trim());
+  KNOWN_DESTINATIONS.add(normalizeName(destName).trim());
 }
 
 // ===================== DIARIO =====================

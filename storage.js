@@ -201,7 +201,7 @@ function migrateDiary() {
   const seen = new Set();
   const newDiary = [];
   sortedFiltered().forEach(entry => {
-    const key = entry.dest.toLowerCase().trim();
+    const key = normalizeName(entry.dest).trim();
     const pioneer = !KNOWN_DESTINATIONS.has(key) && !seen.has(key);
     seen.add(key);
     if (pioneer) markDestinationKnown(entry.dest);
