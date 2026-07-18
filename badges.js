@@ -135,12 +135,15 @@ function renderBadges() {
 }
 
 // ===================== TOASTS =====================
+let pioneerHideTimer = null;
+
 function showPioneerToast(destName) {
   const toast = document.getElementById('pioneer-toast');
   document.getElementById('pioneer-toast-text').textContent =
     `Eres la primera persona en llegar a ${destName}. ¡Queda registrado en tu diario!`;
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 8000);
+  clearTimeout(pioneerHideTimer);
+  pioneerHideTimer = setTimeout(() => toast.classList.remove('show'), 8000);
 }
 
 // Trayectorias del cañón izquierdo; el derecho es el espejo con --dx negado.
@@ -175,6 +178,18 @@ function spawnBadgeConfetti(toast) {
 }
 
 function showBadgeUnlockToast(badge) {
+  // Si el toast de pionero está visible, se acorta a 4s y el logro espera su salida.
+  const pioneer = document.getElementById('pioneer-toast');
+  if (pioneer.classList.contains('show')) {
+    clearTimeout(pioneerHideTimer);
+    pioneerHideTimer = setTimeout(() => pioneer.classList.remove('show'), 4000);
+    setTimeout(() => displayBadgeUnlockToast(badge), 4400);
+  } else {
+    displayBadgeUnlockToast(badge);
+  }
+}
+
+function displayBadgeUnlockToast(badge) {
   const toast = document.getElementById('badge-unlock-toast');
   document.getElementById('bu-name').textContent = badge.name;
   document.getElementById('bu-desc').textContent = badge.desc;
