@@ -204,8 +204,6 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .btn-use-community:hover { background: var(--forest-mid); }
 .btn-use-custom { background: none; border: 0.5px solid #e8913c; color: #c4671e; }
 .btn-use-custom:hover { background: rgba(232,145,60,0.08); }
-.btn-fictional-cancel { background: none; border: 0.5px solid var(--line); color: var(--muted); flex: 0 0 auto; padding: 0.6rem 0.9rem; }
-.btn-fictional-cancel:hover { background: var(--paper); }
 
 /* X de esquina que cierra el modal ficticio sin cancelar el viaje */
 .fic-close-x {
