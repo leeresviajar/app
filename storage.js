@@ -143,7 +143,7 @@ async function loadStateFromCloud() {
     .from('entries')
     .select('*')
     .eq('user_id', currentUser.id)
-    .order('date', { ascending: true });
+    .order('insert_seq', { ascending: true });
 
   // Lectura fallida (p. ej. sin conexión): no tocamos el estado en memoria.
   if (entriesError) {
@@ -178,7 +178,9 @@ async function loadStateFromCloud() {
 
   // El diario se sigue mostrando desde su caché local (diary.js),
   // así que la reconstruimos a partir de lo que acaba de llegar de la nube.
-  const cloudDiary = entries.slice().reverse().map(en => ({ ...en, id: Date.now() + Math.random() }));
+  // entries llega en orden de registro (insert_seq); el diario mantiene su
+  // contrato propio: fecha descendente y, en empates, lo último registrado primero.
+  const cloudDiary = entries.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')).reverse().map(en => ({ ...en, id: Date.now() + Math.random() }));
   saveDiary(cloudDiary);
 
   updateList(); updateStats();
