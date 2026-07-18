@@ -136,8 +136,19 @@ function renderBadges() {
 
 // ===================== TOASTS =====================
 let pioneerHideTimer = null;
+let entryAddedHideTimer = null;
+
+// Los toasts de viaje comparten posición: el nuevo sustituye al que estuviera visible.
+function hideTravelToast(id, clearTimer) {
+  const toast = document.getElementById(id);
+  if (toast.classList.contains('show')) {
+    clearTimer();
+    toast.classList.remove('show');
+  }
+}
 
 function showPioneerToast(destName, fictional) {
+  hideTravelToast('entry-added-toast', () => clearTimeout(entryAddedHideTimer));
   const toast = document.getElementById('pioneer-toast');
   toast.classList.toggle('toast-fictional', !!fictional);
   toast.classList.toggle('toast-real', !fictional);
@@ -179,15 +190,22 @@ function spawnBadgeConfetti(toast) {
 }
 
 function showBadgeUnlockToast(badge) {
-  // Si el toast de pionero está visible, se acorta a 4s y el logro espera su salida.
+  // Si hay un toast de viaje visible, se acorta a 4s y el logro espera su salida.
   const pioneer = document.getElementById('pioneer-toast');
+  const entryAdded = document.getElementById('entry-added-toast');
+  let queued = false;
   if (pioneer.classList.contains('show')) {
     clearTimeout(pioneerHideTimer);
     pioneerHideTimer = setTimeout(() => pioneer.classList.remove('show'), 4000);
-    setTimeout(() => displayBadgeUnlockToast(badge), 4400);
-  } else {
-    displayBadgeUnlockToast(badge);
+    queued = true;
   }
+  if (entryAdded.classList.contains('show')) {
+    clearTimeout(entryAddedHideTimer);
+    entryAddedHideTimer = setTimeout(() => entryAdded.classList.remove('show'), 4000);
+    queued = true;
+  }
+  if (queued) setTimeout(() => displayBadgeUnlockToast(badge), 4400);
+  else displayBadgeUnlockToast(badge);
 }
 
 function displayBadgeUnlockToast(badge) {
@@ -206,10 +224,12 @@ function goToBadgesFromToast(event) {
 }
 
 function showEntryAddedToast(destName, fictional) {
+  hideTravelToast('pioneer-toast', () => clearTimeout(pioneerHideTimer));
   const toast = document.getElementById('entry-added-toast');
   toast.classList.toggle('toast-fictional', !!fictional);
   toast.classList.toggle('toast-real', !fictional);
   document.getElementById('entry-added-name').textContent = fictional ? `✦ ${destName}` : destName;
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 6000);
+  clearTimeout(entryAddedHideTimer);
+  entryAddedHideTimer = setTimeout(() => toast.classList.remove('show'), 6000);
 }
