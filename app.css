@@ -757,6 +757,4 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   .map-title { top: 0.75rem; right: 0.75rem; }
   .export-trigger { top: 0.75rem; left: 0.75rem; right: auto; }
   .pioneer-toast { left: 0.75rem; right: 0.75rem; max-width: none; }
-  .badge-unlock-toast { left: 0.75rem; right: 0.75rem; width: auto; max-width: none; transform: translateY(-20px); }
-  .badge-unlock-toast.show { transform: translateY(0); }
 }
