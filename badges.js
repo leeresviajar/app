@@ -143,12 +143,50 @@ function showPioneerToast(destName) {
   setTimeout(() => toast.classList.remove('show'), 8000);
 }
 
+// Trayectorias del cañón izquierdo; el derecho es el espejo con --dx negado.
+const BADGE_CONFETTI = [
+  { shape: 'rect',   color: 'c-teal',   dx: 110, dy: -190, delay: 0 },
+  { shape: 'dot',    color: 'c-mint',   dx: 180, dy: -150, delay: 0.06 },
+  { shape: 'rect',   color: 'c-orange', dx: 70,  dy: -220, delay: 0.1 },
+  { shape: 'dot-sm', color: 'c-forest', dx: 240, dy: -100, delay: 0.04 },
+  { shape: 'rect',   color: 'c-mint',   dx: 140, dy: -205, delay: 0.13 },
+  { shape: 'dot',    color: 'c-orange', dx: 210, dy: -175, delay: 0.08 },
+];
+let badgeConfettiCleanup = null;
+
+function spawnBadgeConfetti(toast) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  clearTimeout(badgeConfettiCleanup);
+  toast.querySelectorAll('.bu-piece').forEach(p => p.remove());
+  for (const side of [1, -1]) {
+    for (const c of BADGE_CONFETTI) {
+      const piece = document.createElement('span');
+      piece.className = `bu-piece ${c.shape} ${c.color}`;
+      piece.style.left = side === 1 ? '-4px' : '100%';
+      piece.style.top = '100%';
+      piece.style.setProperty('--dx', (side * c.dx) + 'px');
+      piece.style.setProperty('--dy', c.dy + 'px');
+      piece.style.animationDelay = c.delay + 's';
+      toast.appendChild(piece);
+    }
+  }
+  badgeConfettiCleanup = setTimeout(() =>
+    toast.querySelectorAll('.bu-piece').forEach(p => p.remove()), 2400);
+}
+
 function showBadgeUnlockToast(badge) {
   const toast = document.getElementById('badge-unlock-toast');
-  document.getElementById('bu-icon').textContent = badge.icon;
   document.getElementById('bu-name').textContent = badge.name;
+  document.getElementById('bu-desc').textContent = badge.desc;
+  spawnBadgeConfetti(toast);
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 7000);
+}
+
+function goToBadgesFromToast(event) {
+  event.preventDefault();
+  document.getElementById('badge-unlock-toast').classList.remove('show');
+  if (isMobile()) setMobileView('logros'); else switchTab('logros');
 }
 
 function showEntryAddedToast(destName, fictional) {

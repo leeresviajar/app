@@ -280,11 +280,36 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .pioneer-toast .p-text { font-size: 0.77rem; color: rgba(255,255,255,0.85); line-height: 1.4; }
 
 /* BADGE DESBLOQUEADO celebración */
-.badge-unlock-toast { position: fixed; top: 16rem; right: 1.5rem; z-index: 9998; background: linear-gradient(135deg, var(--forest), var(--forest-mid)); color: white; border-radius: 12px; padding: 1rem 1.5rem; text-align: center; box-shadow: 0 8px 32px rgba(29,158,117,0.3); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: none; min-width: 220px; transform: translateY(-20px); }
-.badge-unlock-toast.show { transform: translateY(0); opacity: 1; }
-.badge-unlock-toast .bu-icon { font-size: 2rem; display: block; margin-bottom: 0.3rem; }
-.badge-unlock-toast .bu-title { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; margin-bottom: 0.2rem; }
-.badge-unlock-toast .bu-name { font-size: 1rem; font-weight: 700; }
+.badge-unlock-toast { position: fixed; top: 12vh; left: 50%; right: auto; z-index: 9998; background: #ffffff; border-radius: 10px; padding: 20px 18px; text-align: left; box-shadow: 0 8px 32px rgba(0,0,0,0.12); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: none; width: 300px; max-width: calc(100vw - 1.5rem); transform: translate(-50%, -20px); overflow: hidden; font-family: 'Inter', sans-serif; }
+.badge-unlock-toast.show { transform: translate(-50%, 0); opacity: 1; animation: lev-badge-flash 2.2s linear 1; }
+.badge-unlock-toast .bu-kicker { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #1d9e75; }
+.badge-unlock-toast .bu-name { font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; color: #1a1a18; margin-top: 4px; }
+.badge-unlock-toast .bu-desc { font-size: 13px; color: #9a948d; line-height: 1.5; margin-top: 4px; }
+.badge-unlock-toast .bu-footer { border-top: 0.5px solid #ece8e1; padding-top: 10px; margin-top: 12px; }
+.badge-unlock-toast .bu-link { font-size: 12px; color: #1d9e75; text-decoration: none; pointer-events: auto; }
+.badge-unlock-toast .bu-piece { position: absolute; animation: lev-badge-burst 2.2s cubic-bezier(.1,.6,.35,1) 1 both; }
+.badge-unlock-toast .bu-piece.rect { width: 5px; height: 9px; border-radius: 1px; }
+.badge-unlock-toast .bu-piece.dot { width: 6px; height: 6px; border-radius: 50%; }
+.badge-unlock-toast .bu-piece.dot-sm { width: 5px; height: 5px; border-radius: 50%; }
+.badge-unlock-toast .bu-piece.c-teal { background: #1d9e75; }
+.badge-unlock-toast .bu-piece.c-mint { background: #9fd9c0; }
+.badge-unlock-toast .bu-piece.c-orange { background: #e8913c; }
+.badge-unlock-toast .bu-piece.c-forest { background: #0f6e56; }
+@keyframes lev-badge-flash {
+  0%   { background: #ffffff; }
+  6%   { background: #e1f5ee; }
+  22%  { background: #ffffff; }
+  100% { background: #ffffff; }
+}
+@keyframes lev-badge-burst {
+  0%   { transform: translate(0,0) rotate(0deg) scale(0); opacity: 0; }
+  10%  { opacity: 1; transform: translate(calc(var(--dx)*.5), calc(var(--dy)*.55)) rotate(120deg) scale(1.1); }
+  100% { transform: translate(var(--dx), calc(var(--dy) + 60px)) rotate(360deg) scale(.85); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge-unlock-toast.show { animation: none; }
+  .badge-unlock-toast .bu-piece { display: none; }
+}
 
 /* EXPORT MODAL */
 .export-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.7); z-index: 9100; display: none; align-items: center; justify-content: center; }
@@ -731,5 +756,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   .community-toggle { top: 3rem; right: 0.75rem; bottom: auto; } /* bajo la insignia "Mapa lector · 2026" */
   .map-title { top: 0.75rem; right: 0.75rem; }
   .export-trigger { top: 0.75rem; left: 0.75rem; right: auto; }
-  .pioneer-toast, .badge-unlock-toast { left: 0.75rem; right: 0.75rem; max-width: none; }
+  .pioneer-toast { left: 0.75rem; right: 0.75rem; max-width: none; }
+  .badge-unlock-toast { left: 0.75rem; right: 0.75rem; width: auto; max-width: none; transform: translateY(-20px); }
+  .badge-unlock-toast.show { transform: translateY(0); }
 }
