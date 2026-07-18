@@ -212,6 +212,8 @@ function spawnBadgeConfetti(toast) {
     toast.querySelectorAll('.bu-piece').forEach(p => p.remove()), 2400);
 }
 
+let badgeHideTimer = null;
+
 function showBadgeUnlockToast(badge) {
   const toast = document.getElementById('badge-unlock-toast');
   document.getElementById('bu-name').textContent = badge.name;
@@ -219,11 +221,13 @@ function showBadgeUnlockToast(badge) {
   spawnBadgeConfetti(toast);
   toast.classList.add('show');
   restackBadgeToast();
-  setTimeout(() => toast.classList.remove('show'), 7000);
+  clearTimeout(badgeHideTimer);
+  badgeHideTimer = setTimeout(() => toast.classList.remove('show'), 7000);
 }
 
 function goToBadgesFromToast(event) {
   event.preventDefault();
+  clearTimeout(badgeHideTimer);
   document.getElementById('badge-unlock-toast').classList.remove('show');
   if (isMobile()) setMobileView('logros'); else switchTab('logros');
 }
