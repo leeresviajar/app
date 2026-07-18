@@ -147,6 +147,28 @@ function hideTravelToast(id, clearTimer) {
   }
 }
 
+// El logro convive con los toasts de viaje: si hay uno visible, se coloca debajo
+// y vuelve a la posición base (con la transición existente) cuando aquel se cierra.
+function visibleTravelToast() {
+  return ['pioneer-toast', 'entry-added-toast']
+    .map(id => document.getElementById(id))
+    .find(t => t.classList.contains('show')) || null;
+}
+
+function restackBadgeToast() {
+  const badge = document.getElementById('badge-unlock-toast');
+  if (!badge.classList.contains('show')) { badge.style.top = ''; return; }
+  const travel = visibleTravelToast();
+  badge.style.top = travel
+    ? `calc(12vh + ${Math.round(travel.getBoundingClientRect().height) + 12}px)`
+    : '';
+}
+
+function closeTravelToast(toast) {
+  toast.classList.remove('show');
+  restackBadgeToast();
+}
+
 function showPioneerToast(destName, fictional) {
   hideTravelToast('entry-added-toast', () => clearTimeout(entryAddedHideTimer));
   const toast = document.getElementById('pioneer-toast');
@@ -154,8 +176,9 @@ function showPioneerToast(destName, fictional) {
   toast.classList.toggle('toast-real', !fictional);
   document.getElementById('pioneer-name').textContent = fictional ? `✦ ${destName}` : destName;
   toast.classList.add('show');
+  restackBadgeToast();
   clearTimeout(pioneerHideTimer);
-  pioneerHideTimer = setTimeout(() => toast.classList.remove('show'), 8000);
+  pioneerHideTimer = setTimeout(() => { toast.classList.remove('show'); restackBadgeToast(); }, 8000);
 }
 
 // Trayectorias del cañón izquierdo; el derecho es el espejo con --dx negado.
@@ -190,30 +213,12 @@ function spawnBadgeConfetti(toast) {
 }
 
 function showBadgeUnlockToast(badge) {
-  // Si hay un toast de viaje visible, se acorta a 4s y el logro espera su salida.
-  const pioneer = document.getElementById('pioneer-toast');
-  const entryAdded = document.getElementById('entry-added-toast');
-  let queued = false;
-  if (pioneer.classList.contains('show')) {
-    clearTimeout(pioneerHideTimer);
-    pioneerHideTimer = setTimeout(() => pioneer.classList.remove('show'), 4000);
-    queued = true;
-  }
-  if (entryAdded.classList.contains('show')) {
-    clearTimeout(entryAddedHideTimer);
-    entryAddedHideTimer = setTimeout(() => entryAdded.classList.remove('show'), 4000);
-    queued = true;
-  }
-  if (queued) setTimeout(() => displayBadgeUnlockToast(badge), 4400);
-  else displayBadgeUnlockToast(badge);
-}
-
-function displayBadgeUnlockToast(badge) {
   const toast = document.getElementById('badge-unlock-toast');
   document.getElementById('bu-name').textContent = badge.name;
   document.getElementById('bu-desc').textContent = badge.desc;
   spawnBadgeConfetti(toast);
   toast.classList.add('show');
+  restackBadgeToast();
   setTimeout(() => toast.classList.remove('show'), 7000);
 }
 
@@ -230,6 +235,7 @@ function showEntryAddedToast(destName, fictional) {
   toast.classList.toggle('toast-real', !fictional);
   document.getElementById('entry-added-name').textContent = fictional ? `✦ ${destName}` : destName;
   toast.classList.add('show');
+  restackBadgeToast();
   clearTimeout(entryAddedHideTimer);
-  entryAddedHideTimer = setTimeout(() => toast.classList.remove('show'), 6000);
+  entryAddedHideTimer = setTimeout(() => { toast.classList.remove('show'); restackBadgeToast(); }, 4000);
 }
