@@ -116,6 +116,11 @@ function redrawMap() {
 // Parámetros ajustables sin tocar el motor: se giran según crezca la comunidad.
 const COMMUNITY_CONFIG = {
   maxRoutes: 40,          // tope absoluto de rutas dibujadas
+  // Tope de filas del histórico que se leen para agregar. Va aparte de
+  // maxRoutes a propósito: con un solo tope, un destino cuya última lectura
+  // caía fuera de las N filas más recientes desaparecía de PLACE_VISITORS y
+  // su popup se quedaba sin libros. Leer siempre el histórico entero.
+  historyRows: 500,
   windowDays: null        // null = sin filtro de fecha; número = solo últimos N días
 };
 const COMMUNITY_CACHE_TTL = 5 * 60 * 1000;
@@ -130,13 +135,13 @@ let communityDestKeys = new Set();
 
 function invalidateCommunityCache() { communityCache = { ambient: null, history: null, ts: 0 }; }
 
-async function fetchCommunityRoutes(viewName) {
+async function fetchCommunityRoutes(viewName, rowLimit = COMMUNITY_CONFIG.maxRoutes) {
   let query = supabaseClient.from(viewName).select('*');
   if (COMMUNITY_CONFIG.windowDays) {
     const since = new Date(Date.now() - COMMUNITY_CONFIG.windowDays * 86400000).toISOString().slice(0, 10);
     query = query.gte('date', since);
   }
-  query = query.order('date', { ascending: false }).limit(COMMUNITY_CONFIG.maxRoutes);
+  query = query.order('date', { ascending: false }).limit(rowLimit);
   const { data, error } = await query;
   if (error) { console.warn('Error cargando rutas de comunidad:', error); return []; }
   return data || [];
@@ -224,7 +229,7 @@ async function drawCommunityRoutes() {
   if (stale) {
     const [latestRows, historyRows] = await Promise.all([
       fetchCommunityRoutes('community_routes_latest_per_user'),
-      fetchCommunityRoutes('public_community_routes')
+      fetchCommunityRoutes('public_community_routes', COMMUNITY_CONFIG.historyRows)
     ]);
     const ambient = aggregateCommunityRoutes(latestRows);
     const history = aggregateCommunityRoutes(historyRows); // la última: deja PLACE_VISITORS con el histórico
@@ -273,11 +278,14 @@ function renderCommunityRoutes() {
 
 // «Una persona ha llegado…» / «N lectores han llegado…»: con pocos
 // testers habrá recuentos de 1 y "1 lectores" no puede aparecer.
+// suffix vacío cierra la frase con punto: «leyendo:» solo puede escribirse
+// cuando detrás va de verdad una lista de libros.
 function communityCountHtml(n, color, suffix, tambien) {
   const strong = t => `<strong style="color:${color}">${t}</strong>`;
+  const tail = suffix ? ` ${suffix}` : '.';
   return n === 1
-    ? `${strong('Una persona')} ${tambien ? 'también ' : ''}ha llegado hasta aquí ${suffix}`
-    : `${strong(n.toLocaleString() + ' lectores')} ${tambien ? 'también ' : ''}han llegado hasta aquí ${suffix}`;
+    ? `${strong('Una persona')} ${tambien ? 'también ' : ''}ha llegado hasta aquí${tail}`
+    : `${strong(n.toLocaleString() + ' lectores')} ${tambien ? 'también ' : ''}han llegado hasta aquí${tail}`;
 }
 
 // Rutas históricas completas hacia un destino, mostradas solo mientras
@@ -394,9 +402,17 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
     }
 
     const vData = PLACE_VISITORS[destKey];
-    const booksHtml = vData && vData.books.length
-      ? vData.books.slice(0,3).map(b => `<div style="font-size:0.7rem;color:#888;font-style:italic">· ${b}</div>`).join('')
-      : '';
+    const books = vData && vData.books.length ? vData.books.slice(0,3) : [];
+    const booksHtml = books.map(b => `<div style="font-size:0.7rem;color:#888;font-style:italic">· ${b}</div>`).join('');
+    const destCount = vData ? vData.count : r.visitors;
+    // Sin libros que listar la frase se cierra y el misterio se nombra: nunca
+    // unos dos puntos huérfanos.
+    const destCountHtml = books.length
+      ? communityCountHtml(destCount, highlightColor, 'leyendo:')
+      : communityCountHtml(destCount, highlightColor, '') +
+        (destCount === 1
+          ? ' El libro que la trajo aún es un misterio.'
+          : ' Sus libros aún son un misterio.');
 
     if (!drawnDestinations.has(destKey) && !userDestinations.has(destKey)) {
       drawnDestinations.add(destKey);
@@ -410,7 +426,7 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
       const destPopup = `
         <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
         <div class="popup-community">
-          ${communityCountHtml(vData ? vData.count : r.visitors, highlightColor, 'leyendo:')}
+          ${destCountHtml}
           ${booksHtml}
         </div>
       `;
