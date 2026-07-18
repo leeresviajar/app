@@ -121,11 +121,14 @@ async function addEntry() {
     entry.pioneer = pioneer;
 
     const wasFirstEntry = entries.length === 0;
+    // Antes del push: si ya se visitó este destino, el aviso "ya está en tu mapa" sobra.
+    const repeatVisit = entries.some(e => normalizeName(e.dest) === normalizeName(entry.dest));
     entries.push(entry);
     redrawMap();
 
     addDiaryEntry(entry, pioneer);
-    if (pioneer) { showPioneerToast(entry.dest, entry.fictional); } else { showEntryAddedToast(entry.dest, entry.fictional); }
+    if (pioneer) { showPioneerToast(entry.dest, entry.fictional); }
+    else if (!repeatVisit) { showEntryAddedToast(entry.dest, entry.fictional); }
     if (wasFirstEntry) showAuthCtaToast();
 
     const stats = getBadgeStats();
