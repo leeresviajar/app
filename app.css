@@ -279,9 +279,29 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .pioneer-toast .p-title { font-size: 0.82rem; font-weight: 600; color: var(--teal-light); margin-bottom: 0.2rem; letter-spacing: 0.02em; }
 .pioneer-toast .p-text { font-size: 0.77rem; color: rgba(255,255,255,0.85); line-height: 1.4; }
 
-/* BADGE DESBLOQUEADO celebración */
-.badge-unlock-toast { position: fixed; top: 12vh; left: calc(50% + 190px); right: auto; z-index: 9998; background: #ffffff; border-radius: 10px; padding: 20px 18px; text-align: left; box-shadow: 0 8px 32px rgba(0,0,0,0.12); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: none; width: 300px; max-width: calc(100vw - 1.5rem); transform: translate(-50%, -20px); overflow: hidden; font-family: 'Inter', sans-serif; }
-.badge-unlock-toast.show { transform: translate(-50%, 0); opacity: 1; animation: lev-badge-flash 2.2s linear 1; }
+/* FAMILIA DE TOASTS — tarjeta base compartida (logro, pionero, viaje añadido) */
+.lev-toast { position: fixed; top: 12vh; left: calc(50% + 190px); right: auto; z-index: 9998; border-radius: 10px; padding: 20px 18px; text-align: left; box-shadow: 0 8px 32px rgba(0,0,0,0.12); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: none; width: 300px; max-width: calc(100vw - 1.5rem); transform: translate(-50%, -20px); overflow: hidden; font-family: 'Inter', sans-serif; }
+.lev-toast.show { transform: translate(-50%, 0); opacity: 1; }
+.lev-toast .lt-kicker { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+.lev-toast .lt-name { font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; color: #1a1a18; margin-top: 4px; }
+.lev-toast .lt-desc { font-size: 13px; color: #9a948d; line-height: 1.5; margin-top: 4px; }
+#pioneer-toast, #entry-added-toast { cursor: pointer; }
+#pioneer-toast.show, #entry-added-toast.show { pointer-events: auto; }
+#pioneer-toast.toast-real { background: #e1f5ee; }
+#pioneer-toast.toast-real .lt-kicker { color: #0f6e56; }
+#pioneer-toast.toast-real .lt-desc { color: #5f7a6e; }
+#pioneer-toast.toast-fictional { background: #faf0e2; }
+#pioneer-toast.toast-fictional .lt-kicker { color: #c4671e; }
+#pioneer-toast.toast-fictional .lt-name { color: #e8913c; }
+#pioneer-toast.toast-fictional .lt-desc { color: #8a6a4a; }
+#entry-added-toast { background: #ffffff; }
+#entry-added-toast.toast-real .lt-kicker { color: #1d9e75; }
+#entry-added-toast.toast-fictional .lt-kicker { color: #e8913c; }
+#entry-added-toast.toast-fictional .lt-name { color: #e8913c; }
+
+/* BADGE DESBLOQUEADO celebración (extras sobre .lev-toast) */
+.badge-unlock-toast { background: #ffffff; }
+.badge-unlock-toast.show { animation: lev-badge-flash 2.2s linear 1; }
 .badge-unlock-toast .bu-kicker { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #1d9e75; }
 .badge-unlock-toast .bu-name { font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; color: #1a1a18; margin-top: 4px; }
 .badge-unlock-toast .bu-desc { font-size: 13px; color: #9a948d; line-height: 1.5; margin-top: 4px; }
@@ -757,5 +777,5 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   .map-title { top: 0.75rem; right: 0.75rem; }
   .export-trigger { top: 0.75rem; left: 0.75rem; right: auto; }
   .pioneer-toast { left: 0.75rem; right: 0.75rem; max-width: none; }
-  .badge-unlock-toast { left: 50%; } /* el mapa ocupa todo el viewport, sin offset del sidebar */
+  .lev-toast { left: 50%; } /* el mapa ocupa todo el viewport, sin offset del sidebar */
 }

@@ -137,10 +137,11 @@ function renderBadges() {
 // ===================== TOASTS =====================
 let pioneerHideTimer = null;
 
-function showPioneerToast(destName) {
+function showPioneerToast(destName, fictional) {
   const toast = document.getElementById('pioneer-toast');
-  document.getElementById('pioneer-toast-text').textContent =
-    `Eres la primera persona en llegar a ${destName}. ¡Queda registrado en tu diario!`;
+  toast.classList.toggle('toast-fictional', !!fictional);
+  toast.classList.toggle('toast-real', !fictional);
+  document.getElementById('pioneer-name').textContent = fictional ? `✦ ${destName}` : destName;
   toast.classList.add('show');
   clearTimeout(pioneerHideTimer);
   pioneerHideTimer = setTimeout(() => toast.classList.remove('show'), 8000);
@@ -208,8 +209,7 @@ function showEntryAddedToast(destName, fictional) {
   const toast = document.getElementById('entry-added-toast');
   toast.classList.toggle('toast-fictional', !!fictional);
   toast.classList.toggle('toast-real', !fictional);
-  document.getElementById('entry-added-icon').textContent = fictional ? '✦' : '🗺';
-  document.getElementById('entry-added-text').textContent = `${destName} ya está en tu mapa.`;
+  document.getElementById('entry-added-name').textContent = fictional ? `✦ ${destName}` : destName;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 6000);
 }

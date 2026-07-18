@@ -125,7 +125,7 @@ async function addEntry() {
     redrawMap();
 
     addDiaryEntry(entry, pioneer);
-    if (pioneer) { showPioneerToast(entry.dest); } else { showEntryAddedToast(entry.dest, entry.fictional); }
+    if (pioneer) { showPioneerToast(entry.dest, entry.fictional); } else { showEntryAddedToast(entry.dest, entry.fictional); }
     if (wasFirstEntry) showAuthCtaToast();
 
     const stats = getBadgeStats();
