@@ -167,7 +167,8 @@ function aggregateCommunityRoutes(rows) {
     if (!r) {
       r = { from: [row.from_lat, row.from_lng], to: [row.dest_lat, row.dest_lng],
             fromName: row.from_name, toName: row.dest, book: row.book,
-            fictional: !!row.fictional, visitors: 0, date: row.date };
+            fictional: !!row.fictional, country: row.country || '',
+            visitors: 0, date: row.date };
       routes.set(fullKey, r);
     }
     r.visitors++;
@@ -179,9 +180,22 @@ function aggregateCommunityRoutes(rows) {
   routes.forEach(r => {
     if (r.visitors <= 0) return; // solo lecturas propias: ya están en el mapa
     const pk = normalize(r.toName);
-    if (!PLACE_VISITORS[pk]) PLACE_VISITORS[pk] = { count: 0, books: [] };
-    PLACE_VISITORS[pk].count += r.visitors;
-    if (!PLACE_VISITORS[pk].books.some(b => normalize(b) === normalize(r.book))) PLACE_VISITORS[pk].books.push(r.book);
+    // books se mantiene tal cual (lista de títulos, sin contadores): lo leen
+    // los popups de las lecturas propias. bookCounts va en paralelo, para el
+    // ranking de la tarjeta de destino. Cuenta FILAS del histórico, no
+    // lectores distintos: la vista pública no expone user_id a propósito
+    // (ver sql/2026-07-16-public-community-routes.sql), así que igual que
+    // count, una relectura de la misma persona suma dos.
+    if (!PLACE_VISITORS[pk]) PLACE_VISITORS[pk] = { count: 0, books: [], bookCounts: {}, country: '' };
+    const place = PLACE_VISITORS[pk];
+    place.count += r.visitors;
+    if (!place.books.some(b => normalize(b) === normalize(r.book))) place.books.push(r.book);
+    // Agrupa por título normalizado (mismo libro escrito distinto = un libro),
+    // conservando la primera grafía vista como etiqueta.
+    const bk = normalize(r.book);
+    if (!place.bookCounts[bk]) place.bookCounts[bk] = { title: r.book, n: 0 };
+    place.bookCounts[bk].n += r.visitors;
+    if (!place.country && r.country) place.country = r.country; // filas viejas pueden no traerlo
     list.push(r);
   });
   return list.slice(0, COMMUNITY_CONFIG.maxRoutes);
@@ -324,6 +338,231 @@ function hideDestinationDetail() {
 
 map.on('click', hideDestinationDetail); // pinchar fuera cierra el detalle
 
+// ===================== TARJETA DE DESTINO DE COMUNIDAD =====================
+
+// Ancho de la tarjeta: lo usan el popup de Leaflet (minWidth/maxWidth) y el
+// viewBox del SVG de la cabecera, que se dibuja contra estas medidas.
+const DEST_CARD_W = 300, DEST_CARD_H = 100;
+
+// --------------------- Continente por coordenadas ---------------------
+// Se deriva de dest_lat/dest_lng, no del país: `country` viene de Nominatim
+// en español con formas irregulares ("Estados Unidos de América", "Belarús")
+// y falta en parte de las filas, mientras que las coordenadas están siempre.
+//
+// Cajas DELIBERADAMENTE CONSERVADORAS: es peor mostrar un continente
+// equivocado que no mostrar ninguno. Un punto que no cae limpiamente dentro
+// de una caja devuelve '' y la tarjeta omite el continente.
+//
+// Casos límite conocidos, excluidos a propósito de las cajas:
+//  · Rusia: no se trata como país. Al ir por coordenadas, la parte al oeste
+//    de los Urales (lng < 60) cae en Europa y el resto en Asia, que es lo
+//    correcto y lo que un mapa país→continente no puede hacer.
+//  · El Mediterráneo es el tramo delicado: Europa y África se solapan en
+//    latitud (Málaga 36,7°N está al SUR de Túnez 36,8°N), así que Europa se
+//    parte por tramos de longitud en vez de usar una sola caja:
+//      lng -10..8   → Europa desde 36,2°N (bajo el Estrecho: Tánger 35,8
+//                     cae en África, Málaga 36,7 en Europa)
+//      lng 8..26    → Europa desde 37,6°N (sobre el cabo Angela 37,35, el
+//                     punto más al norte de Túnez; Atenas y Palermo entran)
+//      lng 26..40   → Europa desde 41°N (deja fuera Anatolia; Ankara 39,9
+//                     no da continente, Estambul 41,0 sí da EUROPA, que es
+//                     correcto: su lado europeo lo es)
+//  · Cáucaso, Levante y Sinaí: fuera de todas las cajas → sin continente
+//    (Jerusalén 31,8/35,2 no da ninguno, a propósito).
+//  · Centroamérica y el Caribe (lat 8-25, lng -92..-60): frontera
+//    Norteamérica/Sudamérica → fuera de las cajas, sin continente.
+//  · Hawái, Islandia y las islas del Pacífico y el Atlántico medio quedan
+//    fuera → sin continente, en vez de asignarlas a la fuerza.
+const DEST_CONTINENT_BOXES = [
+  // [nombre, latMin, latMax, lngMin, lngMax]
+  ['EUROPA',      36.2,  71,  -10,    8],  // Iberia, Francia, UK, Escandinavia
+  ['EUROPA',      37.6,  71,    8,   26],  // Italia, Centroeuropa, Balcanes
+  ['EUROPA',        41,  71,   26,   40],  // Grecia norte, Rumanía, Ucrania
+  ['EUROPA',        50,  71,   40,   60],  // Rusia al oeste de los Urales
+  ['ASIA',          10,  55,   60,  145],  // desde los Urales hacia el este
+  ['ASIA',          20,  46,   45,   60],  // Península Arábiga oriental e Irán
+  ['ÁFRICA',       -35,  36,  -17,    8],  // Marruecos y Argelia occidental
+  ['ÁFRICA',       -35, 37.4,   8,   25],  // Túnez y Libia
+  ['ÁFRICA',       -27,  31,   25,   34],  // Egipto y Sudán, sin el Levante
+  ['ÁFRICA',       -27,  15,   34,   43],  // Cuerno de África
+  ['NORTEAMÉRICA',  25,  72, -168,  -55],  // sin Centroamérica ni Caribe
+  ['SUDAMÉRICA',   -55,   0,  -82,  -34],  // desde el ecuador hacia el sur
+  ['OCEANÍA',      -48, -10,  112,  180]   // Australia y Nueva Zelanda
+];
+
+function continentFor(lat, lng) {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return '';
+  const hit = DEST_CONTINENT_BOXES.filter(b => lat >= b[1] && lat <= b[2] && lng >= b[3] && lng <= b[4]);
+  // Si dos cajas se solapan sobre el mismo punto, la zona es ambigua: fuera.
+  const names = new Set(hit.map(b => b[0]));
+  return names.size === 1 ? hit[0][0] : '';
+}
+
+// --------------------- Cabecera decorativa (SVG) ---------------------
+// Mapa estilizado, NO geografía real: crema de fondo, vías y río en verdes
+// suaves. La variación es determinista a partir del nombre del destino —
+// con azar de verdad la cabecera cambiaría en cada apertura del mismo
+// popup y se leería como un fallo de render.
+function destCardSeed(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function destCardHeaderSvg(name) {
+  const seed = destCardSeed(name);
+  // PRNG determinista (mulberry32 simplificado): misma semilla, mismo dibujo.
+  let s = seed;
+  const rnd = () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) % 1000) / 1000; };
+  const W = DEST_CARD_W, H = DEST_CARD_H;
+
+  let grid = '';                          // retícula sutil de fondo
+  for (let x = 0; x <= W; x += 30) grid += `<line x1="${x}" y1="0" x2="${x}" y2="${H}"/>`;
+  for (let y = 0; y <= H; y += 30) grid += `<line x1="0" y1="${y}" x2="${W}" y2="${y}"/>`;
+
+  let roads = '';                         // vías: rectas suaves en varias direcciones
+  for (let i = 0; i < 5; i++) {
+    const y1 = rnd() * H, y2 = rnd() * H;
+    roads += `<line x1="-10" y1="${y1.toFixed(1)}" x2="${W + 10}" y2="${y2.toFixed(1)}"/>`;
+  }
+  for (let i = 0; i < 3; i++) {
+    const x1 = rnd() * W, x2 = rnd() * W;
+    roads += `<line x1="${x1.toFixed(1)}" y1="-10" x2="${x2.toFixed(1)}" y2="${H + 10}"/>`;
+  }
+
+  // Río: una curva ancha que cruza la franja, más saturada que las vías.
+  const ry = 25 + rnd() * (H - 50);
+  const river = `<path d="M-10,${ry.toFixed(1)} C${(W * 0.3).toFixed(0)},${(ry - 22).toFixed(1)} ${(W * 0.6).toFixed(0)},${(ry + 26).toFixed(1)} ${W + 10},${(ry - 6).toFixed(1)}"/>`;
+
+  // Sin etiquetas de texto: solo retícula y curvas.
+  return `<svg class="dest-card-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+      <rect width="${W}" height="${H}" class="dc-bg"/>
+      <g class="dc-grid">${grid}</g>
+      <g class="dc-roads">${roads}</g>
+      <g class="dc-river">${river}</g>
+    </svg>`;
+}
+
+// --------------------- Ranking ---------------------
+const DEST_CARD_ALSO = 3;      // filas visibles en "también os han traído"
+const DEST_CARD_FLAT = 4;      // filas visibles en la lista plana de empate
+
+// Fila del ranking.
+//  · first: badge teal y cifra en teal (solo con un nº1 estricto).
+//  · count: false oculta el contador — con un único título la cifra ya
+//    está en la caja de stats y repetirla es ruido.
+function destCardRankRow(book, pos, first, count) {
+  const n = book.n.toLocaleString();
+  const lectores = first ? (book.n === 1 ? '1 lector' : `${n} lectores`) : n;
+  return `<div class="dest-card-rank">
+      <span class="dest-card-badge${first ? ' is-first' : ''}">${pos}</span>
+      <span class="dest-card-rank-title"><em>${esc(book.title)}</em></span>
+      ${count ? `<span class="dest-card-rank-n">${lectores}</span>` : ''}
+    </div>`;
+}
+
+// Bloque de filas ocultas + botón de expandir, común a los dos modos.
+function destCardMoreHtml(hidden, fromPos, total) {
+  if (!hidden.length) return '';
+  const label = `Ver los ${total} títulos`;
+  return `<div class="dest-card-more">${hidden.map((b, i) => destCardRankRow(b, fromPos + i, false, true)).join('')}</div>
+      <button type="button" class="dest-card-toggle" aria-expanded="false" onclick="toggleDestCardBooks(this, event)"
+        data-more="${label}" data-less="Ver menos">${label}</button>`;
+}
+
+// Devuelve '' si no hay lista: quien llama decide el fallback (el copy del
+// misterio, sin cabeceras de sección ni estructura de ranking).
+function destCardBooksHtml(bookCounts) {
+  const list = Object.values(bookCounts || {}).sort((a, b) => b.n - a.n);
+  if (!list.length) return '';
+
+  // Un solo título: sin ranking y sin contador en la fila.
+  if (list.length === 1) {
+    return `<div class="dest-card-section">El libro que os ha traído aquí</div>
+      ${destCardRankRow(list[0], 1, false, false)}`;
+  }
+
+  // Sin un nº1 estricto no hay ganador que destacar: lista plana, todos los
+  // badges en gris y ningún contador en verde. Es el caso habitual mientras
+  // la comunidad sea pequeña y casi ningún libro se repita en un destino.
+  if (list[0].n === list[1].n) {
+    const shown = list.slice(0, DEST_CARD_FLAT);
+    const hidden = list.slice(DEST_CARD_FLAT);
+    return `<div class="dest-card-section">Los libros que os han traído aquí</div>
+      ${shown.map((b, i) => destCardRankRow(b, i + 1, false, true)).join('')}
+      ${destCardMoreHtml(hidden, DEST_CARD_FLAT + 1, list.length)}`;
+  }
+
+  const rest = list.slice(1);
+  const shown = rest.slice(0, DEST_CARD_ALSO);
+  const hidden = rest.slice(DEST_CARD_ALSO);
+  return `<div class="dest-card-section">El libro que más os ha traído aquí</div>
+      ${destCardRankRow(list[0], 1, true, true)}
+      <hr class="dest-card-div">
+      <div class="dest-card-section">También os han traído</div>
+      ${shown.map((b, i) => destCardRankRow(b, i + 2, false, true)).join('')}
+      ${destCardMoreHtml(hidden, shown.length + 2, list.length)}`;
+}
+
+// Expande/contrae la lista dentro de la tarjeta.
+//
+// Dos cosas que parecen omisiones y no lo son:
+//  · stopPropagation NO es opcional: el click llega al contenedor del mapa,
+//    que con closeOnClick (por defecto) cierra el popup. Sin esto, pulsar el
+//    toggle cerraba la tarjeta en vez de expandirla.
+//  · NO se llama a popup.update(): re-renderiza el contenido desde el HTML
+//    enlazado y se lleva por delante la clase is-expanded y el texto del
+//    botón. Tampoco hace falta: el popup está anclado por abajo al marcador,
+//    así que la tarjeta crece hacia arriba y el piquito no se mueve.
+//    Contrapartida asumida: si la tarjeta expandida se sale por arriba,
+//    Leaflet ya no reencuadra (un panBy dispararía moveend, que redibuja la
+//    capa de comunidad y cerraría el popup).
+function toggleDestCardBooks(btn, ev) {
+  if (ev) ev.stopPropagation();
+  const card = btn.closest('.dest-card');
+  const open = card.classList.toggle('is-expanded');
+  btn.textContent = open ? btn.dataset.less : btn.dataset.more;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+// --------------------- Tarjeta ---------------------
+function destCardHtml(name, lat, lng, fictional, vData, fallbackCount) {
+  const count = vData ? vData.count : fallbackCount;
+  const titles = vData && vData.books ? vData.books.length : 0;
+  const booksHtml = vData ? destCardBooksHtml(vData.bookCounts) : '';
+  // En ficticios NUNCA se muestra geografía real: ni país (aunque una fila
+  // sucia lo traiga relleno) ni continente derivado de sus coordenadas.
+  const country = !fictional && vData && vData.country ? vData.country : '';
+  const continent = fictional ? '' : continentFor(lat, lng);
+  const geo = [country, continent].filter(Boolean).join(' · ');
+  // Sin libros que listar la frase se cierra y el misterio se nombra: nunca
+  // unos dos puntos huérfanos.
+  const fallback = count === 1
+    ? 'El libro que la trajo aún es un misterio.'
+    : 'Sus libros aún son un misterio.';
+  return `<div class="dest-card${fictional ? ' is-fictional' : ''}">
+      <div class="dest-card-header">
+        ${destCardHeaderSvg(name)}
+        <span class="dest-card-pin"></span>
+      </div>
+      <div class="dest-card-body">
+        <h3 class="dest-card-title">${fictional ? '✦ ' : ''}${esc(name)}</h3>
+        ${geo ? `<div class="dest-card-geo">${esc(geo)}</div>` : ''}
+        <div class="dest-card-stats">
+          <div class="dest-card-stat">
+            <b>${count.toLocaleString()}</b>
+            <span>${count === 1 ? 'lector ha llegado aquí' : 'lectores han llegado aquí'}</span>
+          </div>
+          ${titles ? `<div class="dest-card-stat">
+            <b>${titles.toLocaleString()}</b>
+            <span>${titles === 1 ? 'título' : 'títulos distintos'}</span>
+          </div>` : ''}
+        </div>
+        ${booksHtml || `<p class="dest-card-fallback">${fallback}</p>`}
+      </div>
+    </div>`;
+}
+
 // targetLayer permite reutilizar la función desde el detalle (detailLayer);
 // shadowPairs (Map par → timestamp de la ruta más reciente) marca el modo histórico:
 // puntos + línea sombra tenue no interactiva en vez de la línea viva.
@@ -402,17 +641,6 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
     }
 
     const vData = PLACE_VISITORS[destKey];
-    const books = vData && vData.books.length ? vData.books.slice(0,3) : [];
-    const booksHtml = books.map(b => `<div style="font-size:0.7rem;color:#888;font-style:italic">· ${b}</div>`).join('');
-    const destCount = vData ? vData.count : r.visitors;
-    // Sin libros que listar la frase se cierra y el misterio se nombra: nunca
-    // unos dos puntos huérfanos.
-    const destCountHtml = books.length
-      ? communityCountHtml(destCount, highlightColor, 'leyendo:')
-      : communityCountHtml(destCount, highlightColor, '') +
-        (destCount === 1
-          ? ' El libro que la trajo aún es un misterio.'
-          : ' Sus libros aún son un misterio.');
 
     if (!drawnDestinations.has(destKey) && !userDestinations.has(destKey)) {
       drawnDestinations.add(destKey);
@@ -423,17 +651,14 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
           : `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
         iconSize: r.fictional ? [10,10] : [7,7], iconAnchor: r.fictional ? [5,5] : [3.5,3.5]
       });
-      const destPopup = `
-        <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
-        <div class="popup-community">
-          ${destCountHtml}
-          ${booksHtml}
-        </div>
-      `;
-      L.marker(r.to, { icon }).addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(destPopup);
+      const destPopup = destCardHtml(r.toName, r.to[0], r.to[1], r.fictional, vData, r.visitors);
+      // maxWidth fijo: la cabecera de mapa se calcula contra DEST_CARD_W, y a
+      // 380px de viewport la tarjeta sigue cabiendo con mapa alrededor.
+      const destPopupOpts = { className: 'dest-popup', maxWidth: DEST_CARD_W, minWidth: DEST_CARD_W };
+      L.marker(r.to, { icon }).addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(destPopup, destPopupOpts);
       // Zona de click ampliada del destino: mismo popup y mismo detalle.
       L.circleMarker(r.to, { pane: 'communityHit', radius: 11, stroke: false, fillOpacity: 0, bubblingMouseEvents: false })
-        .addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(destPopup);
+        .addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(destPopup, destPopupOpts);
     }
 }
 

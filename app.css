@@ -6,6 +6,10 @@
   --cream: #f5f0e8; --cream-dark: #ede6d8; --parchment: #faf7f2;
   --muted: #9a948d; --route: #e8593c;
   --white: #ffffff; --paper: #f7f5f1; --line: #ece8e1;
+  /* Naranja de destinos ficticios. Reservado en exclusiva para eso (ver
+     CLAUDE.md); de momento solo lo usa la tarjeta de destino de comunidad,
+     el resto del proyecto sigue con el literal #e8913c. */
+  --fiction: #e8913c;
 }
 html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--white); }
 .app { display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
@@ -169,6 +173,73 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .popup-book { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 0.95rem; color: var(--ink); margin-bottom: 2px; }
 .popup-place { font-size: 0.78rem; color: var(--muted); }
 .popup-km { font-size: 0.72rem; color: var(--teal); margin-top: 3px; font-weight: 500; }
+
+/* TARJETA DE DESTINO DE COMUNIDAD
+   Solo se aplica al popup que se abre con className 'dest-popup' (los
+   popups de rutas y de las lecturas propias siguen con el estilo de
+   arriba, intactos). Tarjeta en crema, no blanco puro: el piquito y el
+   wrapper se tiñen igual para que la pieza se lea como una sola. */
+.dest-popup .leaflet-popup-content-wrapper { padding: 0; overflow: hidden; border-radius: 12px; background: var(--paper); box-shadow: 0 6px 24px rgba(26,26,24,0.18); }
+/* Sin !important en width: Leaflet fija el ancho inline a partir de
+   minWidth/maxWidth y sobreescribirlo colapsa la tarjeta. */
+.dest-popup .leaflet-popup-content { margin: 0; }
+.dest-popup .leaflet-popup-tip { background: var(--paper); box-shadow: none; }
+.dest-card { animation: fadeIn 0.18s ease-out; max-width: 100%; background: var(--paper); }
+
+/* 1. Cabecera: mapa estilizado decorativo (SVG), no geografía real */
+.dest-card-header { position: relative; height: 100px; overflow: hidden; border-bottom: 0.5px solid var(--line); border-radius: 12px 12px 0 0; }
+.dest-card-svg { display: block; width: 100%; height: 100%; }
+.dest-card-svg .dc-bg { fill: var(--cream); }
+.dest-card-svg .dc-grid line { stroke: var(--cream-dark); stroke-width: 0.5; }
+.dest-card-svg .dc-roads line { stroke: var(--teal-light); stroke-width: 1.5; opacity: 0.45; }
+.dest-card-svg .dc-river path { fill: none; stroke: var(--teal-light); stroke-width: 5; opacity: 0.55; stroke-linecap: round; }
+/* Marcador: anillo teal de centro blanco, no punto sólido */
+.dest-card-pin { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--white); border: 3px solid var(--teal); box-shadow: 0 1px 5px rgba(26,26,24,0.28); }
+.dest-card.is-fictional .dest-card-pin { border-color: var(--fiction); }
+
+/* La X de Leaflet, reposicionada sobre la cabecera */
+.dest-popup .leaflet-popup-close-button { top: 8px; right: 8px; width: 22px; height: 22px; padding: 0; border-radius: 50%; background: rgba(255,255,255,0.92); color: var(--muted); font-size: 17px; line-height: 21px; text-align: center; box-shadow: 0 1px 4px rgba(26,26,24,0.2); }
+.dest-popup .leaflet-popup-close-button:hover, .dest-popup .leaflet-popup-close-button:focus-visible { color: var(--ink); background: var(--white); }
+.dest-popup .leaflet-popup-close-button:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+
+/* 2. Título */
+.dest-card-body { padding: 0.85rem 1rem 0.95rem; }
+.dest-card-title { font-family: 'Instrument Serif', serif; font-size: 1.3rem; font-weight: 400; line-height: 1.15; color: var(--ink); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.dest-card.is-fictional .dest-card-title { color: var(--fiction); }
+.dest-card-geo { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 0.25rem; }
+
+/* 3. Stats en dos cajas de igual ancho; se apilan si no caben */
+.dest-card-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(115px, 1fr)); gap: 8px; margin-top: 0.75rem; }
+.dest-card-stat { background: var(--cream); border-radius: 8px; padding: 0.55rem 0.6rem; }
+.dest-card-stat b { display: block; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 1.35rem; line-height: 1; color: var(--ink); letter-spacing: -0.02em; }
+.dest-card-stat span { display: block; font-size: 0.62rem; color: var(--muted); line-height: 1.3; margin-top: 0.25rem; text-wrap: balance; }
+.dest-card.is-fictional .dest-card-stat b { color: var(--fiction); }
+
+/* 4. Ranking */
+.dest-card-section { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin: 0.85rem 0 0.5rem; }
+.dest-card-rank { display: flex; align-items: baseline; gap: 0.5rem; padding: 0.2rem 0; }
+.dest-card-badge { flex-shrink: 0; align-self: flex-start; width: 22px; height: 22px; border-radius: 50%; background: var(--cream-dark); color: var(--muted); font-size: 0.65rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
+.dest-card-badge.is-first { background: var(--teal); color: var(--white); }
+.dest-card.is-fictional .dest-card-badge.is-first { background: var(--fiction); }
+.dest-card-rank-title { flex: 1; font-family: 'Instrument Serif', serif; font-size: 0.92rem; line-height: 1.3; color: var(--ink); overflow-wrap: anywhere; }
+.dest-card-rank-title em { font-style: italic; }
+.dest-card-rank-n { flex-shrink: 0; font-size: 0.66rem; color: var(--muted); }
+/* Solo la cifra del nº1 va en teal; el selector cuelga del badge destacado
+   para no depender de la posición de la fila en el DOM. */
+.dest-card-rank .dest-card-badge.is-first ~ .dest-card-rank-n { color: var(--teal); }
+.dest-card.is-fictional .dest-card-rank .dest-card-badge.is-first ~ .dest-card-rank-n { color: var(--fiction); }
+.dest-card-div { border: none; border-top: 0.5px solid var(--line); margin: 0.7rem 0 0; }
+/* Filas ocultas tras el toggle */
+.dest-card-more { display: none; }
+.dest-card.is-expanded .dest-card-more { display: block; }
+.dest-card-toggle { margin-top: 0.5rem; background: none; border: none; padding: 0; font-family: 'Inter', sans-serif; font-size: 0.66rem; color: var(--teal); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.dest-card-toggle:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 2px; }
+.dest-card-fallback { margin-top: 0.75rem; padding-top: 0.7rem; border-top: 0.5px solid var(--line); font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
+
+@media (max-width: 480px) {
+  .dest-card-header { height: 78px; }
+  .dest-card-title { font-size: 1.15rem; }
+}
 
 /* FICTIONAL PLACE MODAL */
 .fictional-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.55); z-index: 9000; display: none; align-items: center; justify-content: center; }
