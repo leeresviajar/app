@@ -186,13 +186,19 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .dest-popup .leaflet-popup-tip { background: var(--paper); box-shadow: none; }
 .dest-card { animation: fadeIn 0.18s ease-out; max-width: 100%; background: var(--paper); }
 
-/* 1. Cabecera: mapa estilizado decorativo (SVG), no geografía real */
-.dest-card-header { position: relative; height: 100px; overflow: hidden; border-bottom: 0.5px solid var(--line); border-radius: 12px 12px 0 0; }
-.dest-card-svg { display: block; width: 100%; height: 100%; }
-.dest-card-svg .dc-bg { fill: var(--cream); }
-.dest-card-svg .dc-grid line { stroke: var(--cream-dark); stroke-width: 0.5; }
-.dest-card-svg .dc-roads line { stroke: var(--teal-light); stroke-width: 1.5; opacity: 0.45; }
-.dest-card-svg .dc-river path { fill: none; stroke: var(--teal-light); stroke-width: 5; opacity: 0.55; stroke-linecap: round; }
+/* 1. Cabecera: fragmento real del basemap centrado en el destino.
+   El fondo crema hace de suelo mientras los tiles cargan, para que la
+   franja nunca aparezca en blanco. */
+.dest-card-header { position: relative; height: 100px; overflow: hidden; background: var(--cream); border-radius: 12px 12px 0 0; }
+.dest-card-tiles { position: absolute; width: 768px; height: 768px; }
+.dest-card-tile { position: absolute; width: 256px; height: 256px; display: block; filter: saturate(0.45) contrast(0.92) brightness(1.04); }
+/* Teñido teal diluido en multiply: integra el mapa con la tarjeta sin
+   borrar el dibujo. */
+.dest-card-tint { position: absolute; inset: 0; background: var(--teal); mix-blend-mode: multiply; opacity: 0.14; pointer-events: none; }
+/* Máscara inferior: la transición al cuerpo crema no puede ser un corte. */
+.dest-card-fade { position: absolute; left: 0; right: 0; bottom: 0; height: 22px; background: linear-gradient(to bottom, rgba(247,245,241,0), var(--paper)); pointer-events: none; }
+/* Ficticios: cabecera lisa, sin mapa. Sus coordenadas son inventadas. */
+.dest-card.is-fictional .dest-card-header { background: linear-gradient(rgba(232,145,60,0.12), rgba(232,145,60,0.12)), var(--cream); }
 /* Marcador: anillo teal de centro blanco, no punto sólido */
 .dest-card-pin { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--white); border: 3px solid var(--teal); box-shadow: 0 1px 5px rgba(26,26,24,0.28); }
 .dest-card.is-fictional .dest-card-pin { border-color: var(--fiction); }

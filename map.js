@@ -398,49 +398,49 @@ function continentFor(lat, lng) {
   return names.size === 1 ? hit[0][0] : '';
 }
 
-// --------------------- Cabecera decorativa (SVG) ---------------------
-// Mapa estilizado, NO geografía real: crema de fondo, vías y río en verdes
-// suaves. La variación es determinista a partir del nombre del destino —
-// con azar de verdad la cabecera cambiaría en cada apertura del mismo
-// popup y se leería como un fallo de render.
-function destCardSeed(name) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
-  return Math.abs(h);
+// --------------------- Cabecera ---------------------
+// Fragmento real del basemap centrado en el destino. Variante SIN ETIQUETAS
+// (light_nolabels): con las etiquetas, el rótulo de la ciudad repetía el
+// título de la tarjeta justo debajo.
+// z11 elegido sobre la comparativa z8/z11/z14: z8 deja casi vacías las
+// cabeceras de destinos de interior (Madrid es una maraña sin forma) y z14
+// da textura pero ya no sitúa. z11 es el único legible en ambos casos.
+const DEST_CARD_ZOOM = 11;
+
+function destCardTilesHtml(lat, lng) {
+  const z = DEST_CARD_ZOOM, n = Math.pow(2, z);
+  const latRad = lat * Math.PI / 180;
+  // Posición del destino en píxeles absolutos del nivel de zoom (slippy map).
+  const px = (lng + 180) / 360 * n * 256;
+  const py = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n * 256;
+  const tx = Math.floor(px / 256), ty = Math.floor(py / 256);
+  // Desplazamiento de la cuadrícula 3x3 para que (px,py) caiga en el centro
+  // de la franja, que es donde va el anillo.
+  const left = DEST_CARD_W / 2 - (px - (tx - 1) * 256);
+  const top = DEST_CARD_H / 2 - (py - (ty - 1) * 256);
+  let tiles = '';
+  for (let dy = 0; dy < 3; dy++) {
+    for (let dx = 0; dx < 3; dx++) {
+      const x = tx - 1 + dx, y = ty - 1 + dy;
+      if (y < 0 || y >= n) continue;              // fuera de los polos: hueco
+      const wrapX = ((x % n) + n) % n;            // el mundo da la vuelta en x
+      const url = `https://a.basemaps.cartocdn.com/light_nolabels/${z}/${wrapX}/${y}@2x.png`;
+      tiles += `<img class="dest-card-tile" src="${url}" alt="" style="left:${dx * 256}px;top:${dy * 256}px">`;
+    }
+  }
+  return `<div class="dest-card-tiles" style="left:${left}px;top:${top}px">${tiles}</div>
+      <span class="dest-card-tint"></span>
+      <span class="dest-card-fade"></span>`;
 }
 
-function destCardHeaderSvg(name) {
-  const seed = destCardSeed(name);
-  // PRNG determinista (mulberry32 simplificado): misma semilla, mismo dibujo.
-  let s = seed;
-  const rnd = () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) % 1000) / 1000; };
-  const W = DEST_CARD_W, H = DEST_CARD_H;
-
-  let grid = '';                          // retícula sutil de fondo
-  for (let x = 0; x <= W; x += 30) grid += `<line x1="${x}" y1="0" x2="${x}" y2="${H}"/>`;
-  for (let y = 0; y <= H; y += 30) grid += `<line x1="0" y1="${y}" x2="${W}" y2="${y}"/>`;
-
-  let roads = '';                         // vías: rectas suaves en varias direcciones
-  for (let i = 0; i < 5; i++) {
-    const y1 = rnd() * H, y2 = rnd() * H;
-    roads += `<line x1="-10" y1="${y1.toFixed(1)}" x2="${W + 10}" y2="${y2.toFixed(1)}"/>`;
-  }
-  for (let i = 0; i < 3; i++) {
-    const x1 = rnd() * W, x2 = rnd() * W;
-    roads += `<line x1="${x1.toFixed(1)}" y1="-10" x2="${x2.toFixed(1)}" y2="${H + 10}"/>`;
-  }
-
-  // Río: una curva ancha que cruza la franja, más saturada que las vías.
-  const ry = 25 + rnd() * (H - 50);
-  const river = `<path d="M-10,${ry.toFixed(1)} C${(W * 0.3).toFixed(0)},${(ry - 22).toFixed(1)} ${(W * 0.6).toFixed(0)},${(ry + 26).toFixed(1)} ${W + 10},${(ry - 6).toFixed(1)}"/>`;
-
-  // Sin etiquetas de texto: solo retícula y curvas.
-  return `<svg class="dest-card-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-      <rect width="${W}" height="${H}" class="dc-bg"/>
-      <g class="dc-grid">${grid}</g>
-      <g class="dc-roads">${roads}</g>
-      <g class="dc-river">${river}</g>
-    </svg>`;
+// Los destinos ficticios NO llevan tiles: sus coordenadas son inventadas y
+// enseñaríamos un lugar real que no les corresponde. Cabecera lisa en el
+// naranja de ficticios (la clase is-fictional la tiñe desde el CSS).
+function destCardHeaderHtml(lat, lng, fictional) {
+  return `<div class="dest-card-header">
+        ${fictional ? '' : destCardTilesHtml(lat, lng)}
+        <span class="dest-card-pin"></span>
+      </div>`;
 }
 
 // --------------------- Ranking ---------------------
@@ -545,10 +545,7 @@ function destCardHtml(name, lat, lng, fictional, vData, fallbackCount) {
     ? 'El libro que la trajo aún es un misterio.'
     : 'Sus libros aún son un misterio.';
   return `<div class="dest-card${fictional ? ' is-fictional' : ''}">
-      <div class="dest-card-header">
-        ${destCardHeaderSvg(name)}
-        <span class="dest-card-pin"></span>
-      </div>
+      ${destCardHeaderHtml(lat, lng, fictional)}
       <div class="dest-card-body">
         <h3 class="dest-card-title">${fictional ? '✦ ' : ''}${esc(name)}</h3>
         ${geo ? `<div class="dest-card-geo">${esc(geo)}</div>` : ''}
