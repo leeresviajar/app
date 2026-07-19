@@ -129,9 +129,13 @@ let communityCache = { ambient: null, history: null, ts: 0 };
 // Única definición compartida — PLACE_VISITORS se escribe y se lee con ella.
 const normalizeName = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 let PLACE_VISITORS = {};
-// Lugares que son destino de alguna ruta de comunidad: el rol destino
-// tiene prioridad — nunca se dibujan como simple "punto de partida".
-let communityDestKeys = new Set();
+// Agregado por punto de partida: viajes y km desde cada origen, para su
+// tarjeta. Lo reconstruye aggregateCommunityRoutes igual que PLACE_VISITORS.
+let PLACE_ORIGINS = {};
+// Lugares que el histórico marca como ficticios. Se acumula (nunca se vacía):
+// un lugar que ya se ha visto ficticio lo sigue siendo aunque una consulta
+// posterior — como la del detalle de un destino — no incluya sus filas.
+const FICTIONAL_FROM_DATA = new Set();
 
 function invalidateCommunityCache() { communityCache = { ambient: null, history: null, ts: 0 }; }
 
@@ -167,7 +171,8 @@ function aggregateCommunityRoutes(rows) {
     if (!r) {
       r = { from: [row.from_lat, row.from_lng], to: [row.dest_lat, row.dest_lng],
             fromName: row.from_name, toName: row.dest, book: row.book,
-            fictional: !!row.fictional, visitors: 0, date: row.date };
+            fictional: !!row.fictional, country: row.country || '',
+            visitors: 0, date: row.date };
       routes.set(fullKey, r);
     }
     r.visitors++;
@@ -175,13 +180,36 @@ function aggregateCommunityRoutes(rows) {
     if (ownCounts[fullKey]) { r.visitors--; ownCounts[fullKey]--; }
   });
   PLACE_VISITORS = {};
+  PLACE_ORIGINS = {};
   const list = [];
   routes.forEach(r => {
     if (r.visitors <= 0) return; // solo lecturas propias: ya están en el mapa
+    // Agregado por punto de partida, para su tarjeta. Se alimenta del mismo
+    // r.visitors ya descontado, así que los viajes y los km del origen
+    // excluyen las lecturas propias igual que los contadores del destino.
+    if (r.fictional) FICTIONAL_FROM_DATA.add(normalize(r.toName));
+    const ok = normalize(r.fromName);
+    if (!PLACE_ORIGINS[ok]) PLACE_ORIGINS[ok] = { name: r.fromName, trips: 0, km: 0 };
+    const origin = PLACE_ORIGINS[ok];
+    origin.trips += r.visitors;
+    origin.km += haversineKm(r.from[0], r.from[1], r.to[0], r.to[1]) * r.visitors;
     const pk = normalize(r.toName);
-    if (!PLACE_VISITORS[pk]) PLACE_VISITORS[pk] = { count: 0, books: [] };
-    PLACE_VISITORS[pk].count += r.visitors;
-    if (!PLACE_VISITORS[pk].books.some(b => normalize(b) === normalize(r.book))) PLACE_VISITORS[pk].books.push(r.book);
+    // books se mantiene tal cual (lista de títulos, sin contadores): lo leen
+    // los popups de las lecturas propias. bookCounts va en paralelo, para el
+    // ranking de la tarjeta de destino. Cuenta FILAS del histórico, no
+    // lectores distintos: la vista pública no expone user_id a propósito
+    // (ver sql/2026-07-16-public-community-routes.sql), así que igual que
+    // count, una relectura de la misma persona suma dos.
+    if (!PLACE_VISITORS[pk]) PLACE_VISITORS[pk] = { count: 0, books: [], bookCounts: {}, country: '' };
+    const place = PLACE_VISITORS[pk];
+    place.count += r.visitors;
+    if (!place.books.some(b => normalize(b) === normalize(r.book))) place.books.push(r.book);
+    // Agrupa por título normalizado (mismo libro escrito distinto = un libro),
+    // conservando la primera grafía vista como etiqueta.
+    const bk = normalize(r.book);
+    if (!place.bookCounts[bk]) place.bookCounts[bk] = { title: r.book, n: 0 };
+    place.bookCounts[bk].n += r.visitors;
+    if (!place.country && r.country) place.country = r.country; // filas viejas pueden no traerlo
     list.push(r);
   });
   return list.slice(0, COMMUNITY_CONFIG.maxRoutes);
@@ -245,9 +273,6 @@ function renderCommunityRoutes() {
   const drawnDestinations = new Set();
   const normalize = normalizeName;
   const userDestinations = new Set(entries.map(e => normalize(e.dest)));
-  // Desde los datos, no desde lo dibujado: un destino que no se dibuja
-  // (p. ej. destino propio) también veta el marcador de partida.
-  communityDestKeys = new Set([...communityCache.ambient, ...communityCache.history].map(r => normalize(r.toName)));
   // El popup de la línea usa el recuento del histórico para la misma ruta:
   // la línea no puede decir «Una persona» cuando su punto dice «5 lectores».
   const keyOf = r => [normalize(r.fromName), normalize(r.toName), normalize(r.book)].join('|');
@@ -309,9 +334,13 @@ async function showDestinationDetail(destName) {
   if (error) { console.warn('Error cargando detalle de destino:', error); return; }
   if (detailDestKey !== key) return;   // se pinchó otro punto mientras cargaba
 
-  const saved = PLACE_VISITORS;        // aggregate reconstruye PLACE_VISITORS como efecto
-  const rows = aggregateCommunityRoutes(data); // lateral; aquí solo queremos la lista
+  // aggregate reconstruye PLACE_VISITORS y PLACE_ORIGINS como efecto lateral;
+  // aquí solo queremos la lista de rutas. Sin restaurar ambos, el agregado
+  // global quedaría reducido a las filas de este único destino.
+  const saved = PLACE_VISITORS, savedOrigins = PLACE_ORIGINS;
+  const rows = aggregateCommunityRoutes(data);
   PLACE_VISITORS = saved;
+  PLACE_ORIGINS = savedOrigins;
   const drawnDestinations = new Set([key]); // el punto ya existe en la capa de ambiente
   const userDestinations = new Set(entries.map(e => normalize(e.dest)));
   rows.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, detailLayer));
@@ -323,6 +352,388 @@ function hideDestinationDetail() {
 }
 
 map.on('click', hideDestinationDetail); // pinchar fuera cierra el detalle
+
+// ===================== TARJETA DE DESTINO DE COMUNIDAD =====================
+
+// Ancho de la tarjeta: lo usan el popup de Leaflet (minWidth/maxWidth) y el
+// viewBox del SVG de la cabecera, que se dibuja contra estas medidas.
+const DEST_CARD_W = 300, DEST_CARD_H = 100;
+
+// --------------------- Continente por coordenadas ---------------------
+// Se deriva de dest_lat/dest_lng, no del país: `country` viene de Nominatim
+// en español con formas irregulares ("Estados Unidos de América", "Belarús")
+// y falta en parte de las filas, mientras que las coordenadas están siempre.
+//
+// Cajas DELIBERADAMENTE CONSERVADORAS: es peor mostrar un continente
+// equivocado que no mostrar ninguno. Un punto que no cae limpiamente dentro
+// de una caja devuelve '' y la tarjeta omite el continente.
+//
+// Casos límite conocidos, excluidos a propósito de las cajas:
+//  · Rusia: no se trata como país. Al ir por coordenadas, la parte al oeste
+//    de los Urales (lng < 60) cae en Europa y el resto en Asia, que es lo
+//    correcto y lo que un mapa país→continente no puede hacer.
+//  · El Mediterráneo es el tramo delicado: Europa y África se solapan en
+//    latitud (Málaga 36,7°N está al SUR de Túnez 36,8°N), así que Europa se
+//    parte por tramos de longitud en vez de usar una sola caja:
+//      lng -10..8   → Europa desde 36,2°N (bajo el Estrecho: Tánger 35,8
+//                     cae en África, Málaga 36,7 en Europa)
+//      lng 8..26    → Europa desde 37,6°N (sobre el cabo Angela 37,35, el
+//                     punto más al norte de Túnez; Atenas y Palermo entran)
+//      lng 26..40   → Europa desde 41°N (deja fuera Anatolia; Ankara 39,9
+//                     no da continente, Estambul 41,0 sí da EUROPA, que es
+//                     correcto: su lado europeo lo es)
+//  · Cáucaso, Levante y Sinaí: fuera de todas las cajas → sin continente
+//    (Jerusalén 31,8/35,2 no da ninguno, a propósito).
+//  · Centroamérica y el Caribe (lat 8-25, lng -92..-60): frontera
+//    Norteamérica/Sudamérica → fuera de las cajas, sin continente.
+//  · Hawái, Islandia y las islas del Pacífico y el Atlántico medio quedan
+//    fuera → sin continente, en vez de asignarlas a la fuerza.
+const DEST_CONTINENT_BOXES = [
+  // [nombre, latMin, latMax, lngMin, lngMax]
+  ['EUROPA',      36.2,  71,  -10,    8],  // Iberia, Francia, UK, Escandinavia
+  ['EUROPA',      37.6,  71,    8,   26],  // Italia, Centroeuropa, Balcanes
+  ['EUROPA',        41,  71,   26,   40],  // Grecia norte, Rumanía, Ucrania
+  ['EUROPA',        50,  71,   40,   60],  // Rusia al oeste de los Urales
+  ['ASIA',          10,  55,   60,  145],  // desde los Urales hacia el este
+  ['ASIA',          20,  46,   45,   60],  // Península Arábiga oriental e Irán
+  ['ÁFRICA',       -35,  36,  -17,    8],  // Marruecos y Argelia occidental
+  ['ÁFRICA',       -35, 37.4,   8,   25],  // Túnez y Libia
+  ['ÁFRICA',       -27,  31,   25,   34],  // Egipto y Sudán, sin el Levante
+  ['ÁFRICA',       -27,  15,   34,   43],  // Cuerno de África
+  ['NORTEAMÉRICA',  25,  72, -168,  -55],  // sin Centroamérica ni Caribe
+  ['SUDAMÉRICA',   -55,   0,  -82,  -34],  // desde el ecuador hacia el sur
+  ['OCEANÍA',      -48, -10,  112,  180]   // Australia y Nueva Zelanda
+];
+
+function continentFor(lat, lng) {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return '';
+  const hit = DEST_CONTINENT_BOXES.filter(b => lat >= b[1] && lat <= b[2] && lng >= b[3] && lng <= b[4]);
+  // Si dos cajas se solapan sobre el mismo punto, la zona es ambigua: fuera.
+  const names = new Set(hit.map(b => b[0]));
+  return names.size === 1 ? hit[0][0] : '';
+}
+
+// --------------------- Cabecera ---------------------
+// Fragmento real del basemap centrado en el destino. Variante SIN ETIQUETAS
+// (light_nolabels): con las etiquetas, el rótulo de la ciudad repetía el
+// título de la tarjeta justo debajo.
+// z11 elegido sobre la comparativa z8/z11/z14: z8 deja casi vacías las
+// cabeceras de destinos de interior (Madrid es una maraña sin forma) y z14
+// da textura pero ya no sitúa. z11 es el único legible en ambos casos.
+const DEST_CARD_ZOOM = 11;
+
+function destCardTilesHtml(lat, lng) {
+  const z = DEST_CARD_ZOOM, n = Math.pow(2, z);
+  const latRad = lat * Math.PI / 180;
+  // Posición del destino en píxeles absolutos del nivel de zoom (slippy map).
+  const px = (lng + 180) / 360 * n * 256;
+  const py = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n * 256;
+  const tx = Math.floor(px / 256), ty = Math.floor(py / 256);
+  // Desplazamiento de la cuadrícula 3x3 para que (px,py) caiga en el centro
+  // de la franja, que es donde va el anillo.
+  const left = DEST_CARD_W / 2 - (px - (tx - 1) * 256);
+  const top = DEST_CARD_H / 2 - (py - (ty - 1) * 256);
+  let tiles = '';
+  for (let dy = 0; dy < 3; dy++) {
+    for (let dx = 0; dx < 3; dx++) {
+      const x = tx - 1 + dx, y = ty - 1 + dy;
+      if (y < 0 || y >= n) continue;              // fuera de los polos: hueco
+      const wrapX = ((x % n) + n) % n;            // el mundo da la vuelta en x
+      const url = `https://a.basemaps.cartocdn.com/light_nolabels/${z}/${wrapX}/${y}@2x.png`;
+      tiles += `<img class="dest-card-tile" src="${url}" alt="" style="left:${dx * 256}px;top:${dy * 256}px">`;
+    }
+  }
+  return `<div class="dest-card-tiles" style="left:${left}px;top:${top}px">${tiles}</div>
+      <span class="dest-card-tint"></span>`;
+}
+
+// --------------------- Constelación (ficticios) ---------------------
+// Los destinos ficticios NO llevan tiles: sus coordenadas son inventadas y
+// enseñaríamos un lugar real que no les corresponde. En su lugar, una
+// constelación generada. La semilla sale del nombre, así que cada ficticio
+// tiene siempre la suya, entre aperturas y entre sesiones — con azar de
+// verdad la cabecera cambiaría en cada apertura y parecería un fallo.
+function destCardSeed(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+const DEST_STAR_MIN_CENTER = 34;   // radio libre alrededor del anillo
+const DEST_STAR_MIN_GAP = 26;      // separación mínima entre estrellas
+
+function destCardConstellationSvg(name) {
+  let s = destCardSeed(name);
+  const rnd = () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) % 100000) / 100000; };
+  const W = DEST_CARD_W, H = DEST_CARD_H, cx = W / 2, cy = H / 2;
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  // Estrellas por muestreo con rechazo. El objetivo es 7-10, pero las dos
+  // restricciones (hueco central + separación) pueden no dejar sitio para
+  // todas en una franja de 300x100: se acepta quedarse corto antes que
+  // amontonarlas.
+  const target = 7 + Math.floor(rnd() * 4);
+  const stars = [];
+  for (let a = 0; a < 400 && stars.length < target; a++) {
+    const p = { x: 6 + rnd() * (W - 12), y: 6 + rnd() * (H - 12) };
+    if (Math.hypot(p.x - cx, p.y - cy) < DEST_STAR_MIN_CENTER) continue;
+    if (stars.some(q => dist(p, q) < DEST_STAR_MIN_GAP)) continue;
+    p.r = (0.9 + rnd() * 1.9).toFixed(2);
+    stars.push(p);
+  }
+
+  // Árbol de expansión (Prim) arrancando del centro: el anillo del marcador
+  // es la estrella principal, así que las líneas nacen de él.
+  const nodes = [{ x: cx, y: cy }].concat(stars);
+  const linked = [0], pending = nodes.map((_, i) => i).slice(1), edges = [];
+  while (pending.length) {
+    let best = null;
+    linked.forEach(i => pending.forEach(j => {
+      const d = dist(nodes[i], nodes[j]);
+      if (!best || d < best.d) best = { i, j, d };
+    }));
+    edges.push([best.i, best.j]);
+    linked.push(best.j);
+    pending.splice(pending.indexOf(best.j), 1);
+  }
+  // Una arista extra entre dos estrellas ya conectadas, para cerrar un
+  // triángulo y que no se lea como un árbol perfecto.
+  if (stars.length > 2) {
+    const a = 1 + Math.floor(rnd() * stars.length);
+    let b = null;
+    nodes.forEach((n, j) => {
+      if (j === a || j === 0) return;
+      if (edges.some(e => (e[0] === a && e[1] === j) || (e[0] === j && e[1] === a))) return;
+      const d = dist(nodes[a], n);
+      if (!b || d < b.d) b = { j, d };
+    });
+    if (b) edges.push([a, b.j]);
+  }
+
+  const links = edges.map(([i, j]) =>
+    `<line x1="${nodes[i].x.toFixed(1)}" y1="${nodes[i].y.toFixed(1)}" x2="${nodes[j].x.toFixed(1)}" y2="${nodes[j].y.toFixed(1)}"/>`).join('');
+  const pts = stars.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.r}"/>`).join('');
+  let dust = '';
+  for (let i = 0; i < 16; i++) {
+    dust += `<circle cx="${(rnd() * W).toFixed(1)}" cy="${(rnd() * H).toFixed(1)}" r="${(0.3 + rnd() * 0.55).toFixed(2)}" opacity="${(0.12 + rnd() * 0.20).toFixed(2)}"/>`;
+  }
+
+  return `<svg class="dest-card-sky" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+      <g class="dc-dust">${dust}</g>
+      <g class="dc-link">${links}</g>
+      <g class="dc-star">${pts}</g>
+    </svg>`;
+}
+
+function destCardHeaderHtml(name, lat, lng, fictional) {
+  return `<div class="dest-card-header">
+        ${fictional ? destCardConstellationSvg(name) : destCardTilesHtml(lat, lng)}
+        <span class="dest-card-fade"></span>
+        <span class="dest-card-pin"></span>
+      </div>`;
+}
+
+// --------------------- Ranking ---------------------
+const DEST_CARD_ALSO = 3;      // filas visibles en "también os han traído"
+const DEST_CARD_FLAT = 4;      // filas visibles en la lista plana de empate
+
+// Fila del ranking.
+//  · first: badge y cifra en color (nº1 estricto, o único libro del destino).
+//  · count: false oculta el contador. Hoy nadie lo pasa en false — se probó
+//    en el caso de un solo libro y se descartó — pero se conserva porque es
+//    la única palanca para esa variante.
+function destCardRankRow(book, pos, first, count) {
+  const n = book.n.toLocaleString();
+  const lectores = first ? (book.n === 1 ? '1 lector' : `${n} lectores`) : n;
+  return `<div class="dest-card-rank">
+      <span class="dest-card-badge${first ? ' is-first' : ''}">${pos}</span>
+      <span class="dest-card-rank-title"><em>${esc(book.title)}</em></span>
+      ${count ? `<span class="dest-card-rank-n">${lectores}</span>` : ''}
+    </div>`;
+}
+
+// Bloque de filas ocultas + botón de expandir, común a los dos modos.
+function destCardMoreHtml(hidden, fromPos, total) {
+  if (!hidden.length) return '';
+  const label = `Ver los ${total} títulos`;
+  return `<div class="dest-card-more">${hidden.map((b, i) => destCardRankRow(b, fromPos + i, false, true)).join('')}</div>
+      <button type="button" class="dest-card-toggle" aria-expanded="false" onclick="toggleDestCardBooks(this, event)"
+        data-more="${label}" data-less="Ver menos">${label}</button>`;
+}
+
+// Devuelve '' si no hay lista: quien llama decide el fallback (el copy del
+// misterio, sin cabeceras de sección ni estructura de ranking).
+function destCardBooksHtml(bookCounts) {
+  const list = Object.values(bookCounts || {}).sort((a, b) => b.n - a.n);
+  if (!list.length) return '';
+
+  // Un solo título: badge y contador en color. Con un libro no cabe empate,
+  // así que es el nº1 legítimo del destino y va con el mismo tratamiento que
+  // cualquier otro nº1 estricto. El gris queda reservado al empate, que es
+  // donde el orden es arbitrario.
+  if (list.length === 1) {
+    return `<div class="dest-card-section">El libro que os ha traído aquí</div>
+      ${destCardRankRow(list[0], 1, true, true)}`;
+  }
+
+  // Sin un nº1 estricto no hay ganador que destacar: lista plana, todos los
+  // badges en gris y ningún contador en verde. Es el caso habitual mientras
+  // la comunidad sea pequeña y casi ningún libro se repita en un destino.
+  if (list[0].n === list[1].n) {
+    const shown = list.slice(0, DEST_CARD_FLAT);
+    const hidden = list.slice(DEST_CARD_FLAT);
+    return `<div class="dest-card-section">Los libros que os han traído aquí</div>
+      ${shown.map((b, i) => destCardRankRow(b, i + 1, false, true)).join('')}
+      ${destCardMoreHtml(hidden, DEST_CARD_FLAT + 1, list.length)}`;
+  }
+
+  const rest = list.slice(1);
+  const shown = rest.slice(0, DEST_CARD_ALSO);
+  const hidden = rest.slice(DEST_CARD_ALSO);
+  return `<div class="dest-card-section">El libro que más os ha traído aquí</div>
+      ${destCardRankRow(list[0], 1, true, true)}
+      <hr class="dest-card-div">
+      <div class="dest-card-section">También os han traído</div>
+      ${shown.map((b, i) => destCardRankRow(b, i + 2, false, true)).join('')}
+      ${destCardMoreHtml(hidden, shown.length + 2, list.length)}`;
+}
+
+// Expande/contrae la lista dentro de la tarjeta.
+//
+// Dos cosas que parecen omisiones y no lo son:
+//  · stopPropagation NO es opcional: el click llega al contenedor del mapa,
+//    que con closeOnClick (por defecto) cierra el popup. Sin esto, pulsar el
+//    toggle cerraba la tarjeta en vez de expandirla.
+//  · NO se llama a popup.update(): re-renderiza el contenido desde el HTML
+//    enlazado y se lleva por delante la clase is-expanded y el texto del
+//    botón. El piquito tampoco lo necesita: el popup está anclado por abajo
+//    al marcador, así que la tarjeta crece hacia arriba y el pico no se mueve.
+//
+// Sí se reencuadra a mano si la tarjeta crecida se sale por arriba. Antes no
+// se podía —el panBy disparaba moveend y el redibujado cerraba el popup—,
+// pero el listener de moveend ahora aplaza el redibujado mientras hay una
+// tarjeta abierta. La lista tiene además un tope en vh, así que el pan
+// necesario es siempre pequeño.
+const DEST_CARD_PAN_MARGIN = 8;
+
+function toggleDestCardBooks(btn, ev) {
+  if (ev) ev.stopPropagation();
+  const card = btn.closest('.dest-card');
+  const open = card.classList.toggle('is-expanded');
+  btn.textContent = open ? btn.dataset.less : btn.dataset.more;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) {
+    const top = card.getBoundingClientRect().top;
+    if (top < DEST_CARD_PAN_MARGIN) map.panBy([0, top - DEST_CARD_PAN_MARGIN], { animate: false });
+  }
+}
+
+// Punto de destino de comunidad. Se usa en los dos sitios donde puede
+// aparecer un destino: al dibujar la ruta que llega a él, y al dibujar una
+// ruta que sale de él cuando ninguna que llegue entró en el corte.
+function communityDestIcon(fictional) {
+  return L.divIcon({
+    className: '',
+    html: fictional
+      ? `<div style="width:10px;height:10px;background:rgba(232,145,60,0.15);border-radius:50%;border:1.5px solid rgba(232,145,60,0.8);display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(232,145,60,0.9);line-height:1">✦</div>`
+      : `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
+    iconSize: fictional ? [10,10] : [7,7], iconAnchor: fictional ? [5,5] : [3.5,3.5]
+  });
+}
+
+// --------------------- Tarjeta ---------------------
+function destCardHtml(name, lat, lng, fictional, vData, fallbackCount) {
+  const count = vData ? vData.count : fallbackCount;
+  const titles = vData && vData.books ? vData.books.length : 0;
+  const booksHtml = vData ? destCardBooksHtml(vData.bookCounts) : '';
+  // En ficticios NUNCA se muestra geografía real: ni país (aunque una fila
+  // sucia lo traiga relleno) ni continente derivado de sus coordenadas.
+  let country = !fictional && vData && vData.country ? vData.country : '';
+  // Destinos que son el país entero ("Francia", "Nigeria"): repetir el nombre
+  // debajo del título no aporta nada. Misma normalización que el resto del
+  // mapa, para que acentos y mayúsculas no cuenten como diferencia.
+  if (country && normalizeName(country).trim() === normalizeName(name).trim()) country = '';
+  const continent = fictional ? '' : continentFor(lat, lng);
+  const geo = [country, continent].filter(Boolean).join(' · ');
+  // Sin libros que listar la frase se cierra y el misterio se nombra: nunca
+  // unos dos puntos huérfanos.
+  const fallback = count === 1
+    ? 'El libro que la trajo aún es un misterio.'
+    : 'Sus libros aún son un misterio.';
+  // La gran mayoría de los destinos son también punto de partida de alguien,
+  // y ahí no se dibuja marcador de origen porque el rol destino manda: sin
+  // esta línea, ese dato no se vería en ninguna parte. Discreta y al final:
+  // es contexto, no un bloque más de la tarjeta.
+  const o = PLACE_ORIGINS[normalizeName(name)];
+  let alsoOrigin = '';
+  if (o && o.trips > 0) {
+    const km = Math.round(o.km);
+    // Dos líneas explícitas, no una que se parta sola: partiendo dejaba el
+    // corte justo detrás de "km".
+    alsoOrigin = `<p class="dest-card-also">También es punto de partida de ${o.trips.toLocaleString()} ${o.trips === 1 ? 'viaje' : 'viajes'}.</p>` +
+      (km > 0 ? `<p class="dest-card-also is-second">${km.toLocaleString()}&nbsp;km recorridos desde aquí.</p>` : '');
+  }
+  return `<div class="dest-card${fictional ? ' is-fictional' : ''}">
+      ${destCardHeaderHtml(name, lat, lng, fictional)}
+      <div class="dest-card-body">
+        <h3 class="dest-card-title">${fictional ? '✦ ' : ''}${esc(name)}</h3>
+        ${geo ? `<div class="dest-card-geo">${esc(geo)}</div>` : ''}
+        <div class="dest-card-stats">
+          <div class="dest-card-stat">
+            <b>${count.toLocaleString()}</b>
+            <span>${count === 1 ? 'lector ha llegado aquí' : 'lectores han llegado aquí'}</span>
+          </div>
+          ${titles ? `<div class="dest-card-stat">
+            <b>${titles.toLocaleString()}</b>
+            <span>${titles === 1 ? 'título' : 'títulos distintos'}</span>
+          </div>` : ''}
+        </div>
+        ${booksHtml || `<p class="dest-card-fallback">${fallback}</p>`}
+        ${alsoOrigin}
+      </div>
+    </div>`;
+}
+
+// --------------------- Tarjeta de punto de partida ---------------------
+// Deliberadamente más pobre que la de destino: sin cabecera, sin cajas de
+// stats y sin ranking. Los destinos son el foco; los orígenes, contexto.
+const ORIGIN_CARD_W = 240;
+
+// Un origen es ficticio si los DATOS lo dicen: si ese mismo lugar aparece
+// como destino con fictional=true en el histórico (FICTIONAL_FROM_DATA, que
+// llena aggregateCommunityRoutes). La tabla FICTIONAL de geocoding.js queda
+// de respaldo, para orígenes que nunca han sido destino de nadie — no basta
+// por sí sola: lugares como "Ceald" no están en ella y sí vienen marcados
+// como ficticios en la base.
+function isFictionalPlace(name) {
+  if (FICTIONAL_FROM_DATA.has(normalizeName(name))) return true;
+  const key = (name || '').toLowerCase().trim();
+  return Object.keys(FICTIONAL).some(k => _matchesFictional(key, k));
+}
+
+function originCardHtml(name, lat, lng) {
+  const fictional = isFictionalPlace(name);
+  // Igual que en destinos: a un lugar inventado no se le cuelga geografía real.
+  const continent = fictional ? '' : continentFor(lat, lng);
+  const o = PLACE_ORIGINS[normalizeName(name)];
+  // Mismo criterio que la tarjeta de destino: la cifra en color, el texto
+  // que la acompaña en --muted. Dos líneas en vez de una con "·", que se
+  // partía dejando "km" huérfano. toLocaleString sin locale explícito, como
+  // el resto de cifras de la app; el espacio duro ata cifra y unidad.
+  let body;
+  if (o && o.trips > 0) {
+    const km = Math.round(o.km);
+    body = `<p class="origin-card-line">Punto de partida de <b>${o.trips.toLocaleString()}</b> ${o.trips === 1 ? 'viaje' : 'viajes'}</p>` +
+      (km > 0 ? `<p class="origin-card-line is-second"><b>${km.toLocaleString()}</b>&nbsp;km recorridos desde aquí</p>` : '');
+  } else {
+    body = `<p class="origin-card-line">Punto de partida de lectores de la comunidad</p>`;
+  }
+  return `<div class="origin-card${fictional ? ' is-fictional' : ''}">
+      <h3 class="origin-card-title">${fictional ? '✦ ' : ''}${esc(name)}</h3>
+      ${continent ? `<div class="origin-card-geo">${esc(continent)}</div>` : ''}
+      ${body}
+    </div>`;
+}
 
 // targetLayer permite reutilizar la función desde el detalle (detailLayer);
 // shadowPairs (Map par → timestamp de la ruta más reciente) marca el modo histórico:
@@ -383,58 +794,93 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
       L.polyline(points, { color, weight: 2, opacity: 1, dashArray: '5 5', interactive: false }).addTo(targetLayer);
     }
 
-    if (!drawnDestinations.has(fromKey) && !userDestinations.has(fromKey) && !communityDestKeys.has(fromKey)) {
+    // El punto de partida se resuelve contra PLACE_VISITORS, que es el censo
+    // completo (se acumula antes del corte de maxRoutes), no contra la lista
+    // dibujada. Un lugar que además es destino se pinta CON SU TARJETA DE
+    // DESTINO aquí mismo, aunque ninguna ruta hacia él haya entrado en el
+    // corte: vetar sin más el marcador dejaba la línea saliendo de la nada
+    // (Nigeria, Whitby y Siena) y pintarlo como origen le borraba los libros.
+    if (!drawnDestinations.has(fromKey) && !userDestinations.has(fromKey)) {
       drawnDestinations.add(fromKey);
-      const fromIcon = L.divIcon({
-        className: '',
-        html: `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
-        iconSize: [7,7], iconAnchor: [3.5,3.5]
-      });
-      const fromPopup = `
-        <div class="popup-book" style="font-size:0.85rem">${r.fromName}</div>
-        <div class="popup-place" style="font-size:0.75rem;color:#888">Punto de partida de lectores de la comunidad</div>
-      `;
-      L.marker(r.from, { icon: fromIcon }).addTo(targetLayer).bindPopup(fromPopup);
-      // Zona de click ampliada: círculo invisible con el mismo popup, para que
-      // un click cerca del punto no se lo lleve la línea ancha de la ruta.
-      L.circleMarker(r.from, { pane: 'communityHit', radius: 11, stroke: false, fillOpacity: 0, bubblingMouseEvents: false })
-        .addTo(targetLayer).bindPopup(fromPopup);
+      const vFrom = PLACE_VISITORS[fromKey];
+      if (vFrom) {
+        const ficFrom = isFictionalPlace(r.fromName);
+        const popup = destCardHtml(r.fromName, r.from[0], r.from[1], ficFrom, vFrom, vFrom.count);
+        const opts = { className: 'dest-popup', maxWidth: DEST_CARD_W, minWidth: DEST_CARD_W };
+        L.marker(r.from, { icon: communityDestIcon(ficFrom) }).addTo(targetLayer)
+          .on('click', () => showDestinationDetail(r.fromName)).bindPopup(popup, opts);
+        L.circleMarker(r.from, { pane: 'communityHit', radius: 11, stroke: false, fillOpacity: 0, bubblingMouseEvents: false })
+          .addTo(targetLayer).on('click', () => showDestinationDetail(r.fromName)).bindPopup(popup, opts);
+      } else {
+        const fromIcon = L.divIcon({
+          className: '',
+          html: `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
+          iconSize: [7,7], iconAnchor: [3.5,3.5]
+        });
+        const fromPopup = originCardHtml(r.fromName, r.from[0], r.from[1]);
+        const fromPopupOpts = { className: 'origin-popup', maxWidth: ORIGIN_CARD_W, minWidth: ORIGIN_CARD_W };
+        L.marker(r.from, { icon: fromIcon }).addTo(targetLayer).bindPopup(fromPopup, fromPopupOpts);
+        // Zona de click ampliada: círculo invisible con el mismo popup, para que
+        // un click cerca del punto no se lo lleve la línea ancha de la ruta.
+        L.circleMarker(r.from, { pane: 'communityHit', radius: 11, stroke: false, fillOpacity: 0, bubblingMouseEvents: false })
+          .addTo(targetLayer).bindPopup(fromPopup, fromPopupOpts);
+      }
     }
 
     const vData = PLACE_VISITORS[destKey];
-    const books = vData && vData.books.length ? vData.books.slice(0,3) : [];
-    const booksHtml = books.map(b => `<div style="font-size:0.7rem;color:#888;font-style:italic">· ${b}</div>`).join('');
-    const destCount = vData ? vData.count : r.visitors;
-    // Sin libros que listar la frase se cierra y el misterio se nombra: nunca
-    // unos dos puntos huérfanos.
-    const destCountHtml = books.length
-      ? communityCountHtml(destCount, highlightColor, 'leyendo:')
-      : communityCountHtml(destCount, highlightColor, '') +
-        (destCount === 1
-          ? ' El libro que la trajo aún es un misterio.'
-          : ' Sus libros aún son un misterio.');
 
     if (!drawnDestinations.has(destKey) && !userDestinations.has(destKey)) {
       drawnDestinations.add(destKey);
-      const icon = L.divIcon({
-        className: '',
-        html: r.fictional
-          ? `<div style="width:10px;height:10px;background:rgba(232,145,60,0.15);border-radius:50%;border:1.5px solid rgba(232,145,60,0.8);display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(232,145,60,0.9);line-height:1">✦</div>`
-          : `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
-        iconSize: r.fictional ? [10,10] : [7,7], iconAnchor: r.fictional ? [5,5] : [3.5,3.5]
-      });
-      const destPopup = `
-        <div class="popup-book" style="font-size:0.85rem">${r.fictional ? '✦ ' : ''}${r.toName}</div>
-        <div class="popup-community">
-          ${destCountHtml}
-          ${booksHtml}
-        </div>
-      `;
-      L.marker(r.to, { icon }).addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(destPopup);
+      const icon = communityDestIcon(r.fictional);
+      const destPopup = destCardHtml(r.toName, r.to[0], r.to[1], r.fictional, vData, r.visitors);
+      // maxWidth fijo: la cabecera de mapa se calcula contra DEST_CARD_W, y a
+      // 380px de viewport la tarjeta sigue cabiendo con mapa alrededor.
+      const destPopupOpts = { className: 'dest-popup', maxWidth: DEST_CARD_W, minWidth: DEST_CARD_W };
+      L.marker(r.to, { icon }).addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(destPopup, destPopupOpts);
       // Zona de click ampliada del destino: mismo popup y mismo detalle.
       L.circleMarker(r.to, { pane: 'communityHit', radius: 11, stroke: false, fillOpacity: 0, bubblingMouseEvents: false })
-        .addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(destPopup);
+        .addTo(targetLayer).on('click', () => showDestinationDetail(r.toName)).bindPopup(destPopup, destPopupOpts);
     }
 }
 
-map.on('moveend zoomend', renderCommunityRoutes);
+// Con una tarjeta abierta NO se redibuja: el redibujado limpia la capa,
+// destruye el marcador y se lleva el popup con él. Leaflet hace autoPan al
+// abrir un popup que no cabe en pantalla, y ese pan disparaba este mismo
+// moveend, así que la tarjeta se cerraba sola justo al abrirse — un parpadeo
+// al pinchar cualquier punto de la mitad superior del mapa. Se nota desde que
+// la tarjeta es alta; con el popup viejo, de ~80px, casi siempre cabía.
+//
+// Aplazarlo no pierde nada: renderCommunityRoutes dibuja todas las rutas de
+// la caché sin filtrar por viewport, así que un redibujado tras mover produce
+// exactamente el mismo resultado. El pendiente se ejecuta al cerrar.
+let communityPopupOpen = false;
+let communityRenderPending = false;
+
+map.on('popupopen', () => { communityPopupOpen = true; });
+map.on('popupclose', () => {
+  communityPopupOpen = false;
+  if (!communityRenderPending) return;
+  // El redibujado NO puede ir aquí dentro: al pasar de una tarjeta a otra,
+  // Leaflet cierra la primera ANTES de abrir la segunda, y redibujar en ese
+  // punto destruye el marcador que está a punto de abrirse — openPopup()
+  // reventaba sobre un marcador ya fuera del mapa. Se aplaza un tick y se
+  // cancela si para entonces hay otra tarjeta abierta.
+  setTimeout(() => {
+    if (communityPopupOpen || !communityRenderPending) return;
+    communityRenderPending = false;
+    renderCommunityRoutes();
+  }, 0);
+});
+
+// Se mira también map._popup, no solo la bandera: Leaflet asigna map._popup y
+// hace su autoPan DENTRO de onAdd, antes de emitir 'popupopen'. Con la bandera
+// sola, el moveend de ese autoPan se colaba y redibujaba en mitad de la
+// apertura — openPopup() reventaba al quedarse su marcador fuera del mapa.
+map.on('moveend zoomend', () => {
+  // hasLayer y no solo map._popup: Leaflet conserva la referencia al último
+  // popup aunque ya esté cerrado, y con eso el redibujado se aplazaría para
+  // siempre.
+  const abriendose = map._popup && map.hasLayer(map._popup);
+  if (communityPopupOpen || abriendose) { communityRenderPending = true; return; }
+  renderCommunityRoutes();
+});
