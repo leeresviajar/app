@@ -262,6 +262,8 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
    cuerpo en voz baja. Prefijado para ganarle al `p` de Leaflet, igual que
    .dest-card-fallback. */
 .dest-popup .dest-card-also { margin: 0.7rem 0 0; font-size: 0.66rem; color: var(--muted); line-height: 1.45; opacity: 0.9; }
+/* La segunda línea va pegada a la primera: son un bloque, no dos párrafos. */
+.dest-popup .dest-card-also.is-second { margin-top: 0; }
 
 /* TARJETA DE PUNTO DE PARTIDA
    Misma familia que .dest-card (crema, radio 12px, sombra, piquito, aspa)
