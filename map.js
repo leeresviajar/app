@@ -660,7 +660,7 @@ function destCardHtml(name, lat, lng, fictional, vData, fallbackCount) {
     // Dos líneas explícitas, no una que se parta sola: partiendo dejaba el
     // corte justo detrás de "km".
     alsoOrigin = `<p class="dest-card-also">También es punto de partida de ${o.trips.toLocaleString()} ${o.trips === 1 ? 'viaje' : 'viajes'}.</p>` +
-      (km > 0 ? `<p class="dest-card-also is-second">¡Hay ${km.toLocaleString()}&nbsp;km recorridos desde aquí!</p>` : '');
+      (km > 0 ? `<p class="dest-card-also is-second">${km.toLocaleString()}&nbsp;km recorridos desde aquí.</p>` : '');
   }
   return `<div class="dest-card${fictional ? ' is-fictional' : ''}">
       ${destCardHeaderHtml(name, lat, lng, fictional)}
