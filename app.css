@@ -197,8 +197,13 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .dest-card-tint { position: absolute; inset: 0; background: var(--teal); mix-blend-mode: multiply; opacity: 0.14; pointer-events: none; }
 /* Máscara inferior: la transición al cuerpo crema no puede ser un corte. */
 .dest-card-fade { position: absolute; left: 0; right: 0; bottom: 0; height: 22px; background: linear-gradient(to bottom, rgba(247,245,241,0), var(--paper)); pointer-events: none; }
-/* Ficticios: cabecera lisa, sin mapa. Sus coordenadas son inventadas. */
-.dest-card.is-fictional .dest-card-header { background: linear-gradient(rgba(232,145,60,0.12), rgba(232,145,60,0.12)), var(--cream); }
+/* Ficticios: constelación en vez de mapa. Sus coordenadas son inventadas.
+   Fondo crema cálido = naranja de ficticios muy diluido sobre --cream. */
+.dest-card.is-fictional .dest-card-header { background: linear-gradient(rgba(232,145,60,0.10), rgba(232,145,60,0.10)), var(--cream); }
+.dest-card-sky { display: block; width: 100%; height: 100%; }
+.dest-card-sky .dc-star circle { fill: var(--fiction); opacity: 0.7; }
+.dest-card-sky .dc-link line { stroke: var(--fiction); stroke-width: 0.7; opacity: 0.4; }
+.dest-card-sky .dc-dust circle { fill: var(--fiction); }
 /* Marcador: anillo teal de centro blanco, no punto sólido */
 .dest-card-pin { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--white); border: 3px solid var(--teal); box-shadow: 0 1px 5px rgba(26,26,24,0.28); }
 .dest-card.is-fictional .dest-card-pin { border-color: var(--fiction); }

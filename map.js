@@ -429,16 +429,91 @@ function destCardTilesHtml(lat, lng) {
     }
   }
   return `<div class="dest-card-tiles" style="left:${left}px;top:${top}px">${tiles}</div>
-      <span class="dest-card-tint"></span>
-      <span class="dest-card-fade"></span>`;
+      <span class="dest-card-tint"></span>`;
 }
 
+// --------------------- Constelación (ficticios) ---------------------
 // Los destinos ficticios NO llevan tiles: sus coordenadas son inventadas y
-// enseñaríamos un lugar real que no les corresponde. Cabecera lisa en el
-// naranja de ficticios (la clase is-fictional la tiñe desde el CSS).
-function destCardHeaderHtml(lat, lng, fictional) {
+// enseñaríamos un lugar real que no les corresponde. En su lugar, una
+// constelación generada. La semilla sale del nombre, así que cada ficticio
+// tiene siempre la suya, entre aperturas y entre sesiones — con azar de
+// verdad la cabecera cambiaría en cada apertura y parecería un fallo.
+function destCardSeed(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+const DEST_STAR_MIN_CENTER = 34;   // radio libre alrededor del anillo
+const DEST_STAR_MIN_GAP = 26;      // separación mínima entre estrellas
+
+function destCardConstellationSvg(name) {
+  let s = destCardSeed(name);
+  const rnd = () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) % 100000) / 100000; };
+  const W = DEST_CARD_W, H = DEST_CARD_H, cx = W / 2, cy = H / 2;
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  // Estrellas por muestreo con rechazo. El objetivo es 7-10, pero las dos
+  // restricciones (hueco central + separación) pueden no dejar sitio para
+  // todas en una franja de 300x100: se acepta quedarse corto antes que
+  // amontonarlas.
+  const target = 7 + Math.floor(rnd() * 4);
+  const stars = [];
+  for (let a = 0; a < 400 && stars.length < target; a++) {
+    const p = { x: 6 + rnd() * (W - 12), y: 6 + rnd() * (H - 12) };
+    if (Math.hypot(p.x - cx, p.y - cy) < DEST_STAR_MIN_CENTER) continue;
+    if (stars.some(q => dist(p, q) < DEST_STAR_MIN_GAP)) continue;
+    p.r = (0.9 + rnd() * 1.9).toFixed(2);
+    stars.push(p);
+  }
+
+  // Árbol de expansión (Prim) arrancando del centro: el anillo del marcador
+  // es la estrella principal, así que las líneas nacen de él.
+  const nodes = [{ x: cx, y: cy }].concat(stars);
+  const linked = [0], pending = nodes.map((_, i) => i).slice(1), edges = [];
+  while (pending.length) {
+    let best = null;
+    linked.forEach(i => pending.forEach(j => {
+      const d = dist(nodes[i], nodes[j]);
+      if (!best || d < best.d) best = { i, j, d };
+    }));
+    edges.push([best.i, best.j]);
+    linked.push(best.j);
+    pending.splice(pending.indexOf(best.j), 1);
+  }
+  // Una arista extra entre dos estrellas ya conectadas, para cerrar un
+  // triángulo y que no se lea como un árbol perfecto.
+  if (stars.length > 2) {
+    const a = 1 + Math.floor(rnd() * stars.length);
+    let b = null;
+    nodes.forEach((n, j) => {
+      if (j === a || j === 0) return;
+      if (edges.some(e => (e[0] === a && e[1] === j) || (e[0] === j && e[1] === a))) return;
+      const d = dist(nodes[a], n);
+      if (!b || d < b.d) b = { j, d };
+    });
+    if (b) edges.push([a, b.j]);
+  }
+
+  const links = edges.map(([i, j]) =>
+    `<line x1="${nodes[i].x.toFixed(1)}" y1="${nodes[i].y.toFixed(1)}" x2="${nodes[j].x.toFixed(1)}" y2="${nodes[j].y.toFixed(1)}"/>`).join('');
+  const pts = stars.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.r}"/>`).join('');
+  let dust = '';
+  for (let i = 0; i < 16; i++) {
+    dust += `<circle cx="${(rnd() * W).toFixed(1)}" cy="${(rnd() * H).toFixed(1)}" r="${(0.3 + rnd() * 0.55).toFixed(2)}" opacity="${(0.12 + rnd() * 0.20).toFixed(2)}"/>`;
+  }
+
+  return `<svg class="dest-card-sky" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+      <g class="dc-dust">${dust}</g>
+      <g class="dc-link">${links}</g>
+      <g class="dc-star">${pts}</g>
+    </svg>`;
+}
+
+function destCardHeaderHtml(name, lat, lng, fictional) {
   return `<div class="dest-card-header">
-        ${fictional ? '' : destCardTilesHtml(lat, lng)}
+        ${fictional ? destCardConstellationSvg(name) : destCardTilesHtml(lat, lng)}
+        <span class="dest-card-fade"></span>
         <span class="dest-card-pin"></span>
       </div>`;
 }
@@ -476,10 +551,12 @@ function destCardBooksHtml(bookCounts) {
   const list = Object.values(bookCounts || {}).sort((a, b) => b.n - a.n);
   if (!list.length) return '';
 
-  // Un solo título: sin ranking y sin contador en la fila.
+  // Un solo título: sin contador en la fila (la caja de stats ya da esa
+  // cifra), pero el badge SÍ va coloreado — es el nº1 legítimo del destino.
+  // El gris está reservado al empate, que es donde el orden es arbitrario.
   if (list.length === 1) {
     return `<div class="dest-card-section">El libro que os ha traído aquí</div>
-      ${destCardRankRow(list[0], 1, false, false)}`;
+      ${destCardRankRow(list[0], 1, true, false)}`;
   }
 
   // Sin un nº1 estricto no hay ganador que destacar: lista plana, todos los
@@ -545,7 +622,7 @@ function destCardHtml(name, lat, lng, fictional, vData, fallbackCount) {
     ? 'El libro que la trajo aún es un misterio.'
     : 'Sus libros aún son un misterio.';
   return `<div class="dest-card${fictional ? ' is-fictional' : ''}">
-      ${destCardHeaderHtml(lat, lng, fictional)}
+      ${destCardHeaderHtml(name, lat, lng, fictional)}
       <div class="dest-card-body">
         <h3 class="dest-card-title">${fictional ? '✦ ' : ''}${esc(name)}</h3>
         ${geo ? `<div class="dest-card-geo">${esc(geo)}</div>` : ''}
