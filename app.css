@@ -258,6 +258,11 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
    `.leaflet-popup-content p` de Leaflet. */
 .dest-popup .dest-card-fallback { margin: 0.75rem 0 0; padding-top: 0.7rem; border-top: 0.5px solid var(--line); font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
 
+/* El destino que además es origen. Sin sección ni separador: cierra el
+   cuerpo en voz baja. Prefijado para ganarle al `p` de Leaflet, igual que
+   .dest-card-fallback. */
+.dest-popup .dest-card-also { margin: 0.7rem 0 0; font-size: 0.66rem; color: var(--muted); line-height: 1.45; opacity: 0.9; }
+
 /* TARJETA DE PUNTO DE PARTIDA
    Misma familia que .dest-card (crema, radio 12px, sombra, piquito, aspa)
    pero a propósito más pobre y más estrecha: sin cabecera, sin cajas y sin

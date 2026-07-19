@@ -136,9 +136,6 @@ let PLACE_ORIGINS = {};
 // un lugar que ya se ha visto ficticio lo sigue siendo aunque una consulta
 // posterior — como la del detalle de un destino — no incluya sus filas.
 const FICTIONAL_FROM_DATA = new Set();
-// Lugares que son destino de alguna ruta de comunidad: el rol destino
-// tiene prioridad — nunca se dibujan como simple "punto de partida".
-let communityDestKeys = new Set();
 
 function invalidateCommunityCache() { communityCache = { ambient: null, history: null, ts: 0 }; }
 
@@ -276,9 +273,6 @@ function renderCommunityRoutes() {
   const drawnDestinations = new Set();
   const normalize = normalizeName;
   const userDestinations = new Set(entries.map(e => normalize(e.dest)));
-  // Desde los datos, no desde lo dibujado: un destino que no se dibuja
-  // (p. ej. destino propio) también veta el marcador de partida.
-  communityDestKeys = new Set([...communityCache.ambient, ...communityCache.history].map(r => normalize(r.toName)));
   // El popup de la línea usa el recuento del histórico para la misma ruta:
   // la línea no puede decir «Una persona» cuando su punto dice «5 lectores».
   const keyOf = r => [normalize(r.fromName), normalize(r.toName), normalize(r.book)].join('|');
@@ -623,6 +617,19 @@ function toggleDestCardBooks(btn, ev) {
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
+// Punto de destino de comunidad. Se usa en los dos sitios donde puede
+// aparecer un destino: al dibujar la ruta que llega a él, y al dibujar una
+// ruta que sale de él cuando ninguna que llegue entró en el corte.
+function communityDestIcon(fictional) {
+  return L.divIcon({
+    className: '',
+    html: fictional
+      ? `<div style="width:10px;height:10px;background:rgba(232,145,60,0.15);border-radius:50%;border:1.5px solid rgba(232,145,60,0.8);display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(232,145,60,0.9);line-height:1">✦</div>`
+      : `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
+    iconSize: fictional ? [10,10] : [7,7], iconAnchor: fictional ? [5,5] : [3.5,3.5]
+  });
+}
+
 // --------------------- Tarjeta ---------------------
 function destCardHtml(name, lat, lng, fictional, vData, fallbackCount) {
   const count = vData ? vData.count : fallbackCount;
@@ -642,6 +649,17 @@ function destCardHtml(name, lat, lng, fictional, vData, fallbackCount) {
   const fallback = count === 1
     ? 'El libro que la trajo aún es un misterio.'
     : 'Sus libros aún son un misterio.';
+  // La gran mayoría de los destinos son también punto de partida de alguien,
+  // y ahí no se dibuja marcador de origen porque el rol destino manda: sin
+  // esta línea, ese dato no se vería en ninguna parte. Discreta y al final:
+  // es contexto, no un bloque más de la tarjeta.
+  const o = PLACE_ORIGINS[normalizeName(name)];
+  let alsoOrigin = '';
+  if (o && o.trips > 0) {
+    const km = Math.round(o.km);
+    alsoOrigin = `<p class="dest-card-also">También es punto de partida de ${o.trips.toLocaleString()} ${o.trips === 1 ? 'viaje' : 'viajes'}` +
+      (km > 0 ? `, ${km.toLocaleString()}&nbsp;km recorridos` : '') + `</p>`;
+  }
   return `<div class="dest-card${fictional ? ' is-fictional' : ''}">
       ${destCardHeaderHtml(name, lat, lng, fictional)}
       <div class="dest-card-body">
@@ -658,6 +676,7 @@ function destCardHtml(name, lat, lng, fictional, vData, fallbackCount) {
           </div>` : ''}
         </div>
         ${booksHtml || `<p class="dest-card-fallback">${fallback}</p>`}
+        ${alsoOrigin}
       </div>
     </div>`;
 }
@@ -762,33 +781,44 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
       L.polyline(points, { color, weight: 2, opacity: 1, dashArray: '5 5', interactive: false }).addTo(targetLayer);
     }
 
-    if (!drawnDestinations.has(fromKey) && !userDestinations.has(fromKey) && !communityDestKeys.has(fromKey)) {
+    // El punto de partida se resuelve contra PLACE_VISITORS, que es el censo
+    // completo (se acumula antes del corte de maxRoutes), no contra la lista
+    // dibujada. Un lugar que además es destino se pinta CON SU TARJETA DE
+    // DESTINO aquí mismo, aunque ninguna ruta hacia él haya entrado en el
+    // corte: vetar sin más el marcador dejaba la línea saliendo de la nada
+    // (Nigeria, Whitby y Siena) y pintarlo como origen le borraba los libros.
+    if (!drawnDestinations.has(fromKey) && !userDestinations.has(fromKey)) {
       drawnDestinations.add(fromKey);
-      const fromIcon = L.divIcon({
-        className: '',
-        html: `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
-        iconSize: [7,7], iconAnchor: [3.5,3.5]
-      });
-      const fromPopup = originCardHtml(r.fromName, r.from[0], r.from[1]);
-      const fromPopupOpts = { className: 'origin-popup', maxWidth: ORIGIN_CARD_W, minWidth: ORIGIN_CARD_W };
-      L.marker(r.from, { icon: fromIcon }).addTo(targetLayer).bindPopup(fromPopup, fromPopupOpts);
-      // Zona de click ampliada: círculo invisible con el mismo popup, para que
-      // un click cerca del punto no se lo lleve la línea ancha de la ruta.
-      L.circleMarker(r.from, { pane: 'communityHit', radius: 11, stroke: false, fillOpacity: 0, bubblingMouseEvents: false })
-        .addTo(targetLayer).bindPopup(fromPopup, fromPopupOpts);
+      const vFrom = PLACE_VISITORS[fromKey];
+      if (vFrom) {
+        const ficFrom = isFictionalPlace(r.fromName);
+        const popup = destCardHtml(r.fromName, r.from[0], r.from[1], ficFrom, vFrom, vFrom.count);
+        const opts = { className: 'dest-popup', maxWidth: DEST_CARD_W, minWidth: DEST_CARD_W };
+        L.marker(r.from, { icon: communityDestIcon(ficFrom) }).addTo(targetLayer)
+          .on('click', () => showDestinationDetail(r.fromName)).bindPopup(popup, opts);
+        L.circleMarker(r.from, { pane: 'communityHit', radius: 11, stroke: false, fillOpacity: 0, bubblingMouseEvents: false })
+          .addTo(targetLayer).on('click', () => showDestinationDetail(r.fromName)).bindPopup(popup, opts);
+      } else {
+        const fromIcon = L.divIcon({
+          className: '',
+          html: `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
+          iconSize: [7,7], iconAnchor: [3.5,3.5]
+        });
+        const fromPopup = originCardHtml(r.fromName, r.from[0], r.from[1]);
+        const fromPopupOpts = { className: 'origin-popup', maxWidth: ORIGIN_CARD_W, minWidth: ORIGIN_CARD_W };
+        L.marker(r.from, { icon: fromIcon }).addTo(targetLayer).bindPopup(fromPopup, fromPopupOpts);
+        // Zona de click ampliada: círculo invisible con el mismo popup, para que
+        // un click cerca del punto no se lo lleve la línea ancha de la ruta.
+        L.circleMarker(r.from, { pane: 'communityHit', radius: 11, stroke: false, fillOpacity: 0, bubblingMouseEvents: false })
+          .addTo(targetLayer).bindPopup(fromPopup, fromPopupOpts);
+      }
     }
 
     const vData = PLACE_VISITORS[destKey];
 
     if (!drawnDestinations.has(destKey) && !userDestinations.has(destKey)) {
       drawnDestinations.add(destKey);
-      const icon = L.divIcon({
-        className: '',
-        html: r.fictional
-          ? `<div style="width:10px;height:10px;background:rgba(232,145,60,0.15);border-radius:50%;border:1.5px solid rgba(232,145,60,0.8);display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(232,145,60,0.9);line-height:1">✦</div>`
-          : `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
-        iconSize: r.fictional ? [10,10] : [7,7], iconAnchor: r.fictional ? [5,5] : [3.5,3.5]
-      });
+      const icon = communityDestIcon(r.fictional);
       const destPopup = destCardHtml(r.toName, r.to[0], r.to[1], r.fictional, vData, r.visitors);
       // maxWidth fijo: la cabecera de mapa se calcula contra DEST_CARD_W, y a
       // 380px de viewport la tarjeta sigue cabiendo con mapa alrededor.
