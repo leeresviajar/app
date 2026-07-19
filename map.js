@@ -532,7 +532,11 @@ function destCardHtml(name, lat, lng, fictional, vData, fallbackCount) {
   const booksHtml = vData ? destCardBooksHtml(vData.bookCounts) : '';
   // En ficticios NUNCA se muestra geografía real: ni país (aunque una fila
   // sucia lo traiga relleno) ni continente derivado de sus coordenadas.
-  const country = !fictional && vData && vData.country ? vData.country : '';
+  let country = !fictional && vData && vData.country ? vData.country : '';
+  // Destinos que son el país entero ("Francia", "Nigeria"): repetir el nombre
+  // debajo del título no aporta nada. Misma normalización que el resto del
+  // mapa, para que acentos y mayúsculas no cuenten como diferencia.
+  if (country && normalizeName(country).trim() === normalizeName(name).trim()) country = '';
   const continent = fictional ? '' : continentFor(lat, lng);
   const geo = [country, continent].filter(Boolean).join(' · ');
   // Sin libros que listar la frase se cierra y el misterio se nombra: nunca

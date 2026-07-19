@@ -197,10 +197,18 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .dest-card-pin { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--white); border: 3px solid var(--teal); box-shadow: 0 1px 5px rgba(26,26,24,0.28); }
 .dest-card.is-fictional .dest-card-pin { border-color: var(--fiction); }
 
-/* La X de Leaflet, reposicionada sobre la cabecera */
-.dest-popup .leaflet-popup-close-button { top: 8px; right: 8px; width: 22px; height: 22px; padding: 0; border-radius: 50%; background: rgba(255,255,255,0.92); color: var(--muted); font-size: 17px; line-height: 21px; text-align: center; box-shadow: 0 1px 4px rgba(26,26,24,0.2); }
-.dest-popup .leaflet-popup-close-button:hover, .dest-popup .leaflet-popup-close-button:focus-visible { color: var(--ink); background: var(--white); }
-.dest-popup .leaflet-popup-close-button:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+/* La X de Leaflet, sobre la cabecera y sin cápsula: solo el aspa, fina.
+   El área táctil son 40x40 aunque el aspa se dibuje pequeña.
+   En --ink y no en blanco porque la cabecera es crema claro: el blanco
+   queda en 1,13:1 sobre el fondo y 1,60:1 sobre las curvas, ilegible. La
+   sombra clara despega el trazo al pasar sobre una curva.
+   El selector necesita .leaflet-container y a: Leaflet estila el aspa con
+   `.leaflet-container a.leaflet-popup-close-button` (incluido un shorthand
+   `font` que reimpone el grosor), y con menos especificidad gana él — el
+   área se quedaba en 24px y el color en su gris. */
+.leaflet-container .dest-popup a.leaflet-popup-close-button { top: 0; right: 0; width: 40px; height: 40px; padding: 0; border: none; border-radius: 0; background: none; box-shadow: none; color: var(--ink); font: 300 18px/40px 'Inter', sans-serif; text-align: center; text-shadow: 0 1px 2px rgba(255,255,255,0.75); }
+.leaflet-container .dest-popup a.leaflet-popup-close-button:hover { color: var(--ink); background: none; opacity: 0.6; }
+.leaflet-container .dest-popup a.leaflet-popup-close-button:focus-visible { outline: 2px solid var(--teal); outline-offset: -10px; border-radius: 50%; }
 
 /* 2. Título */
 .dest-card-body { padding: 0.85rem 1rem 0.95rem; }
