@@ -538,9 +538,10 @@ const DEST_CARD_ALSO = 3;      // filas visibles en "también os han traído"
 const DEST_CARD_FLAT = 4;      // filas visibles en la lista plana de empate
 
 // Fila del ranking.
-//  · first: badge teal y cifra en teal (solo con un nº1 estricto).
-//  · count: false oculta el contador — con un único título la cifra ya
-//    está en la caja de stats y repetirla es ruido.
+//  · first: badge y cifra en color (nº1 estricto, o único libro del destino).
+//  · count: false oculta el contador. Hoy nadie lo pasa en false — se probó
+//    en el caso de un solo libro y se descartó — pero se conserva porque es
+//    la única palanca para esa variante.
 function destCardRankRow(book, pos, first, count) {
   const n = book.n.toLocaleString();
   const lectores = first ? (book.n === 1 ? '1 lector' : `${n} lectores`) : n;
@@ -566,12 +567,13 @@ function destCardBooksHtml(bookCounts) {
   const list = Object.values(bookCounts || {}).sort((a, b) => b.n - a.n);
   if (!list.length) return '';
 
-  // Un solo título: sin contador en la fila (la caja de stats ya da esa
-  // cifra), pero el badge SÍ va coloreado — es el nº1 legítimo del destino.
-  // El gris está reservado al empate, que es donde el orden es arbitrario.
+  // Un solo título: badge y contador en color. Con un libro no cabe empate,
+  // así que es el nº1 legítimo del destino y va con el mismo tratamiento que
+  // cualquier otro nº1 estricto. El gris queda reservado al empate, que es
+  // donde el orden es arbitrario.
   if (list.length === 1) {
     return `<div class="dest-card-section">El libro que os ha traído aquí</div>
-      ${destCardRankRow(list[0], 1, true, false)}`;
+      ${destCardRankRow(list[0], 1, true, true)}`;
   }
 
   // Sin un nº1 estricto no hay ganador que destacar: lista plana, todos los
