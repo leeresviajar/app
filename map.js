@@ -606,17 +606,26 @@ function destCardBooksHtml(bookCounts) {
 //    toggle cerraba la tarjeta en vez de expandirla.
 //  · NO se llama a popup.update(): re-renderiza el contenido desde el HTML
 //    enlazado y se lleva por delante la clase is-expanded y el texto del
-//    botón. Tampoco hace falta: el popup está anclado por abajo al marcador,
-//    así que la tarjeta crece hacia arriba y el piquito no se mueve.
-//    Contrapartida asumida: si la tarjeta expandida se sale por arriba,
-//    Leaflet ya no reencuadra (un panBy dispararía moveend, que redibuja la
-//    capa de comunidad y cerraría el popup).
+//    botón. El piquito tampoco lo necesita: el popup está anclado por abajo
+//    al marcador, así que la tarjeta crece hacia arriba y el pico no se mueve.
+//
+// Sí se reencuadra a mano si la tarjeta crecida se sale por arriba. Antes no
+// se podía —el panBy disparaba moveend y el redibujado cerraba el popup—,
+// pero el listener de moveend ahora aplaza el redibujado mientras hay una
+// tarjeta abierta. La lista tiene además un tope en vh, así que el pan
+// necesario es siempre pequeño.
+const DEST_CARD_PAN_MARGIN = 8;
+
 function toggleDestCardBooks(btn, ev) {
   if (ev) ev.stopPropagation();
   const card = btn.closest('.dest-card');
   const open = card.classList.toggle('is-expanded');
   btn.textContent = open ? btn.dataset.less : btn.dataset.more;
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) {
+    const top = card.getBoundingClientRect().top;
+    if (top < DEST_CARD_PAN_MARGIN) map.panBy([0, top - DEST_CARD_PAN_MARGIN], { animate: false });
+  }
 }
 
 // Punto de destino de comunidad. Se usa en los dos sitios donde puede
@@ -834,4 +843,44 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
     }
 }
 
-map.on('moveend zoomend', renderCommunityRoutes);
+// Con una tarjeta abierta NO se redibuja: el redibujado limpia la capa,
+// destruye el marcador y se lleva el popup con él. Leaflet hace autoPan al
+// abrir un popup que no cabe en pantalla, y ese pan disparaba este mismo
+// moveend, así que la tarjeta se cerraba sola justo al abrirse — un parpadeo
+// al pinchar cualquier punto de la mitad superior del mapa. Se nota desde que
+// la tarjeta es alta; con el popup viejo, de ~80px, casi siempre cabía.
+//
+// Aplazarlo no pierde nada: renderCommunityRoutes dibuja todas las rutas de
+// la caché sin filtrar por viewport, así que un redibujado tras mover produce
+// exactamente el mismo resultado. El pendiente se ejecuta al cerrar.
+let communityPopupOpen = false;
+let communityRenderPending = false;
+
+map.on('popupopen', () => { communityPopupOpen = true; });
+map.on('popupclose', () => {
+  communityPopupOpen = false;
+  if (!communityRenderPending) return;
+  // El redibujado NO puede ir aquí dentro: al pasar de una tarjeta a otra,
+  // Leaflet cierra la primera ANTES de abrir la segunda, y redibujar en ese
+  // punto destruye el marcador que está a punto de abrirse — openPopup()
+  // reventaba sobre un marcador ya fuera del mapa. Se aplaza un tick y se
+  // cancela si para entonces hay otra tarjeta abierta.
+  setTimeout(() => {
+    if (communityPopupOpen || !communityRenderPending) return;
+    communityRenderPending = false;
+    renderCommunityRoutes();
+  }, 0);
+});
+
+// Se mira también map._popup, no solo la bandera: Leaflet asigna map._popup y
+// hace su autoPan DENTRO de onAdd, antes de emitir 'popupopen'. Con la bandera
+// sola, el moveend de ese autoPan se colaba y redibujaba en mitad de la
+// apertura — openPopup() reventaba al quedarse su marcador fuera del mapa.
+map.on('moveend zoomend', () => {
+  // hasLayer y no solo map._popup: Leaflet conserva la referencia al último
+  // popup aunque ya esté cerrado, y con eso el redibujado se aplazaría para
+  // siempre.
+  const abriendose = map._popup && map.hasLayer(map._popup);
+  if (communityPopupOpen || abriendose) { communityRenderPending = true; return; }
+  renderCommunityRoutes();
+});

@@ -251,7 +251,16 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .dest-card-div { border: none; border-top: 0.5px solid var(--line); margin: 0.7rem 0 0; }
 /* Filas ocultas tras el toggle */
 .dest-card-more { display: none; }
-.dest-card.is-expanded .dest-card-more { display: block; }
+/* Tope de altura con scroll propio: la tarjeta crece hacia arriba desde el
+   marcador y, sin tope, a partir de ~14 títulos las primeras filas se salían
+   por el borde superior sin forma de alcanzarlas, porque un popup no
+   scrollea. Leaflet ya corta la propagación de la rueda sobre el contenido
+   del popup, así que este scroll no hace zoom en el mapa.
+   El tope va en vh y no en px porque lo que limita es la ventana: Leaflet
+   encuadra la tarjeta cerrada al abrirla y lo que crezca después tiene que
+   caber en el hueco que quede. Medido a 834px de alto, 18vh (=150px, unas
+   5 filas) mantiene el reencuadre de toggleDestCardBooks en un pan corto. */
+.dest-card.is-expanded .dest-card-more { display: block; max-height: 18vh; overflow-y: auto; }
 .dest-card-toggle { margin-top: 0.5rem; background: none; border: none; padding: 0; font-family: 'Inter', sans-serif; font-size: 0.66rem; color: var(--teal); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .dest-card-toggle:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 2px; }
 /* Prefijado por lo mismo que .origin-card-line: hay que ganarle al
