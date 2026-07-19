@@ -254,21 +254,32 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .dest-card.is-expanded .dest-card-more { display: block; }
 .dest-card-toggle { margin-top: 0.5rem; background: none; border: none; padding: 0; font-family: 'Inter', sans-serif; font-size: 0.66rem; color: var(--teal); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .dest-card-toggle:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 2px; }
-.dest-card-fallback { margin-top: 0.75rem; padding-top: 0.7rem; border-top: 0.5px solid var(--line); font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
+/* Prefijado por lo mismo que .origin-card-line: hay que ganarle al
+   `.leaflet-popup-content p` de Leaflet. */
+.dest-popup .dest-card-fallback { margin: 0.75rem 0 0; padding-top: 0.7rem; border-top: 0.5px solid var(--line); font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
 
 /* TARJETA DE PUNTO DE PARTIDA
    Misma familia que .dest-card (crema, radio 12px, sombra, piquito, aspa)
    pero a propósito más pobre y más estrecha: sin cabecera, sin cajas y sin
    ranking. Los destinos son el foco; los orígenes, contexto. */
-.origin-card { animation: fadeIn 0.18s ease-out; max-width: 100%; background: var(--paper); padding: 0.9rem 1rem 1rem; }
+.origin-card { animation: fadeIn 0.18s ease-out; max-width: 100%; background: var(--paper); padding: 0.75rem 1rem 0.8rem; }
 /* Serif REDONDA, no cursiva: mismo tamaño y color que el título de destino.
    El padding derecho reserva el sitio del aspa, que aquí no tiene cabecera
    sobre la que apoyarse. */
 .origin-card-title { font-family: 'Instrument Serif', serif; font-size: 1.3rem; font-style: normal; font-weight: 400; line-height: 1.15; color: var(--ink); letter-spacing: -0.01em; overflow-wrap: anywhere; padding-right: 26px; }
 .origin-card.is-fictional .origin-card-title { color: var(--fiction); }
 .origin-card-geo { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 0.25rem; }
-/* Una sola línea de dato. Si no cabe, parte en dos antes que recortar. */
-.origin-card-line { margin-top: 0.6rem; font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
+/* Dos líneas de dato: viajes y km. La cifra en color, el texto en --muted,
+   mismo criterio que las cajas de stats de la tarjeta de destino.
+   Prefijado con .origin-popup a propósito: Leaflet trae
+   `.leaflet-popup-content p{margin:1.3em 0}`, que con (0,1,1) gana a un
+   `.origin-card-line` pelado (0,1,0) y colaba ~15px fantasma arriba y abajo
+   de cada párrafo. */
+.origin-popup .origin-card-line { margin: 0.55rem 0 0; font-size: 0.72rem; color: var(--muted); line-height: 1.45; }
+/* Las dos líneas del dato van pegadas: son un bloque, no dos párrafos. */
+.origin-popup .origin-card-line.is-second { margin-top: 0; }
+.origin-card-line b { font-weight: 600; color: var(--teal); }
+.origin-card.is-fictional .origin-card-line b { color: var(--fiction); }
 
 @media (max-width: 480px) {
   .dest-card-header { height: 78px; }

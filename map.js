@@ -684,18 +684,22 @@ function originCardHtml(name, lat, lng) {
   // Igual que en destinos: a un lugar inventado no se le cuelga geografía real.
   const continent = fictional ? '' : continentFor(lat, lng);
   const o = PLACE_ORIGINS[normalizeName(name)];
-  let linea = 'Punto de partida de lectores de la comunidad'; // sin datos aún
+  // Mismo criterio que la tarjeta de destino: la cifra en color, el texto
+  // que la acompaña en --muted. Dos líneas en vez de una con "·", que se
+  // partía dejando "km" huérfano. toLocaleString sin locale explícito, como
+  // el resto de cifras de la app; el espacio duro ata cifra y unidad.
+  let body;
   if (o && o.trips > 0) {
-    // toLocaleString sin locale explícito, como el resto de cifras de la app.
-    // Espacio duro entre cifra y unidad: al partir en dos líneas, "km" no
-    // puede quedarse solo en la segunda.
-    const viajes = o.trips === 1 ? '1 viaje' : `${o.trips.toLocaleString()} viajes`;
-    linea = `Punto de partida de ${viajes} · ${Math.round(o.km).toLocaleString()}&nbsp;km`;
+    const km = Math.round(o.km);
+    body = `<p class="origin-card-line">Punto de partida de <b>${o.trips.toLocaleString()}</b> ${o.trips === 1 ? 'viaje' : 'viajes'}</p>` +
+      (km > 0 ? `<p class="origin-card-line is-second"><b>${km.toLocaleString()}</b>&nbsp;km recorridos</p>` : '');
+  } else {
+    body = `<p class="origin-card-line">Punto de partida de lectores de la comunidad</p>`;
   }
   return `<div class="origin-card${fictional ? ' is-fictional' : ''}">
       <h3 class="origin-card-title">${fictional ? '✦ ' : ''}${esc(name)}</h3>
       ${continent ? `<div class="origin-card-geo">${esc(continent)}</div>` : ''}
-      <p class="origin-card-line">${linea}</p>
+      ${body}
     </div>`;
 }
 
