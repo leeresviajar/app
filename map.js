@@ -129,6 +129,13 @@ let communityCache = { ambient: null, history: null, ts: 0 };
 // Única definición compartida — PLACE_VISITORS se escribe y se lee con ella.
 const normalizeName = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 let PLACE_VISITORS = {};
+// Agregado por punto de partida: viajes y km desde cada origen, para su
+// tarjeta. Lo reconstruye aggregateCommunityRoutes igual que PLACE_VISITORS.
+let PLACE_ORIGINS = {};
+// Lugares que el histórico marca como ficticios. Se acumula (nunca se vacía):
+// un lugar que ya se ha visto ficticio lo sigue siendo aunque una consulta
+// posterior — como la del detalle de un destino — no incluya sus filas.
+const FICTIONAL_FROM_DATA = new Set();
 // Lugares que son destino de alguna ruta de comunidad: el rol destino
 // tiene prioridad — nunca se dibujan como simple "punto de partida".
 let communityDestKeys = new Set();
@@ -176,9 +183,19 @@ function aggregateCommunityRoutes(rows) {
     if (ownCounts[fullKey]) { r.visitors--; ownCounts[fullKey]--; }
   });
   PLACE_VISITORS = {};
+  PLACE_ORIGINS = {};
   const list = [];
   routes.forEach(r => {
     if (r.visitors <= 0) return; // solo lecturas propias: ya están en el mapa
+    // Agregado por punto de partida, para su tarjeta. Se alimenta del mismo
+    // r.visitors ya descontado, así que los viajes y los km del origen
+    // excluyen las lecturas propias igual que los contadores del destino.
+    if (r.fictional) FICTIONAL_FROM_DATA.add(normalize(r.toName));
+    const ok = normalize(r.fromName);
+    if (!PLACE_ORIGINS[ok]) PLACE_ORIGINS[ok] = { name: r.fromName, trips: 0, km: 0 };
+    const origin = PLACE_ORIGINS[ok];
+    origin.trips += r.visitors;
+    origin.km += haversineKm(r.from[0], r.from[1], r.to[0], r.to[1]) * r.visitors;
     const pk = normalize(r.toName);
     // books se mantiene tal cual (lista de títulos, sin contadores): lo leen
     // los popups de las lecturas propias. bookCounts va en paralelo, para el
@@ -323,9 +340,13 @@ async function showDestinationDetail(destName) {
   if (error) { console.warn('Error cargando detalle de destino:', error); return; }
   if (detailDestKey !== key) return;   // se pinchó otro punto mientras cargaba
 
-  const saved = PLACE_VISITORS;        // aggregate reconstruye PLACE_VISITORS como efecto
-  const rows = aggregateCommunityRoutes(data); // lateral; aquí solo queremos la lista
+  // aggregate reconstruye PLACE_VISITORS y PLACE_ORIGINS como efecto lateral;
+  // aquí solo queremos la lista de rutas. Sin restaurar ambos, el agregado
+  // global quedaría reducido a las filas de este único destino.
+  const saved = PLACE_VISITORS, savedOrigins = PLACE_ORIGINS;
+  const rows = aggregateCommunityRoutes(data);
   PLACE_VISITORS = saved;
+  PLACE_ORIGINS = savedOrigins;
   const drawnDestinations = new Set([key]); // el punto ya existe en la capa de ambiente
   const userDestinations = new Set(entries.map(e => normalize(e.dest)));
   rows.forEach(r => drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, detailLayer));
@@ -641,6 +662,43 @@ function destCardHtml(name, lat, lng, fictional, vData, fallbackCount) {
     </div>`;
 }
 
+// --------------------- Tarjeta de punto de partida ---------------------
+// Deliberadamente más pobre que la de destino: sin cabecera, sin cajas de
+// stats y sin ranking. Los destinos son el foco; los orígenes, contexto.
+const ORIGIN_CARD_W = 240;
+
+// Un origen es ficticio si los DATOS lo dicen: si ese mismo lugar aparece
+// como destino con fictional=true en el histórico (FICTIONAL_FROM_DATA, que
+// llena aggregateCommunityRoutes). La tabla FICTIONAL de geocoding.js queda
+// de respaldo, para orígenes que nunca han sido destino de nadie — no basta
+// por sí sola: lugares como "Ceald" no están en ella y sí vienen marcados
+// como ficticios en la base.
+function isFictionalPlace(name) {
+  if (FICTIONAL_FROM_DATA.has(normalizeName(name))) return true;
+  const key = (name || '').toLowerCase().trim();
+  return Object.keys(FICTIONAL).some(k => _matchesFictional(key, k));
+}
+
+function originCardHtml(name, lat, lng) {
+  const fictional = isFictionalPlace(name);
+  // Igual que en destinos: a un lugar inventado no se le cuelga geografía real.
+  const continent = fictional ? '' : continentFor(lat, lng);
+  const o = PLACE_ORIGINS[normalizeName(name)];
+  let linea = 'Punto de partida de lectores de la comunidad'; // sin datos aún
+  if (o && o.trips > 0) {
+    // toLocaleString sin locale explícito, como el resto de cifras de la app.
+    // Espacio duro entre cifra y unidad: al partir en dos líneas, "km" no
+    // puede quedarse solo en la segunda.
+    const viajes = o.trips === 1 ? '1 viaje' : `${o.trips.toLocaleString()} viajes`;
+    linea = `Punto de partida de ${viajes} · ${Math.round(o.km).toLocaleString()}&nbsp;km`;
+  }
+  return `<div class="origin-card${fictional ? ' is-fictional' : ''}">
+      <h3 class="origin-card-title">${fictional ? '✦ ' : ''}${esc(name)}</h3>
+      ${continent ? `<div class="origin-card-geo">${esc(continent)}</div>` : ''}
+      <p class="origin-card-line">${linea}</p>
+    </div>`;
+}
+
 // targetLayer permite reutilizar la función desde el detalle (detailLayer);
 // shadowPairs (Map par → timestamp de la ruta más reciente) marca el modo histórico:
 // puntos + línea sombra tenue no interactiva en vez de la línea viva.
@@ -707,15 +765,13 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
         html: `<div style="width:7px;height:7px;background:rgba(29,158,117,0.5);border-radius:50%;border:1.5px solid rgba(29,158,117,0.7)"></div>`,
         iconSize: [7,7], iconAnchor: [3.5,3.5]
       });
-      const fromPopup = `
-        <div class="popup-book" style="font-size:0.85rem">${r.fromName}</div>
-        <div class="popup-place" style="font-size:0.75rem;color:#888">Punto de partida de lectores de la comunidad</div>
-      `;
-      L.marker(r.from, { icon: fromIcon }).addTo(targetLayer).bindPopup(fromPopup);
+      const fromPopup = originCardHtml(r.fromName, r.from[0], r.from[1]);
+      const fromPopupOpts = { className: 'origin-popup', maxWidth: ORIGIN_CARD_W, minWidth: ORIGIN_CARD_W };
+      L.marker(r.from, { icon: fromIcon }).addTo(targetLayer).bindPopup(fromPopup, fromPopupOpts);
       // Zona de click ampliada: círculo invisible con el mismo popup, para que
       // un click cerca del punto no se lo lleve la línea ancha de la ruta.
       L.circleMarker(r.from, { pane: 'communityHit', radius: 11, stroke: false, fillOpacity: 0, bubblingMouseEvents: false })
-        .addTo(targetLayer).bindPopup(fromPopup);
+        .addTo(targetLayer).bindPopup(fromPopup, fromPopupOpts);
     }
 
     const vData = PLACE_VISITORS[destKey];

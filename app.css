@@ -174,16 +174,17 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .popup-place { font-size: 0.78rem; color: var(--muted); }
 .popup-km { font-size: 0.72rem; color: var(--teal); margin-top: 3px; font-weight: 500; }
 
-/* TARJETA DE DESTINO DE COMUNIDAD
-   Solo se aplica al popup que se abre con className 'dest-popup' (los
-   popups de rutas y de las lecturas propias siguen con el estilo de
-   arriba, intactos). Tarjeta en crema, no blanco puro: el piquito y el
-   wrapper se tiñen igual para que la pieza se lea como una sola. */
-.dest-popup .leaflet-popup-content-wrapper { padding: 0; overflow: hidden; border-radius: 12px; background: var(--paper); box-shadow: 0 6px 24px rgba(26,26,24,0.18); }
+/* TARJETAS DE COMUNIDAD (destino y punto de partida)
+   El chrome del popup —crema, radio, sombra, piquito y aspa— lo comparten
+   las dos, 'dest-popup' y 'origin-popup', para que sean de la misma familia
+   sin duplicar reglas. Los popups de rutas y de las lecturas propias siguen
+   con el estilo de arriba, intactos. Crema y no blanco puro: el piquito y
+   el wrapper se tiñen igual para que la pieza se lea como una sola. */
+.dest-popup .leaflet-popup-content-wrapper, .origin-popup .leaflet-popup-content-wrapper { padding: 0; overflow: hidden; border-radius: 12px; background: var(--paper); box-shadow: 0 6px 24px rgba(26,26,24,0.18); }
 /* Sin !important en width: Leaflet fija el ancho inline a partir de
    minWidth/maxWidth y sobreescribirlo colapsa la tarjeta. */
-.dest-popup .leaflet-popup-content { margin: 0; }
-.dest-popup .leaflet-popup-tip { background: var(--paper); box-shadow: none; }
+.dest-popup .leaflet-popup-content, .origin-popup .leaflet-popup-content { margin: 0; }
+.dest-popup .leaflet-popup-tip, .origin-popup .leaflet-popup-tip { background: var(--paper); box-shadow: none; }
 .dest-card { animation: fadeIn 0.18s ease-out; max-width: 100%; background: var(--paper); }
 
 /* 1. Cabecera: fragmento real del basemap centrado en el destino.
@@ -217,9 +218,9 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
    `.leaflet-container a.leaflet-popup-close-button` (incluido un shorthand
    `font` que reimpone el grosor), y con menos especificidad gana él — el
    área se quedaba en 24px y el color en su gris. */
-.leaflet-container .dest-popup a.leaflet-popup-close-button { top: 0; right: 0; width: 40px; height: 40px; padding: 0; border: none; border-radius: 0; background: none; box-shadow: none; color: var(--ink); font: 300 18px/40px 'Inter', sans-serif; text-align: center; text-shadow: 0 1px 2px rgba(255,255,255,0.75); }
-.leaflet-container .dest-popup a.leaflet-popup-close-button:hover { color: var(--ink); background: none; opacity: 0.6; }
-.leaflet-container .dest-popup a.leaflet-popup-close-button:focus-visible { outline: 2px solid var(--teal); outline-offset: -10px; border-radius: 50%; }
+.leaflet-container .dest-popup a.leaflet-popup-close-button, .leaflet-container .origin-popup a.leaflet-popup-close-button { top: 0; right: 0; width: 40px; height: 40px; padding: 0; border: none; border-radius: 0; background: none; box-shadow: none; color: var(--ink); font: 300 18px/40px 'Inter', sans-serif; text-align: center; text-shadow: 0 1px 2px rgba(255,255,255,0.75); }
+.leaflet-container .dest-popup a.leaflet-popup-close-button:hover, .leaflet-container .origin-popup a.leaflet-popup-close-button:hover { color: var(--ink); background: none; opacity: 0.6; }
+.leaflet-container .dest-popup a.leaflet-popup-close-button:focus-visible, .leaflet-container .origin-popup a.leaflet-popup-close-button:focus-visible { outline: 2px solid var(--teal); outline-offset: -10px; border-radius: 50%; }
 
 /* 2. Título */
 .dest-card-body { padding: 0.85rem 1rem 0.95rem; }
@@ -255,9 +256,24 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .dest-card-toggle:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 2px; }
 .dest-card-fallback { margin-top: 0.75rem; padding-top: 0.7rem; border-top: 0.5px solid var(--line); font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
 
+/* TARJETA DE PUNTO DE PARTIDA
+   Misma familia que .dest-card (crema, radio 12px, sombra, piquito, aspa)
+   pero a propósito más pobre y más estrecha: sin cabecera, sin cajas y sin
+   ranking. Los destinos son el foco; los orígenes, contexto. */
+.origin-card { animation: fadeIn 0.18s ease-out; max-width: 100%; background: var(--paper); padding: 0.9rem 1rem 1rem; }
+/* Serif REDONDA, no cursiva: mismo tamaño y color que el título de destino.
+   El padding derecho reserva el sitio del aspa, que aquí no tiene cabecera
+   sobre la que apoyarse. */
+.origin-card-title { font-family: 'Instrument Serif', serif; font-size: 1.3rem; font-style: normal; font-weight: 400; line-height: 1.15; color: var(--ink); letter-spacing: -0.01em; overflow-wrap: anywhere; padding-right: 26px; }
+.origin-card.is-fictional .origin-card-title { color: var(--fiction); }
+.origin-card-geo { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 0.25rem; }
+/* Una sola línea de dato. Si no cabe, parte en dos antes que recortar. */
+.origin-card-line { margin-top: 0.6rem; font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
+
 @media (max-width: 480px) {
   .dest-card-header { height: 78px; }
   .dest-card-title { font-size: 1.15rem; }
+  .origin-card-title { font-size: 1.15rem; }
 }
 
 /* FICTIONAL PLACE MODAL */
