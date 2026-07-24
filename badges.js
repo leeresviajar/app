@@ -79,9 +79,15 @@ function getBadgeStats() {
   const pioneersCount = diary.filter(e => e.pioneer).length;
   const booksCount = entries.length;
   const fictionalCount = entries.filter(e => e.fictional).length;
-  const totalKm = resolveEntries(entries).reduce((s,e) => s + e.km, 0);
+  const resolved = resolveEntries(entries);
+  const totalKm = resolved.reduce((s,e) => s + e.km, 0);
+  const realRoutes = resolved.filter(e => !e.fictional && e.km > 0);
+  const maxRouteKm = realRoutes.reduce((m,e) => Math.max(m, e.km), 0);
+  const minRouteKm = realRoutes.length
+    ? realRoutes.reduce((m,e) => Math.min(m, e.km), Infinity)
+    : 0;
   const countries = new Set(entries.filter(e => !e.fictional).map(e => e.countryCode || e.country || '').filter(Boolean));
-  return { pioneersCount, booksCount, fictionalCount, totalKm, countriesCount: countries.size };
+  return { pioneersCount, booksCount, fictionalCount, totalKm, maxRouteKm, minRouteKm, countriesCount: countries.size };
 }
 
 function loadUnlocked() {
