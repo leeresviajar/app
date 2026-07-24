@@ -450,18 +450,19 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .diary-pioneer { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--teal); background: rgba(29,158,117,0.08); border: 1px solid rgba(29,158,117,0.25); border-radius: 20px; padding: 0.2rem 0.55rem; margin-top: 0.4rem; font-weight: 500; }
 
 /* LOGROS */
-.badges-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-top: 0.5rem; }
-.badge-card { background: var(--white); border: 0.5px solid var(--line); border-radius: 12px; padding: 1.1rem 0.85rem; text-align: center; transition: all 0.2s; }
-.badge-card.unlocked { background: rgba(29,158,117,0.04); border-color: rgba(29,158,117,0.35); box-shadow: none; }
-.badge-card.locked { background: var(--paper); border-color: var(--line); }
-.badge-card.locked .badge-icon { filter: grayscale(1); opacity: 0.4; }
-.badge-card.locked .badge-name { color: var(--muted); }
-.badge-card.locked .badge-desc { opacity: 0.7; }
-.badge-icon { font-size: 1.7rem; margin-bottom: 0.5rem; display: block; }
-.badge-name { font-size: 0.78rem; font-weight: 600; color: var(--ink); margin-bottom: 0.3rem; line-height: 1.3; }
-.badge-desc { font-size: 0.67rem; color: var(--muted); line-height: 1.45; }
-.badge-card.unlocked .badge-name { color: var(--teal); }
-.badge-progress { font-size: 0.65rem; color: var(--teal); margin-top: 0.4rem; font-weight: 500; }
+.badge-row { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 0.5px solid var(--line); }
+.badge-row:last-child { border-bottom: none; }
+.badge-row-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(29,158,117,0.09); display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0; }
+.badge-row.locked .badge-row-icon { background: var(--cream-dark, #f1eee8); filter: grayscale(1); opacity: 0.75; }
+.badge-row-body { flex: 1; min-width: 0; }
+.badge-row-name { font-size: 0.8rem; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.badge-row.locked .badge-row-name { color: var(--muted); }
+.badge-row-desc { font-size: 0.7rem; color: var(--muted); line-height: 1.4; margin-top: 1px; }
+.badge-row-check { color: var(--teal); font-size: 0.95rem; flex-shrink: 0; }
+.badge-row-track { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.badge-row-bar-bg { flex: 1; height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.badge-row-bar { height: 100%; background: var(--teal); border-radius: 2px; }
+.badge-row-frac { font-size: 0.65rem; color: var(--muted); white-space: nowrap; }
 .badges-section-title { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 1.25rem 0 0.6rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
 .badges-section-title:first-child { margin-top: 0; }
 .badges-section-title::after { content: ''; flex: 1; height: 0.5px; background: var(--line); }
