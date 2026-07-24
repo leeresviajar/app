@@ -739,7 +739,12 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   padding: 0.45rem 0.7rem; cursor: pointer;
   font-size: 0.68rem; color: var(--teal);
   font-family: 'Inter', sans-serif; letter-spacing: 0.02em; white-space: nowrap;
+  transition: opacity 0.18s ease;
 }
+/* Con una tarjeta abierta el chip cede el paso: en la esquina superior derecha
+   se solapaba con la X del popup (z-index 1000 > popupPane) y la volvía no
+   pulsable. Se apaga y deja de capturar clicks mientras hay un popup abierto. */
+.community-toggle.popup-open { opacity: 0; pointer-events: none; }
 .community-toggle.off { color: #9a948d; }
 /* Icono ojo: hereda color vía currentColor (teal activo, gris apagado) */
 .community-toggle .eye-open, .community-toggle .eye-off { vertical-align: middle; }
