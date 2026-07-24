@@ -211,7 +211,18 @@ function renderBadges() {
   }
   if (lockedBadges.length) {
     html += `<div class="badges-section-title">Por conseguir · ${lockedBadges.length}</div>`;
-    html += lockedBadges.map(b => `
+    html += lockedBadges.map(b => {
+      if (b.hidden) {
+        return `
+      <div class="badge-row locked badge-hidden">
+        <span class="badge-row-icon">🔒</span>
+        <div class="badge-row-body">
+          <div class="badge-row-name">Logro oculto</div>
+          <div class="badge-row-desc">Sigue viajando para descubrirlo.</div>
+        </div>
+      </div>`;
+      }
+      return `
       <div class="badge-row locked">
         <span class="badge-row-icon">${b.icon}</span>
         <div class="badge-row-body">
@@ -221,7 +232,8 @@ function renderBadges() {
             <span class="badge-row-frac">${b.progress(stats).split(' ')[0]}</span>
           </div>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
   if (!html) html = `<div class="diary-empty"><div class="diary-icon">🏅</div><p>Añade lecturas para desbloquear logros.</p></div>`;
   container.innerHTML = html;
