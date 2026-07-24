@@ -231,9 +231,12 @@ async function fetchCommunityRoutes(viewName, rowLimit = COMMUNITY_CONFIG.maxRou
 function aggregateCommunityRoutes(rows) {
   const normalize = normalizeName;
   const ownCounts = {};
-  // Resuelto: el descuento de lecturas propias compara contra el origen
-  // real actual de cada entrada, no contra uno viudo.
-  resolveEntries(entries).forEach(e => {
+  // El descuento compara contra las entradas CRUDAS (origen congelado), porque
+  // las filas de las vistas provienen de un DELETE+INSERT literal de entries:
+  // crudo contra crudo casa siempre. Comparar contra el origen resuelto rompía
+  // el descuento cuando la cadena divergía del origen de creación (borrados
+  // intermedios, cambios de fecha, fechas empatadas).
+  entries.forEach(e => {
     const k = [normalize(e.fromName), normalize(e.dest), normalize(e.book)].join('|');
     ownCounts[k] = (ownCounts[k] || 0) + 1;
   });
