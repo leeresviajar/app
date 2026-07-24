@@ -504,22 +504,76 @@ function drawMapExport(ctx, canvas, W, H) {
   for (const r of real) { if (chosen.length >= 6) break; chosen.push(r); }
   const placed = [];
   function ov(a,b) { return !(a.x+a.w<b.x || b.x+b.w<a.x || a.y+a.h<b.y || b.y+b.h<a.y); }
+
+  // Rutas en coordenadas de pantalla, muestreadas en segmentos (para test contra etiquetas)
+  const SEG = [];
+  routes.forEach(r => {
+    const a = P(r.from[0], r.from[1]), b = P(r.to[0], r.to[1]);
+    const cx = (a[0]+b[0])/2, cy = (a[1]+b[1])/2 - Math.abs(b[0]-a[0])*0.08;
+    let prev = { x: a[0], y: a[1] };
+    for (let i = 1; i <= 8; i++) {
+      const t = i/8, u = 1-t;
+      const cur = { x: u*u*a[0] + 2*u*t*cx + t*t*b[0], y: u*u*a[1] + 2*u*t*cy + t*t*b[1] };
+      SEG.push({ a: prev, b: cur }); prev = cur;
+    }
+  });
+  // Marcadores en coordenadas de pantalla
+  const MPT = list.map(p => { const xy = P(p.lon, p.lat); return { x: xy[0], y: xy[1] }; });
+
+  function segSeg(p, p2, q, q2) {
+    const d = (a,b,c) => (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x);
+    const d1 = d(q,q2,p), d2 = d(q,q2,p2), d3 = d(p,p2,q), d4 = d(p,p2,q2);
+    return ((d1>0) !== (d2>0)) && ((d3>0) !== (d4>0));
+  }
+  function segRect(a, b, r) {
+    const inside = pt => pt.x>=r.x && pt.x<=r.x+r.w && pt.y>=r.y && pt.y<=r.y+r.h;
+    if (inside(a) || inside(b)) return true;
+    const c = [{x:r.x,y:r.y},{x:r.x+r.w,y:r.y},{x:r.x+r.w,y:r.y+r.h},{x:r.x,y:r.y+r.h}];
+    for (let i = 0; i < 4; i++) if (segSeg(a, b, c[i], c[(i+1)%4])) return true;
+    return false;
+  }
+
+  // 8 candidatas por etiqueta. Invariante: box.y = ay - 30 (baseline 30px bajo el borde sup.)
+  const TH = 36, HO = 18, VO = 20;
+  function cands(px, py, tw) {
+    const H = tw/2;
+    const mk = (align, ax, ay, bx) => ({ align, ax, ay, box: { x: bx, y: ay-30, w: tw+12, h: TH } });
+    return [
+      mk('left',   px+HO, py+10,    px+HO-6),        // E
+      mk('right',  px-HO, py+10,    px-HO-tw-6),     // O
+      mk('center', px,    py-VO-6,  px-H-6),         // N
+      mk('center', px,    py+VO+30, px-H-6),         // S
+      mk('left',   px+HO, py-VO-6,  px+HO-6),        // NE
+      mk('right',  px-HO, py-VO-6,  px-HO-tw-6),     // NO
+      mk('left',   px+HO, py+VO+30, px+HO-6),        // SE
+      mk('right',  px-HO, py+VO+30, px-HO-tw-6),     // SO
+    ];
+  }
+
   chosen.forEach(p => {
     const xy = P(p.lon, p.lat);
     ctx.font = p.fict ? "italic 32px 'Instrument Serif', serif" : "500 28px 'Inter', sans-serif";
     const label = p.fict ? ('✦ ' + p.name) : p.name;
-    const tw = ctx.measureText(label).width, th = 36;
-    const right = xy[0] > bX + bW*0.7;
-    const off = right ? -18 : 18;
-    const tx = right ? xy[0]+off-tw : xy[0]+off;
-    const ty = xy[1] + 10;
-    const box = { x: tx-6, y: ty-th+6, w: tw+12, h: th };
-    if (placed.some(b => ov(box, b))) return;
-    placed.push(box);
+    const tw = ctx.measureText(label).width;
+
+    let best = null, bestScore = Infinity;
+    cands(xy[0], xy[1], tw).forEach((c, idx) => {
+      const bx = c.box;
+      let s = idx * 0.1; // desempate: prioriza E, O, luego N/S, luego diagonales
+      if (bx.x < bX || bx.y < bY || bx.x+bx.w > bX+bW || bx.y+bx.h > bY+bH) s += 1000; // fuera de frame
+      for (const sg of SEG) if (segRect(sg.a, sg.b, bx)) s += 10;                       // ruta encima
+      for (const m of MPT) if (m.x>=bx.x-6 && m.x<=bx.x+bx.w+6 && m.y>=bx.y-6 && m.y<=bx.y+bx.h+6) s += 8; // otro marcador
+      for (const pb of placed) if (ov(bx, pb)) s += 6;                                  // otra etiqueta
+      if (s < bestScore) { bestScore = s; best = c; }
+    });
+    if (!best) return;
+
+    placed.push(best.box);
     ctx.fillStyle = p.fict ? orange : ink;
-    ctx.textAlign = right ? 'right' : 'left';
-    ctx.fillText(label, xy[0]+off, ty);
+    ctx.textAlign = best.align;
+    ctx.fillText(label, best.ax, best.ay);
   });
+  ctx.textAlign = 'left';
 
   // Pie: km y nº de destinos reales (calculados de verdad, no de ejemplo)
   const km = Math.round(exFiltered.reduce((s,e) => s+e.km, 0));
