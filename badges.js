@@ -7,6 +7,7 @@ const BADGES_DEF = [
     desc: 'Registraste un destino que nadie había visitado.',
     unlockFn: (stats) => stats.pioneersCount >= 1,
     progress: (stats) => `${Math.min(stats.pioneersCount,1)}/1 primera llegada`,
+    pct: (stats) => Math.min(1, stats.pioneersCount / 1),
   },
   {
     id: 'explorer_3',
@@ -15,6 +16,7 @@ const BADGES_DEF = [
     desc: 'Has sido el primero en llegar a 3 destinos distintos.',
     unlockFn: (stats) => stats.pioneersCount >= 3,
     progress: (stats) => `${stats.pioneersCount}/3 primeras llegadas`,
+    pct: (stats) => Math.min(1, stats.pioneersCount / 3),
   },
   {
     id: 'explorer_10',
@@ -23,6 +25,7 @@ const BADGES_DEF = [
     desc: '10 destinos donde pusiste el pie antes que nadie.',
     unlockFn: (stats) => stats.pioneersCount >= 10,
     progress: (stats) => `${stats.pioneersCount}/10 primeras llegadas`,
+    pct: (stats) => Math.min(1, stats.pioneersCount / 10),
   },
   {
     id: 'books_5',
@@ -31,6 +34,7 @@ const BADGES_DEF = [
     desc: 'Tu mapa lector ya tiene 5 viajes trazados.',
     unlockFn: (stats) => stats.booksCount >= 5,
     progress: (stats) => `${stats.booksCount}/5 libros`,
+    pct: (stats) => Math.min(1, stats.booksCount / 5),
   },
   {
     id: 'books_20',
@@ -39,6 +43,7 @@ const BADGES_DEF = [
     desc: '20 libros y 20 destinos marcados en el mapa.',
     unlockFn: (stats) => stats.booksCount >= 20,
     progress: (stats) => `${stats.booksCount}/20 libros`,
+    pct: (stats) => Math.min(1, stats.booksCount / 20),
   },
   {
     id: 'fictional',
@@ -47,6 +52,7 @@ const BADGES_DEF = [
     desc: 'Has visitado un lugar que solo existe en la ficción.',
     unlockFn: (stats) => stats.fictionalCount >= 1,
     progress: (stats) => `${Math.min(stats.fictionalCount,1)}/1 lugar ficticio`,
+    pct: (stats) => Math.min(1, stats.fictionalCount / 1),
   },
   {
     id: 'km_10k',
@@ -55,6 +61,7 @@ const BADGES_DEF = [
     desc: 'Una vuelta al mundo en páginas.',
     unlockFn: (stats) => stats.totalKm >= 10000,
     progress: (stats) => `${Math.round(stats.totalKm).toLocaleString()}/10.000 km`,
+    pct: (stats) => Math.min(1, stats.totalKm / 10000),
   },
   {
     id: 'countries_5',
@@ -63,6 +70,7 @@ const BADGES_DEF = [
     desc: 'Tus lecturas te han llevado por medio mundo.',
     unlockFn: (stats) => stats.countriesCount >= 5,
     progress: (stats) => `${stats.countriesCount}/5 países`,
+    pct: (stats) => Math.min(1, stats.countriesCount / 5),
   },
 ];
 
@@ -110,25 +118,30 @@ function renderBadges() {
 
   let html = '';
   if (unlockedBadges.length) {
-    html += `<div class="badges-section-title">Conseguidos</div><div class="badges-grid">`;
+    html += `<div class="badges-section-title">Conseguidos · ${unlockedBadges.length}</div>`;
     html += unlockedBadges.map(b => `
-      <div class="badge-card unlocked">
-        <span class="badge-icon">${b.icon}</span>
-        <div class="badge-name">${b.name}</div>
-        <div class="badge-desc">${b.desc}</div>
+      <div class="badge-row unlocked">
+        <span class="badge-row-icon">${b.icon}</span>
+        <div class="badge-row-body">
+          <div class="badge-row-name">${b.name}</div>
+          <div class="badge-row-desc">${b.desc}</div>
+        </div>
+        <span class="badge-row-check">✓</span>
       </div>`).join('');
-    html += `</div>`;
   }
   if (lockedBadges.length) {
-    html += `<div class="badges-section-title">Por conseguir</div><div class="badges-grid">`;
+    html += `<div class="badges-section-title">Por conseguir · ${lockedBadges.length}</div>`;
     html += lockedBadges.map(b => `
-      <div class="badge-card locked">
-        <span class="badge-icon">${b.icon}</span>
-        <div class="badge-name">${b.name}</div>
-        <div class="badge-desc">${b.desc}</div>
-        <div class="badge-progress">${b.progress(stats)}</div>
+      <div class="badge-row locked">
+        <span class="badge-row-icon">${b.icon}</span>
+        <div class="badge-row-body">
+          <div class="badge-row-name">${b.name}</div>
+          <div class="badge-row-track">
+            <div class="badge-row-bar-bg"><div class="badge-row-bar" style="width:${Math.round(b.pct(stats)*100)}%"></div></div>
+            <span class="badge-row-frac">${b.progress(stats).split(' ')[0]}</span>
+          </div>
+        </div>
       </div>`).join('');
-    html += `</div>`;
   }
   if (!html) html = `<div class="diary-empty"><div class="diary-icon">🏅</div><p>Añade lecturas para desbloquear logros.</p></div>`;
   container.innerHTML = html;
