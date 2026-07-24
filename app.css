@@ -442,7 +442,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .diary-empty p { font-size: 0.8rem; line-height: 1.6; }
 .diary-entry { padding: 0.9rem 0; border-bottom: 1px solid var(--cream-dark); animation: fadeIn 0.3s ease; }
 .diary-entry:last-child { border-bottom: none; }
-.diary-date { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.3rem; }
+.diary-date { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.3rem; }
 .diary-text { font-family: 'Instrument Serif', serif; font-size: 0.92rem; color: var(--ink); line-height: 1.5; font-style: italic; }
 .diary-text .place { color: var(--teal); font-style: normal; font-weight: 600; }
 .diary-text .place.fictional { color: #e8913c; }
@@ -455,9 +455,9 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .badge-row-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(29,158,117,0.09); display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0; }
 .badge-row.locked .badge-row-icon { background: var(--cream-dark, #f1eee8); filter: grayscale(1); opacity: 0.75; }
 .badge-row-body { flex: 1; min-width: 0; }
-.badge-row-name { font-size: 0.8rem; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.badge-row-name { font-size: 0.92rem; font-weight: 600; color: var(--ink); line-height: 1.3; }
 .badge-row.locked .badge-row-name { color: var(--muted); }
-.badge-row-desc { font-size: 0.7rem; color: var(--muted); line-height: 1.4; margin-top: 1px; }
+.badge-row-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.4; margin-top: 1px; }
 .badge-row-check { color: var(--teal); font-size: 0.95rem; flex-shrink: 0; }
 .badge-row-track { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .badge-row-bar-bg { flex: 1; height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
