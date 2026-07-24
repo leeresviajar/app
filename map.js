@@ -928,9 +928,16 @@ function drawCommunityRoute(r, drawnDestinations, userDestinations, normalize, t
 let communityPopupOpen = false;
 let communityRenderPending = false;
 
-map.on('popupopen', () => { communityPopupOpen = true; });
+// El chip "Otros viajeros" se aparta mientras hay una tarjeta abierta: en la
+// esquina superior derecha tapaba la X del popup y la dejaba sin pulsar.
+const communityToggleEl = () => document.querySelector('.community-toggle');
+map.on('popupopen', () => {
+  communityPopupOpen = true;
+  communityToggleEl()?.classList.add('popup-open');
+});
 map.on('popupclose', () => {
   communityPopupOpen = false;
+  communityToggleEl()?.classList.remove('popup-open');
   if (!communityRenderPending) return;
   // El redibujado NO puede ir aquí dentro: al pasar de una tarjeta a otra,
   // Leaflet cierra la primera ANTES de abrir la segunda, y redibujar en ese
