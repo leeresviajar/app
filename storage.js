@@ -27,7 +27,8 @@ async function saveStateToCloud() {
         id: currentUser.id,
         origin_name: origin.name,
         origin_lat: origin.lat,
-        origin_lng: origin.lng
+        origin_lng: origin.lng,
+        badges: loadUnlocked()
       });
       if (profileError) throw profileError;
     }
@@ -185,6 +186,12 @@ async function loadStateFromCloud() {
 
   updateList(); updateStats();
   updateOriginNarrative();
+
+  // Logros: unión nube ∪ local antes del recálculo. Los logros nunca se
+  // revocan, así que la unión es siempre segura; cubre lo desbloqueado en
+  // local que aún no llegó a la nube. Viaja en el siguiente guardado normal.
+  const cloudBadges = Array.isArray(profile?.badges) ? profile.badges : [];
+  saveUnlocked([...new Set([...cloudBadges, ...loadUnlocked()])]);
 
   // Recalcular logros con el estado recién cargado, en silencio (sin toasts)
   // para que un usuario que entra en un dispositivo nuevo vea de inmediato
