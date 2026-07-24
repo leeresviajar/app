@@ -27,7 +27,7 @@ const ONBOARDING_STEPS = [
   {
     label: 'Paso 2 de 5',
     icon: '🏠',
-    text: 'Este es tu punto de partida. <em>Desde aquí arranca tu viaje — tu ciudad, tu casa.</em>',
+    text: '<em>Este es tu punto de partida.</em> Desde aquí arranca tu viaje: tu ciudad, tu casa, tu biblioteca.',
     target: ['.origin-section', '.origin-narrative'], placement: 'right', pad: 8
   },
   {
