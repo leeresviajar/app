@@ -2,7 +2,7 @@
 const ONBOARDING_STEPS_MOBILE = [
   {
     label: 'Paso 1 de 3', icon: '🗺',
-    text: '<em>Esto es un mapa vivo.</em> Cada línea es el viaje de un lector — y se construye entre todos.',
+    text: '<em>Este mapa está vivo.</em> Cada ruta es un viaje lector y lo construimos leyendo.',
     target: '#map', placement: 'center'
   },
   {
@@ -21,7 +21,7 @@ const ONBOARDING_STEPS = [
   {
     label: 'Paso 1 de 5',
     icon: '🗺',
-    text: 'Cada línea es un viaje lector. <em>El mapa se construye entre todos.</em>',
+    text: '<em>Este mapa está vivo.</em> Cada ruta es un viaje lector y lo construimos leyendo.',
     target: '#map', placement: 'center', pad: -28
   },
   {
