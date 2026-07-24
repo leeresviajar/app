@@ -39,13 +39,13 @@ const ONBOARDING_STEPS = [
   {
     label: 'Paso 4 de 5',
     icon: '📖',
-    text: '¿Qué estás leyendo? <em>Cada destino queda unido al libro que te llevó hasta él.</em>',
+    text: '<em>¿Qué estás leyendo?</em> Cada destino queda unido al libro que te llevó hasta él.',
     target: '#book-title', placement: 'right', pad: 8
   },
   {
     label: 'Paso 5 de 5',
     icon: '🧭',
-    text: 'Cada nuevo viaje puede salir desde donde quieras — <em>no tiene por qué ser siempre desde casa.</em>',
+    text: '<em>Cada viaje puede empezar donde quieras.</em> No tienes por qué partir siempre desde casa.',
     target: '.departure-toggle', placement: 'right', pad: 8
   }
 ];
