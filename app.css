@@ -251,7 +251,6 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
    para no depender de la posición de la fila en el DOM. */
 .dest-card-rank .dest-card-badge.is-first ~ .dest-card-rank-n { color: var(--teal); }
 .dest-card.is-fictional .dest-card-rank .dest-card-badge.is-first ~ .dest-card-rank-n { color: var(--fiction); }
-.dest-card-div { border: none; border-top: 0.5px solid var(--line); margin: 0.7rem 0 0; }
 /* Filas ocultas tras el toggle */
 .dest-card-more { display: none; }
 /* Tope de altura con scroll propio: la tarjeta crece hacia arriba desde el
@@ -266,9 +265,10 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .dest-card.is-expanded .dest-card-more { display: block; max-height: 18vh; overflow-y: auto; }
 .dest-card-toggle { margin-top: 0.5rem; background: none; border: none; padding: 0; font-family: 'Inter', sans-serif; font-size: 0.66rem; color: var(--teal); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .dest-card-toggle:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 2px; }
-/* Prefijado por lo mismo que .origin-card-line: hay que ganarle al
-   `.leaflet-popup-content p` de Leaflet. */
-.dest-popup .dest-card-fallback { margin: 0.75rem 0 0; padding-top: 0.7rem; border-top: 0.5px solid var(--line); font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
+/* Sin filete sobre el fallback: --line sobre --paper da 1,12:1, no se lee
+   como regla sino como hueco. Se separa con espacio. El margin explícito le
+   gana al `.leaflet-popup-content p` de Leaflet, igual que .origin-card-line. */
+.dest-popup .dest-card-fallback { margin: 0.85rem 0 0; font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
 
 /* El destino que además es origen. Sin sección ni separador: cierra el
    cuerpo en voz baja. Prefijado para ganarle al `p` de Leaflet, igual que
@@ -346,6 +346,16 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .entry-card-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 .entry-card-hint { font-size: 0.66rem; color: var(--muted); font-style: italic; }
 
+/* TARJETA DE PUNTO DE PARTIDA PROPIO
+   El origen de una entrada de "otro lugar", que hasta ahora no se dibujaba y
+   dejaba su ruta saliendo de la nada. Como la de origen de comunidad pero en
+   rojo, porque es tuya. */
+.start-card { animation: fadeIn 0.18s ease-out; max-width: 100%; background: var(--paper); padding: 0.75rem 1rem 0.8rem; }
+.start-card-title { font-family: 'Instrument Serif', serif; font-size: 1.3rem; font-weight: 400; line-height: 1.15; color: var(--route); letter-spacing: -0.01em; overflow-wrap: anywhere; padding-right: 26px; }
+.start-card-geo { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 0.25rem; }
+.start-popup .start-card-line { margin: 0.55rem 0 0; font-size: 0.72rem; color: var(--muted); line-height: 1.45; }
+.start-card-line b { color: var(--route); font-weight: 600; }
+
 @media (max-width: 480px) {
   .dest-card-header { height: 78px; }
   /* Espejo de la cabecera de comunidad en móvil: 78px / 3 líneas. */
@@ -354,6 +364,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   .dest-card-title { font-size: 1.15rem; }
   .origin-card-title { font-size: 1.15rem; }
   .entry-card-book { font-size: 1.15rem; }
+  .start-card-title { font-size: 1.15rem; }
 }
 
 /* FICTIONAL PLACE MODAL */

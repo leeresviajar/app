@@ -132,11 +132,50 @@ function addDestMarker(entry) {
     .on('click', () => showDestinationDetail(entry.dest)).bindPopup(html, opts);
 }
 
+// Punto de partida propio. Hasta ahora el origen de una entrada de "otro
+// lugar" no se dibujaba y su ruta salía de la nada. Rojo, porque es tuyo; el
+// naranja queda reservado a los destinos ficticios, y un origen no lo es.
+const START_CARD_W = 240;
+
+function addStartMarker(name, lat, lng, count) {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return;
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="width:9px;height:9px;background:#e8593c;border-radius:50%;border:2px solid white;box-shadow:0 0 0 1.5px #e8593c"></div>`,
+    iconSize: [9,9], iconAnchor: [4.5,4.5]
+  });
+  // Coordenadas de "otro lugar" ficticio serían inventadas: sin geografía.
+  const continent = isFictionalPlace(name) ? '' : continentFor(lat, lng);
+  const html = `<div class="start-card">
+      <div class="start-card-title">${esc(name)}</div>
+      ${continent ? `<div class="start-card-geo">${esc(continent)}</div>` : ''}
+      <p class="start-card-line">Punto de partida de <b>${count.toLocaleString()}</b> ${count === 1 ? 'lectura tuya' : 'lecturas tuyas'}</p>
+    </div>`;
+  const opts = { className: 'start-popup', maxWidth: START_CARD_W, minWidth: START_CARD_W };
+  L.marker([lat, lng], { icon }).addTo(markersLayer).bindPopup(html, opts);
+}
+
 function redrawMap() {
   markersLayer.clearLayers();
   map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
   if (origin) addOriginMarker();
-  resolvedFiltered().forEach(e => { drawRoute(e); addDestMarker(e); });
+  // Puntos que ya tienen marcador: el origen configurado y cada destino. Un
+  // origen que no esté aquí (típico de "otro lugar") dibujaba su ruta desde
+  // la nada; se le pone su propio marcador, agregando por si varias entradas
+  // salen del mismo sitio.
+  const drawn = new Set();
+  if (origin) drawn.add(normalizeName(origin.name));
+  const resolved = resolvedFiltered();
+  resolved.forEach(e => { drawRoute(e); addDestMarker(e); drawn.add(normalizeName(e.dest)); });
+  const starts = new Map();
+  resolved.forEach(e => {
+    const k = normalizeName(e.fromName || '');
+    if (!k || drawn.has(k)) return;
+    let s = starts.get(k);
+    if (!s) { s = { name: e.fromName, lat: e.fromLat, lng: e.fromLng, count: 0 }; starts.set(k, s); }
+    s.count++;
+  });
+  starts.forEach(s => addStartMarker(s.name, s.lat, s.lng, s.count));
   drawCommunityRoutes();
 }
 
@@ -626,7 +665,6 @@ function destCardBooksHtml(bookCounts) {
   const hidden = rest.slice(DEST_CARD_ALSO);
   return `<div class="dest-card-section">El libro que más os ha traído aquí</div>
       ${destCardRankRow(list[0], 1, true, true)}
-      <hr class="dest-card-div">
       <div class="dest-card-section">También os han traído</div>
       ${shown.map((b, i) => destCardRankRow(b, i + 2, false, true)).join('')}
       ${destCardMoreHtml(hidden, shown.length + 2, list.length)}`;

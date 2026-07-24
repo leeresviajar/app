@@ -60,7 +60,7 @@ function addOriginMarker() {
     iconSize: [14,14], iconAnchor: [7,7]
   });
   L.marker([origin.lat, origin.lng], { icon }).addTo(markersLayer)
-    .bindPopup(`<div class="popup-book">Punto de partida</div><div class="popup-place">${origin.name}</div>`);
+    .bindPopup(`<div class="popup-book">Punto de partida</div><div class="popup-place">${esc(origin.name)}</div>`);
 }
 
 // ===================== DEPARTURE =====================
