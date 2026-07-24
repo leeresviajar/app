@@ -59,8 +59,21 @@ function addOriginMarker() {
     html: `<div style="width:14px;height:14px;background:#1a3a2a;border-radius:50%;border:3px solid #1d9e75;box-shadow:0 0 0 2px white"></div>`,
     iconSize: [14,14], iconAnchor: [7,7]
   });
-  L.marker([origin.lat, origin.lng], { icon }).addTo(markersLayer)
-    .bindPopup(`<div class="popup-book">Punto de partida</div><div class="popup-place">${esc(origin.name)}</div>`);
+  // Tarjeta de origen propio unificada (misma que "otro lugar", start-card):
+  // la casa es variante de CONTENIDO, no de diseño. Su conteo de lecturas
+  // propias se cuenta aquí porque redrawMap la excluye del agregado de starts.
+  const count = resolvedFiltered().filter(e => normalizeName(e.fromName) === normalizeName(origin.name)).length;
+  const continent = isFictionalPlace(origin.name) ? '' : continentFor(origin.lat, origin.lng);
+  const line = count > 0
+    ? `Tu casa · punto de partida de <b>${count.toLocaleString()}</b> ${count === 1 ? 'lectura tuya' : 'lecturas tuyas'}`
+    : 'Tu casa';
+  const html = `<div class="start-card">
+      <div class="start-card-title">${esc(origin.name)}</div>
+      ${continent ? `<div class="start-card-geo">${esc(continent)}</div>` : ''}
+      <p class="start-card-line">${line}</p>
+    </div>`;
+  const opts = { className: 'start-popup', maxWidth: START_CARD_W, minWidth: START_CARD_W };
+  L.marker([origin.lat, origin.lng], { icon }).addTo(markersLayer).bindPopup(html, opts);
 }
 
 // ===================== DEPARTURE =====================
