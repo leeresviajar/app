@@ -33,7 +33,7 @@ App web en español: mapa literario donde lectores registran libros ligados a de
 ## Diseño y marca
 
 - Paleta: paper `#faf7f2`, teal `#1d9e75`, forest `#0f6e56`, naranja `#e8913c`, rojo `#e8593c`, mint `#9fd9c0`, ink `#1a1a18`.
-- **Naranja `#e8913c` = SOLO destinos ficticios. Rojo `#e8593c` = SOLO rutas del usuario.** Nunca intercambiarlos.
+- **Naranja `#e8913c` = SOLO destinos ficticios. Rojo `#e8593c` = lo del usuario (rutas y destinos propios; en un ficticio del usuario manda el naranja).** Nunca intercambiarlos.
 - El símbolo **✦ está reservado en exclusiva para destinos ficticios**. Nunca decorativo.
 - Las rutas nunca son ficticias — solo los destinos lo son.
 - Dirección de rediseño (Concepto B "Minimalismo cartográfico"): blanco puro, Inter + Instrument Serif, máximo espacio en blanco, sidebar ultrafino, el mapa como protagonista.

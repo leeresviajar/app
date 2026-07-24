@@ -1,4 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap');
+/* IM Fell English (itálica): solo la cabecera de página de las lecturas
+   FICTICIAS, que son minoría. display=swap para no bloquear el render. */
+@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@1&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
   --ink: #1a1a18; --forest: #1a3a2a; --forest-mid: #0f6e56;
@@ -180,11 +183,11 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
    sin duplicar reglas. Los popups de rutas y de las lecturas propias siguen
    con el estilo de arriba, intactos. Crema y no blanco puro: el piquito y
    el wrapper se tiñen igual para que la pieza se lea como una sola. */
-.dest-popup .leaflet-popup-content-wrapper, .origin-popup .leaflet-popup-content-wrapper { padding: 0; overflow: hidden; border-radius: 12px; background: var(--paper); box-shadow: 0 6px 24px rgba(26,26,24,0.18); }
+.dest-popup .leaflet-popup-content-wrapper, .origin-popup .leaflet-popup-content-wrapper, .entry-popup .leaflet-popup-content-wrapper, .start-popup .leaflet-popup-content-wrapper { padding: 0; overflow: hidden; border-radius: 12px; background: var(--paper); box-shadow: 0 6px 24px rgba(26,26,24,0.18); }
 /* Sin !important en width: Leaflet fija el ancho inline a partir de
    minWidth/maxWidth y sobreescribirlo colapsa la tarjeta. */
-.dest-popup .leaflet-popup-content, .origin-popup .leaflet-popup-content { margin: 0; }
-.dest-popup .leaflet-popup-tip, .origin-popup .leaflet-popup-tip { background: var(--paper); box-shadow: none; }
+.dest-popup .leaflet-popup-content, .origin-popup .leaflet-popup-content, .entry-popup .leaflet-popup-content, .start-popup .leaflet-popup-content { margin: 0; }
+.dest-popup .leaflet-popup-tip, .origin-popup .leaflet-popup-tip, .entry-popup .leaflet-popup-tip, .start-popup .leaflet-popup-tip { background: var(--paper); box-shadow: none; }
 .dest-card { animation: fadeIn 0.18s ease-out; max-width: 100%; background: var(--paper); }
 
 /* 1. Cabecera: fragmento real del basemap centrado en el destino.
@@ -218,9 +221,9 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
    `.leaflet-container a.leaflet-popup-close-button` (incluido un shorthand
    `font` que reimpone el grosor), y con menos especificidad gana él — el
    área se quedaba en 24px y el color en su gris. */
-.leaflet-container .dest-popup a.leaflet-popup-close-button, .leaflet-container .origin-popup a.leaflet-popup-close-button { top: 0; right: 0; width: 40px; height: 40px; padding: 0; border: none; border-radius: 0; background: none; box-shadow: none; color: var(--ink); font: 300 18px/40px 'Inter', sans-serif; text-align: center; text-shadow: 0 1px 2px rgba(255,255,255,0.75); }
-.leaflet-container .dest-popup a.leaflet-popup-close-button:hover, .leaflet-container .origin-popup a.leaflet-popup-close-button:hover { color: var(--ink); background: none; opacity: 0.6; }
-.leaflet-container .dest-popup a.leaflet-popup-close-button:focus-visible, .leaflet-container .origin-popup a.leaflet-popup-close-button:focus-visible { outline: 2px solid var(--teal); outline-offset: -10px; border-radius: 50%; }
+.leaflet-container .dest-popup a.leaflet-popup-close-button, .leaflet-container .origin-popup a.leaflet-popup-close-button, .leaflet-container .entry-popup a.leaflet-popup-close-button, .leaflet-container .start-popup a.leaflet-popup-close-button { top: 0; right: 0; width: 40px; height: 40px; padding: 0; border: none; border-radius: 0; background: none; box-shadow: none; color: var(--ink); font: 300 18px/40px 'Inter', sans-serif; text-align: center; text-shadow: 0 1px 2px rgba(255,255,255,0.75); }
+.leaflet-container .dest-popup a.leaflet-popup-close-button:hover, .leaflet-container .origin-popup a.leaflet-popup-close-button:hover, .leaflet-container .entry-popup a.leaflet-popup-close-button:hover, .leaflet-container .start-popup a.leaflet-popup-close-button:hover { color: var(--ink); background: none; opacity: 0.6; }
+.leaflet-container .dest-popup a.leaflet-popup-close-button:focus-visible, .leaflet-container .origin-popup a.leaflet-popup-close-button:focus-visible, .leaflet-container .entry-popup a.leaflet-popup-close-button:focus-visible, .leaflet-container .start-popup a.leaflet-popup-close-button:focus-visible { outline: 2px solid var(--teal); outline-offset: -10px; border-radius: 50%; }
 
 /* 2. Título */
 .dest-card-body { padding: 0.85rem 1rem 0.95rem; }
@@ -248,7 +251,6 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
    para no depender de la posición de la fila en el DOM. */
 .dest-card-rank .dest-card-badge.is-first ~ .dest-card-rank-n { color: var(--teal); }
 .dest-card.is-fictional .dest-card-rank .dest-card-badge.is-first ~ .dest-card-rank-n { color: var(--fiction); }
-.dest-card-div { border: none; border-top: 0.5px solid var(--line); margin: 0.7rem 0 0; }
 /* Filas ocultas tras el toggle */
 .dest-card-more { display: none; }
 /* Tope de altura con scroll propio: la tarjeta crece hacia arriba desde el
@@ -263,9 +265,10 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .dest-card.is-expanded .dest-card-more { display: block; max-height: 18vh; overflow-y: auto; }
 .dest-card-toggle { margin-top: 0.5rem; background: none; border: none; padding: 0; font-family: 'Inter', sans-serif; font-size: 0.66rem; color: var(--teal); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .dest-card-toggle:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 2px; }
-/* Prefijado por lo mismo que .origin-card-line: hay que ganarle al
-   `.leaflet-popup-content p` de Leaflet. */
-.dest-popup .dest-card-fallback { margin: 0.75rem 0 0; padding-top: 0.7rem; border-top: 0.5px solid var(--line); font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
+/* Sin filete sobre el fallback: --line sobre --paper da 1,12:1, no se lee
+   como regla sino como hueco. Se separa con espacio. El margin explícito le
+   gana al `.leaflet-popup-content p` de Leaflet, igual que .origin-card-line. */
+.dest-popup .dest-card-fallback { margin: 0.85rem 0 0; font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
 
 /* El destino que además es origen. Sin sección ni separador: cierra el
    cuerpo en voz baja. Prefijado para ganarle al `p` de Leaflet, igual que
@@ -297,10 +300,71 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .origin-card-line b { font-weight: 600; color: var(--teal); }
 .origin-card.is-fictional .origin-card-line b { color: var(--fiction); }
 
+/* TARJETA DE LECTURA PROPIA (popup de un destino del usuario)
+   Comparte el chrome (crema, radio, piquito, aspa) pero tiene anatomía
+   propia: aquí el sujeto es EL LIBRO, no el lugar, así que va de
+   protagonista. Rojo --route para lo tuyo; naranja --fiction en ficticios. */
+.entry-card { animation: fadeIn 0.18s ease-out; max-width: 100%; background: var(--paper); }
+/* Cabecera: página de libro desenfocada. Cada familia tiene la suya —
+   mapa real (comunidad), constelación (ficticios), página (tus lecturas).
+   El texto es decorativo: no es el libro, evoca "una página".
+   100px / 4 líneas para igualar la altura de la cabecera de comunidad (ver
+   .dest-card-header); en móvil ambas bajan a 78px / 3 líneas. */
+.entry-card-page { position: relative; height: 100px; overflow: hidden; border-radius: 12px 12px 0 0;
+  background: linear-gradient(rgba(232,89,60,0.07), rgba(232,89,60,0.07)), var(--cream); }
+.entry-card.is-fictional .entry-card-page { background: linear-gradient(rgba(232,145,60,0.09), rgba(232,145,60,0.09)), var(--cream); }
+.entry-card-page p { position: absolute; left: 18px; right: 18px; top: 10px; margin: 0;
+  color: var(--route); text-align: justify; user-select: none; pointer-events: none;
+  font-family: 'Instrument Serif', serif; font-style: italic; font-size: 13px; line-height: 1.45;
+  filter: blur(1.8px); opacity: 0.42;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
+/* Ficticios: imprenta antigua, para separarlos a la vista de las reales. */
+.entry-card.is-fictional .entry-card-page p { color: var(--fiction); font-family: 'IM Fell English', serif; line-height: 1.4; }
+.entry-card-page::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 22px;
+  background: linear-gradient(to bottom, rgba(247,245,241,0), var(--paper)); }
+/* Cuerpo */
+.entry-card-body { padding: 0.85rem 1rem 0.95rem; }
+.entry-card-book { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 1.25rem; line-height: 1.2; color: var(--ink); overflow-wrap: anywhere; padding-right: 26px; }
+.entry-card-author { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
+.entry-card-geo { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 0.5rem; }
+.entry-card-geo b { color: var(--route); font-weight: 600; }
+.entry-card.is-fictional .entry-card-geo b { color: var(--fiction); }
+.entry-card-km { font-size: 0.72rem; color: var(--muted); margin-top: 0.5rem; }
+.entry-card-km b { color: var(--route); font-weight: 600; }
+.entry-card.is-fictional .entry-card-km b { color: var(--fiction); }
+/* El margin explícito le gana al `.leaflet-popup-content p` de Leaflet. */
+.entry-popup .entry-card-note { margin: 0.65rem 0 0; font-family: 'Instrument Serif', serif; font-style: italic; font-size: 0.85rem; color: var(--ink); line-height: 1.45; padding-left: 0.6rem; border-left: 2px solid var(--cream-dark); }
+/* Pionera: sin relleno ni borde, para que el único elemento con fondo sea
+   la acción. Solo se pinta si nadie más ha llegado (lo decide el JS). */
+.entry-card-pioneer { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.7rem; font-size: 0.66rem; color: var(--teal); font-weight: 500; }
+.entry-popup .entry-card-com { margin: 0.7rem 0 0; font-size: 0.66rem; color: var(--muted); line-height: 1.45; }
+.entry-card-com b { color: var(--teal); font-weight: 600; }
+/* Acción sin filete: en estas tarjetas se separa con espacio, no con líneas. */
+.entry-card-action { margin-top: 0.9rem; }
+.entry-card-btn { display: inline-flex; align-items: center; gap: 0.4rem; font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 500; color: var(--white); background: var(--teal); border: none; border-radius: 20px; padding: 0.4rem 0.85rem; cursor: pointer; }
+.entry-card-btn:hover { background: var(--forest-mid); }
+.entry-card-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.entry-card-hint { font-size: 0.66rem; color: var(--muted); font-style: italic; }
+
+/* TARJETA DE PUNTO DE PARTIDA PROPIO
+   El origen de una entrada de "otro lugar", que hasta ahora no se dibujaba y
+   dejaba su ruta saliendo de la nada. Como la de origen de comunidad pero en
+   rojo, porque es tuya. */
+.start-card { animation: fadeIn 0.18s ease-out; max-width: 100%; background: var(--paper); padding: 0.75rem 1rem 0.8rem; }
+.start-card-title { font-family: 'Instrument Serif', serif; font-size: 1.3rem; font-weight: 400; line-height: 1.15; color: var(--route); letter-spacing: -0.01em; overflow-wrap: anywhere; padding-right: 26px; }
+.start-card-geo { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 0.25rem; }
+.start-popup .start-card-line { margin: 0.55rem 0 0; font-size: 0.72rem; color: var(--muted); line-height: 1.45; }
+.start-card-line b { color: var(--route); font-weight: 600; }
+
 @media (max-width: 480px) {
   .dest-card-header { height: 78px; }
+  /* Espejo de la cabecera de comunidad en móvil: 78px / 3 líneas. */
+  .entry-card-page { height: 78px; }
+  .entry-card-page p { -webkit-line-clamp: 3; line-clamp: 3; }
   .dest-card-title { font-size: 1.15rem; }
   .origin-card-title { font-size: 1.15rem; }
+  .entry-card-book { font-size: 1.15rem; }
+  .start-card-title { font-size: 1.15rem; }
 }
 
 /* FICTIONAL PLACE MODAL */

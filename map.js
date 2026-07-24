@@ -59,6 +59,22 @@ function coloredPinIcon(color) {
   });
 }
 
+// Cabecera de la tarjeta de lectura: una página desenfocada. El texto es
+// DECORATIVO —no es el libro, que no tenemos—, igual que la constelación de
+// un ficticio no es su cielo. Dos párrafos fijos, uno por familia. El
+// fragmento visible empieza en una palabra distinta según el título (misma
+// semilla que la constelación), para que dos tarjetas no muestren lo mismo.
+const ENTRY_PAGE_REAL = 'Por dificultades en el último momento para adquirir billetes, llegué a Barcelona a medianoche, en un tren distinto del que había anunciado y no me esperaba nadie.';
+const ENTRY_PAGE_FIC = 'Cuando el señor Bilbo Bolsón de Bolsón Cerrado anunció que celebraría en breve su ciento un cumpleaños con una fiesta de especial magnificencia, hubo mucho hablar y excitación en Hobbiton.';
+const ENTRY_CARD_W = 300;
+
+function entryPageHtml(title, fictional) {
+  const words = (fictional ? ENTRY_PAGE_FIC : ENTRY_PAGE_REAL).split(' ');
+  const start = destCardSeed(title || '') % words.length;
+  const body = words.slice(start).concat(words.slice(0, start)).join(' ');
+  return `<div class="entry-card-page" aria-hidden="true"><p>${esc(body)}</p></div>`;
+}
+
 function addDestMarker(entry) {
   const color = entry.fictional ? '#e8913c' : '#e8593c';
   const size = entry.fictional ? 12 : 10;
@@ -70,39 +86,96 @@ function addDestMarker(entry) {
     html: `<div style="width:${size}px;height:${size}px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 0 0 1.5px ${color}"></div>`,
     iconSize: [size,size], iconAnchor: [size/2,size/2]
   });
-  L.marker([entry.destLat, entry.destLng], { icon }).addTo(markersLayer).on('click', () => showDestinationDetail(entry.dest)).bindPopup(`
-    <div class="popup-book">${esc(entry.book)}${entry.author ? ` <span style="font-weight:400;font-style:normal;font-size:0.8rem;color:#888">— ${esc(entry.author)}</span>` : ''}</div>
-    <div class="popup-place">${entry.fictional ? '✦ ' : ''}${esc(entry.dest)}</div>
-    <div class="popup-km">+${entry.km.toLocaleString()} km desde ${esc(entry.fromName)}</div>
-    ${entry.note ? `<div style="font-size:0.75rem;color:#888;font-style:italic;margin-top:4px;">"${esc(entry.note)}"</div>` : ''}
-    ${(() => {
-      const key = normalizeName(entry.dest);
-      const vData = PLACE_VISITORS[key];
-      if (vData) {
-        const others = vData.books.filter(b => b !== entry.book).slice(0,2);
-        const highlightColor = entry.fictional ? '#e8913c' : 'var(--teal)';
-        // Sin otros libros que listar, todas esas lecturas son de este mismo libro.
-        const suffix = others.length ? 'leyendo:' : 'leyendo este libro';
-        return `<div class="popup-community">
-          ${communityCountHtml(vData.count, highlightColor, suffix, true)}
-          ${others.length ? '<br>' + others.map(b => `<span style="font-size:0.7rem;color:#aaa;font-style:italic">· ${b}</span>`).join(' ') : ''}
-        </div>`;
-      }
-      return '';
-    })()}
-    <div style="margin-top:8px;">
-      ${isCurrent
-        ? `<button onclick="openPostalFromEl(this)" data-dest="${esc(entry.dest)}" data-book="${esc(entry.book ? entry.book + (entry.author ? ', de ' + entry.author : '') : '')}" data-fictional="${!!entry.fictional}" style="background:none;border:1px solid rgba(29,158,117,0.3);border-radius:12px;padding:3px 10px;font-size:0.68rem;color:var(--teal);cursor:pointer;font-family:'Inter',sans-serif;">✉️ Enviar postal</button>`
-        : `<span style="font-size:0.68rem;color:#aaa;font-style:italic;">Solo puedes enviar postales desde tu destino actual</span>`}
-    </div>
-  `);
+
+  // Geo: país REAL de la entrada (no derivado) + continente por coordenadas.
+  // Mismo criterio que la tarjeta de comunidad: en ficticios no hay geografía
+  // real, y se omite el país cuando repite el nombre del destino.
+  let country = !entry.fictional && entry.country ? entry.country : '';
+  if (country && normalizeName(country).trim() === normalizeName(entry.dest).trim()) country = '';
+  const continent = entry.fictional ? '' : continentFor(entry.destLat, entry.destLng);
+  const geoSuffix = [country, continent].filter(Boolean).join(' · ');
+
+  // Contexto de comunidad sobre TU punto. PLACE_VISITORS descuenta las
+  // lecturas propias, así que existir aquí significa que hay OTROS.
+  const key = normalizeName(entry.dest);
+  const vData = PLACE_VISITORS[key];
+  const otros = vData
+    ? `<p class="entry-card-com">${vData.count === 1
+        ? 'Otra persona ha llegado hasta aquí.'
+        : `Otras <b>${vData.count.toLocaleString()}</b> personas han llegado hasta aquí.`}</p>`
+    : '';
+  // Insignia de pionera solo si NADIE más ha llegado: isPioneer() es local, y
+  // sin esta condición diría "primera persona" junto a "otras 6 han llegado".
+  const pioneer = entry.pioneer && !vData
+    ? `<p class="entry-card-pioneer">🧭 Primera persona en llegar</p>` : '';
+
+  const dataBook = entry.book ? entry.book + (entry.author ? ', de ' + entry.author : '') : '';
+  const accion = isCurrent
+    ? `<button type="button" class="entry-card-btn" onclick="openPostalFromEl(this)" data-dest="${esc(entry.dest)}" data-book="${esc(dataBook)}" data-fictional="${!!entry.fictional}"><span>✉️</span>Enviar una postal</button>`
+    : `<span class="entry-card-hint">Las postales se envían desde tu destino actual</span>`;
+
+  const html = `<div class="entry-card${entry.fictional ? ' is-fictional' : ''}">
+      ${entryPageHtml(entry.book, entry.fictional)}
+      <div class="entry-card-body">
+        <div class="entry-card-book">${esc(entry.book)}</div>
+        ${entry.author ? `<div class="entry-card-author">de ${esc(entry.author)}</div>` : ''}
+        <div class="entry-card-geo"><b>${entry.fictional ? '✦ ' : ''}${esc(entry.dest)}</b>${geoSuffix ? ' · ' + esc(geoSuffix) : ''}</div>
+        <div class="entry-card-km"><b>+${entry.km.toLocaleString()}&nbsp;km</b> desde ${esc(entry.fromName)}</div>
+        ${entry.note ? `<p class="entry-card-note">“${esc(entry.note)}”</p>` : ''}
+        ${pioneer}
+        ${otros}
+        <div class="entry-card-action">${accion}</div>
+      </div>
+    </div>`;
+  const opts = { className: 'entry-popup', maxWidth: ENTRY_CARD_W, minWidth: ENTRY_CARD_W };
+  L.marker([entry.destLat, entry.destLng], { icon }).addTo(markersLayer)
+    .on('click', () => showDestinationDetail(entry.dest)).bindPopup(html, opts);
+}
+
+// Punto de partida propio. Hasta ahora el origen de una entrada de "otro
+// lugar" no se dibujaba y su ruta salía de la nada. Rojo, porque es tuyo; el
+// naranja queda reservado a los destinos ficticios, y un origen no lo es.
+const START_CARD_W = 240;
+
+function addStartMarker(name, lat, lng, count) {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return;
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="width:9px;height:9px;background:#e8593c;border-radius:50%;border:2px solid white;box-shadow:0 0 0 1.5px #e8593c"></div>`,
+    iconSize: [9,9], iconAnchor: [4.5,4.5]
+  });
+  // Coordenadas de "otro lugar" ficticio serían inventadas: sin geografía.
+  const continent = isFictionalPlace(name) ? '' : continentFor(lat, lng);
+  const html = `<div class="start-card">
+      <div class="start-card-title">${esc(name)}</div>
+      ${continent ? `<div class="start-card-geo">${esc(continent)}</div>` : ''}
+      <p class="start-card-line">Punto de partida de <b>${count.toLocaleString()}</b> ${count === 1 ? 'lectura tuya' : 'lecturas tuyas'}</p>
+    </div>`;
+  const opts = { className: 'start-popup', maxWidth: START_CARD_W, minWidth: START_CARD_W };
+  L.marker([lat, lng], { icon }).addTo(markersLayer).bindPopup(html, opts);
 }
 
 function redrawMap() {
   markersLayer.clearLayers();
   map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
   if (origin) addOriginMarker();
-  resolvedFiltered().forEach(e => { drawRoute(e); addDestMarker(e); });
+  // Puntos que ya tienen marcador: el origen configurado y cada destino. Un
+  // origen que no esté aquí (típico de "otro lugar") dibujaba su ruta desde
+  // la nada; se le pone su propio marcador, agregando por si varias entradas
+  // salen del mismo sitio.
+  const drawn = new Set();
+  if (origin) drawn.add(normalizeName(origin.name));
+  const resolved = resolvedFiltered();
+  resolved.forEach(e => { drawRoute(e); addDestMarker(e); drawn.add(normalizeName(e.dest)); });
+  const starts = new Map();
+  resolved.forEach(e => {
+    const k = normalizeName(e.fromName || '');
+    if (!k || drawn.has(k)) return;
+    let s = starts.get(k);
+    if (!s) { s = { name: e.fromName, lat: e.fromLat, lng: e.fromLng, count: 0 }; starts.set(k, s); }
+    s.count++;
+  });
+  starts.forEach(s => addStartMarker(s.name, s.lat, s.lng, s.count));
   drawCommunityRoutes();
 }
 
@@ -592,7 +665,6 @@ function destCardBooksHtml(bookCounts) {
   const hidden = rest.slice(DEST_CARD_ALSO);
   return `<div class="dest-card-section">El libro que más os ha traído aquí</div>
       ${destCardRankRow(list[0], 1, true, true)}
-      <hr class="dest-card-div">
       <div class="dest-card-section">También os han traído</div>
       ${shown.map((b, i) => destCardRankRow(b, i + 2, false, true)).join('')}
       ${destCardMoreHtml(hidden, shown.length + 2, list.length)}`;
