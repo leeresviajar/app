@@ -49,7 +49,7 @@ const BADGES_DEF = [
     id: 'explorer_3',
     icon: '🗺️',
     name: 'He cartografiado 3 destinos',
-    desc: 'Has sido el primero en llegar a 3 destinos distintos.',
+    desc: 'Llegaste antes que nadie a 3 destinos distintos.',
     unlockFn: (stats) => stats.pioneersCount >= 3,
     progress: (stats) => `${stats.pioneersCount}/3 primeras llegadas`,
     pct: (stats) => Math.min(1, stats.pioneersCount / 3),
