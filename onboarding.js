@@ -12,7 +12,7 @@ const ONBOARDING_STEPS_MOBILE = [
   },
   {
     label: 'Paso 3 de 3', icon: '📖',
-    text: 'Aquí viven tus rutas, tu diario de lectura y los logros que desbloqueas leyendo. <em>Buen viaje.</em>',
+    text: 'Aquí viven tus rutas, tu diario de lectura y los logros que desbloqueas leyendo. <em>¡Buen viaje!</em>',
     target: ['#mtab-viajes', '#mtab-diario', '#mtab-logros'], spanAll: true, placement: 'top', pad: 6
   }
 ];
@@ -33,7 +33,7 @@ const ONBOARDING_STEPS = [
   {
     label: 'Paso 3 de 5',
     icon: '📍',
-    text: '¿Adónde te lleva tu lectura? <em>Puede ser un lugar real… o uno que solo existe en los libros.</em>',
+    text: '<em>¿Adónde te lleva tu lectura?</em> Puede ser un lugar real… o uno que solo existe en los libros.',
     target: '#destination', placement: 'right', pad: 8
   },
   {
