@@ -22,7 +22,7 @@ function closeExportModal() {
   document.getElementById('export-overlay').classList.remove('visible');
 }
 function syncExportButtons() {
-  ['stats','books','wrapped','map'].forEach(m =>
+  ['stats','books','wrapped','map','globe'].forEach(m =>
     document.getElementById('em-' + m).classList.toggle('active', m === exportMode));
   ['story','feed'].forEach(f =>
     document.getElementById('ef-' + f).classList.toggle('active', f === exportFormat));
@@ -165,6 +165,9 @@ async function buildExportCanvas() {
   // comparte el fondo con gradiente/círculos de los otros modos.
   if (exportMode === 'map') {
     return drawMapExport(ctx, canvas, W, H);
+  }
+  if (exportMode === 'globe') {
+    return drawGlobeExport(ctx, canvas, W, H);
   }
 
   function centerOffset(blockTop, blockBottom) {
@@ -587,6 +590,145 @@ function drawMapExport(ctx, canvas, W, H) {
   return canvas;
 }
 
+function drawGlobeExport(ctx, canvas, W, H) {
+  const paper='#faf7f2', ink='#1a1a18', teal='#1d9e75', forest='#0f6e56',
+        rojo='#e8593c', orange='#e8913c', muted='#9a948d';
+  const grid='rgba(15,110,86,0.09)', edge='rgba(15,110,86,0.20)';
+
+  const exFiltered = getExportEntries();
+
+  ctx.fillStyle = paper;
+  ctx.fillRect(0, 0, W, H);
+
+  // Cabecera
+  drawBrandSerif(ctx, W, 160, 60);
+  ctx.textAlign = 'center';
+  ctx.font = "500 26px 'Inter', sans-serif"; ctx.fillStyle = muted; ctx.letterSpacing = '4px';
+  ctx.fillText('MI MUNDO LECTOR', W/2, 225); ctx.letterSpacing = '0px';
+
+  if (!exFiltered.length) {
+    ctx.font = "italic 32px 'Instrument Serif', serif"; ctx.fillStyle = muted;
+    ctx.fillText('Aún no hay rutas que mostrar.', W/2, H/2);
+    return canvas;
+  }
+
+  const headerH = 330, footerH = 210;
+  const bY = headerH, bH = H - headerH - footerH;
+
+  // Rutas en orden cronológico (mismo patrón que el mapa plano)
+  const sorted = exFiltered.slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  const routes = sorted.map(en => ({
+    from: [en.fromLng, en.fromLat], fromName: en.fromName,
+    to: [en.destLng, en.destLat], toName: en.dest,
+    fict: !!en.fictional
+  }));
+
+  // Esfera: centro y radio
+  const scx = W/2, scy = bY + bH/2;
+  const SR = Math.min(W - 140, bH) / 2 * 0.72;
+  const rad = Math.PI/180;
+
+  // Rotación: centroide de los puntos reales (media de vectores unitarios, robusta al meridiano ±180)
+  function unit(lat, lng){ const p=lat*rad, l=lng*rad; return [Math.cos(p)*Math.cos(l), Math.cos(p)*Math.sin(l), Math.sin(p)]; }
+  let sx=0, sy=0, sz=0;
+  routes.forEach(r => {
+    let v = unit(r.from[1], r.from[0]); sx+=v[0]; sy+=v[1]; sz+=v[2];       // origen: siempre real
+    if (!r.fict) { v = unit(r.to[1], r.to[0]); sx+=v[0]; sy+=v[1]; sz+=v[2]; } // destino real
+  });
+  let lat0=20, lng0=0;
+  if (sx || sy || sz) { const m=Math.hypot(sx,sy,sz)||1; lat0=Math.asin(sz/m)/rad; lng0=Math.atan2(sy,sx)/rad; }
+
+  function GP(lat, lng){
+    const p=lat*rad, l=(lng-lng0)*rad, p0=lat0*rad;
+    const cosc=Math.sin(p0)*Math.sin(p)+Math.cos(p0)*Math.cos(p)*Math.cos(l);
+    return { x: scx + SR*(Math.cos(p)*Math.sin(l)),
+             y: scy - SR*(Math.cos(p0)*Math.sin(p)-Math.sin(p0)*Math.cos(p)*Math.cos(l)),
+             vis: cosc >= 0 };
+  }
+  function ll(v){ return [Math.asin(v[2])/rad, Math.atan2(v[1],v[0])/rad]; }
+  function gcArc(a, b){ // a,b = [lng,lat]
+    const v1=unit(a[1],a[0]), v2=unit(b[1],b[0]);
+    let d=v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]; d=Math.max(-1,Math.min(1,d));
+    const om=Math.acos(d), so=Math.sin(om), out=[];
+    for(let i=0;i<=48;i++){ const t=i/48; let s1,s2;
+      if(so<1e-6){ s1=1-t; s2=t; } else { s1=Math.sin((1-t)*om)/so; s2=Math.sin(t*om)/so; }
+      const g=ll([v1[0]*s1+v2[0]*s2, v1[1]*s1+v2[1]*s2, v1[2]*s1+v2[2]*s2]);
+      out.push(GP(g[0], g[1]));
+    }
+    return out;
+  }
+  function drawPolyVisible(seg, color, width){
+    ctx.strokeStyle=color; ctx.lineWidth=width; ctx.setLineDash([12,8]);
+    ctx.beginPath(); let started=false;
+    for(let i=0;i<seg.length;i++){ if(seg[i].vis){ started?ctx.lineTo(seg[i].x,seg[i].y):ctx.moveTo(seg[i].x,seg[i].y); started=true; } else started=false; }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  function label(x, y, text, color, font){
+    ctx.font=font; ctx.fillStyle=color; ctx.textBaseline='middle';
+    ctx.textAlign = x>scx ? 'left' : 'right';
+    ctx.fillText(text, x + (x>scx?14:-14), y);
+  }
+
+  // Globo esquemático: rejilla tenue, hemisferio frontal, recortada al círculo
+  ctx.save();
+  ctx.beginPath(); ctx.arc(scx, scy, SR, 0, Math.PI*2); ctx.clip();
+  ctx.strokeStyle=grid; ctx.lineWidth=1.5;
+  for(let lo=-150; lo<=180; lo+=30){ ctx.beginPath(); let st=false;
+    for(let la=-90; la<=90; la+=3){ const q=GP(la,lo); if(q.vis){ st?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y); st=true; } else st=false; } ctx.stroke(); }
+  for(let la2=-60; la2<=60; la2+=30){ ctx.beginPath(); let s2=false;
+    for(let lo2=-180; lo2<=180; lo2+=3){ const q=GP(la2,lo2); if(q.vis){ s2?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y); s2=true; } else s2=false; } ctx.stroke(); }
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(scx, scy, SR, 0, Math.PI*2); ctx.strokeStyle=edge; ctx.lineWidth=2; ctx.stroke();
+
+  // Rutas reales: arcos de círculo máximo (solo tramo visible)
+  routes.forEach(r => { if(!r.fict) drawPolyVisible(gcArc(r.from, r.to), rojo, 4); });
+
+  // Marcadores reales (solo cara visible). El origen del primer viaje es "casa" (teal)
+  const homeName = routes.length ? routes[0].fromName : null;
+  const uniqReal = {};
+  routes.forEach(r => {
+    if(!uniqReal[r.fromName]) uniqReal[r.fromName]={ lon:r.from[0], lat:r.from[1], name:r.fromName };
+    if(!r.fict && !uniqReal[r.toName]) uniqReal[r.toName]={ lon:r.to[0], lat:r.to[1], name:r.toName };
+  });
+  Object.values(uniqReal).forEach(p => {
+    const q=GP(p.lat, p.lon); if(!q.vis) return;
+    const isHome = p.name===homeName;
+    ctx.beginPath(); ctx.arc(q.x, q.y, isHome?11:9, 0, Math.PI*2);
+    ctx.fillStyle = isHome?teal:forest; ctx.fill();
+    ctx.strokeStyle=paper; ctx.lineWidth=3.5; ctx.stroke();
+    label(q.x, q.y, p.name, ink, "500 28px 'Inter', sans-serif");
+  });
+
+  // Destinos ficticios: flotando fuera del globo, hilo desde el origen real
+  const seenFict = {};
+  routes.forEach(r => {
+    if(!r.fict || seenFict[r.toName]) return; seenFict[r.toName]=true;
+    const gp = GP(r.to[1], r.to[0]);
+    let ang = Math.atan2(gp.y-scy, gp.x-scx);
+    if(!isFinite(ang)) ang = 0;
+    const fx = scx + Math.cos(ang)*(SR+52), fy = scy + Math.sin(ang)*(SR+52);
+    const o = GP(r.from[1], r.from[0]);
+    if(o.vis){
+      ctx.strokeStyle=orange; ctx.lineWidth=4; ctx.setLineDash([12,8]);
+      ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(fx, fy); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.beginPath(); ctx.arc(fx, fy, 9, 0, Math.PI*2); ctx.fillStyle=orange; ctx.fill();
+    ctx.strokeStyle=paper; ctx.lineWidth=3.5; ctx.stroke();
+    label(fx, fy, '✦ ' + r.toName, orange, "italic 32px 'Instrument Serif', serif");
+  });
+
+  // Pie: km y nº de destinos reales (calculados de verdad)
+  const km = Math.round(exFiltered.reduce((s,e)=>s+e.km,0));
+  const places = new Set(exFiltered.map(e=>e.dest.toLowerCase())).size;
+  ctx.textAlign='center';
+  ctx.font="italic 34px 'Instrument Serif', serif"; ctx.fillStyle='rgba(29,158,117,0.85)';
+  ctx.fillText(km.toLocaleString('es-ES') + ' km · ' + places + ' destino' + (places===1?'':'s'), W/2, H-160);
+  ctx.font="400 24px 'Inter', sans-serif"; ctx.fillStyle=muted;
+  ctx.fillText('leeresviajar.app', W/2, H-100);
+
+  return canvas;
+}
+
 function downloadExport() {
   if (!exportCanvas) return;
   const dataUrl = exportCanvas.toDataURL('image/png');
@@ -597,7 +739,7 @@ function downloadExport() {
     return;
   }
   const link = document.createElement('a');
-  const modeLabel = { stats: 'stats', books: 'lecturas', wrapped: 'wrapped', map: 'mapa' }[exportMode] || exportMode;
+  const modeLabel = { stats: 'stats', books: 'lecturas', wrapped: 'wrapped', map: 'mapa', globe: 'globo' }[exportMode] || exportMode;
   const fmtLabel = { story: 'historia', feed: 'feed' }[exportFormat] || exportFormat;
   const periodLabel = exportPeriod === 'total' ? 'todo' : String(exportPeriodValue);
   link.download = `leer-es-viajar-${modeLabel}-${fmtLabel}-${periodLabel}.png`;
