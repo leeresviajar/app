@@ -520,6 +520,8 @@ window.addEventListener('load', async () => {
   // normales, pero sale por return si falla la lectura de la nube
   // (storage.js) y ahí se quedaría el hueco vacío.
   updateOriginNarrative();
+  // Alto inicial del campo de notas: el del placeholder, que depende del ancho.
+  autoGrowNote(document.getElementById('book-note'));
 });
 </script>
 

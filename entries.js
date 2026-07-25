@@ -178,12 +178,23 @@ function clearAllFieldErrors() {
 }
 
 // ===================== NOTAS =====================
-// El textarea mide una línea en reposo y crece con el contenido. Al
-// vaciarlo vuelve a una línea: 'auto' antes de leer scrollHeight es lo que
-// permite que también encoja, no solo que crezca.
+// El campo se dimensiona a su contenido en todo momento: nunca sobra alto.
+// Vacío mide lo que ocupe el placeholder (una o dos líneas según el ancho);
+// con contenido, crece y decrece con el texto. 'auto' antes de leer
+// scrollHeight es lo que permite que también encoja, no solo que crezca.
 function autoGrowNote(el) {
   el.style.height = 'auto';
-  el.style.height = el.scrollHeight + 'px';
+  let h = el.scrollHeight;
+  if (!el.value) {
+    // scrollHeight no cuenta el placeholder. Para medirlo se escribe en el
+    // propio campo y se borra: mismas métricas exactas que el texto real, y
+    // asignar value por código no dispara 'input', así que no hay recursión.
+    el.value = el.placeholder;
+    el.style.height = 'auto';
+    h = el.scrollHeight;
+    el.value = '';
+  }
+  el.style.height = h + 'px';
 }
 
 // ===================== ADD ENTRY =====================
