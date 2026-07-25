@@ -149,6 +149,10 @@ Distinción real: hay lugares imaginarios anclados en un país que existe (Hogwa
 - **No deducirlo de las coordenadas.** Las posiciones de `COMMUNITY_POSITIONS` son colocaciones inventadas para el mapa, no ubicaciones geográficas reales.
 - El cómputo de países pasa a ser: países de destinos reales + `paisReal` de destinos ficticios cuando no es nulo, deduplicado.
 
+**Regla de curación** (decidida por Paula, 25 jul 2026; vale para futuras ampliaciones del catálogo): anclar solo si el país existe **con ese nombre y en ese mundo**. Ni mundos que no son la Tierra (Konoha), ni lugares deliberadamente sin ubicar (Omelas), ni estados sucesores (Panem, Gilead, Oceanía).
+
+Valores decididos: **ES** vetusta, marineda, oleza, orbajosa, región · **CO** macondo · **MX** comala · **GB** thornfield, wuthering heights, manderley, mansfield park, coketown, hogwarts, hogsmeade, azkaban, diagon alley, el callejón diagon, neverwhere · **US** yoknapatawpha. Los otros 110 se quedan en `null`.
+
 **Claude Code no rellena los valores.** Debe listar todos los lugares de `FICTIONAL` con su `paisReal` a `null` y presentar la lista para que Paula decida cuáles anclar. Es curación manual y probablemente la mayoría se queden en `null`.
 
 ---

@@ -75,17 +75,27 @@ function _matchesFictional(key, k) {
 // coordenadas — las de FICTIONAL son colocaciones inventadas para el mapa, no
 // ubicaciones geográficas. Mismas claves que FICTIONAL, alias incluidos: los
 // alias de un mismo lugar llevan el mismo valor.
+//
+// REGLA para ampliar el catálogo: anclar solo si el país existe con ese nombre
+// y en ese mundo. Quedan fuera, y son las tres trampas habituales:
+//   · mundos que no son la Tierra — Konoha está en el País del Fuego, y que la
+//     inspiración sea japonesa no la pone en Japón
+//   · lugares deliberadamente sin ubicar — Omelas viene de leer "Salem, Oregon"
+//     al revés, pero eso es el origen del nombre, no una ubicación
+//   · estados sucesores — Panem, Gilead y Oceanía ocupan geografía real pero
+//     sustituyen al país: anclar Panem a US diría que quien lee Los juegos del
+//     hambre ha viajado a un Estados Unidos que en ese libro ya no existe
 const FICTIONAL_REAL_COUNTRY = {
   'hobbiton':null,'la comarca':null,'the shire':null,
   'mordor':null,'gondor':null,'rohan':null,
   'rivendell':null,'rivendel':null,'minas tirith':null,
   'lothlórien':null,'lothloren':null,'erebor':null,
   'isengard':null,'moria':null,
-  'hogwarts':null,'hogsmeade':null,'azkaban':null,
-  'diagon alley':null,'el callejón diagon':null,
-  'macondo':null,'comala':null,
-  'vetusta':null,'orbajosa':null,'región':null,
-  'marineda':null,'oleza':null,
+  'hogwarts':'GB','hogsmeade':'GB','azkaban':'GB',
+  'diagon alley':'GB','el callejón diagon':'GB',
+  'macondo':'CO','comala':'MX',
+  'vetusta':'ES','orbajosa':'ES','región':'ES',
+  'marineda':'ES','oleza':'ES',
   'arrakis':null,'dune':null,'giedi prime':null,'caladan':null,
   'terramar':null,'earthsea':null,'anarres':null,'omelas':null,
   'narnia':null,'cair paravel':null,
@@ -93,10 +103,10 @@ const FICTIONAL_REAL_COUNTRY = {
   'winterfell':null,'rocadragón':null,'dragonstone':null,
   'oceania':null,'oceanía':null,'airstrip one':null,
   'gilead':null,'panem':null,
-  'coketown':null,'wuthering heights':null,'thornfield':null,
-  'manderley':null,'mansfield park':null,
+  'coketown':'GB','wuthering heights':'GB','thornfield':'GB',
+  'manderley':'GB','mansfield park':'GB',
   'tlön':null,'uqbar':null,
-  'neverwhere':null,'stardust':null,'american gods':null,
+  'neverwhere':'GB','stardust':null,'american gods':null,
   'ankh-morpork':null,'lancre':null,
   'capricorno':null,'ombra':null,'tintamundo':null,
   'isla misteriosa':null,'centro de la tierra':null,
@@ -109,7 +119,7 @@ const FICTIONAL_REAL_COUNTRY = {
   'luthadel':null,'roshar':null,
   'bolvangar':null,'cittàgazze':null,
   'mid-world':null,'la torre oscura':null,
-  'yoknapatawpha':null,'zenda':null,
+  'yoknapatawpha':'US','zenda':null,
   // Memorias de Idhún — Laura Gallego
   'vanis':null,'vanissar':null,
   'thalis':null,'raheld':null,
