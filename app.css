@@ -49,7 +49,10 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 /* DESTINO PROTAGONISTA — sin etiqueta: el tamaño y el serif marcan la
    jerarquía. La línea inferior es de 2px (el resto de campos, 1px): es lo
    que lo señala como el campo que define el producto. */
-#destination { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 26px; line-height: 1.3; padding: 0 0 12px; border: none; border-bottom: 2px solid var(--teal); border-radius: 0; margin-bottom: 0; color: var(--ink); }
+/* 18px y no 16: a 16px la altura de x de Instrument Serif iguala la de Inter
+   a 15px (8,3 frente a 8,2), y el destino se leía subordinado al título.
+   Ver espec §4. */
+#destination { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 18px; line-height: 1.3; padding: 0 0 12px; border: none; border-bottom: 2px solid var(--teal); border-radius: 0; margin-bottom: 0; color: var(--ink); }
 /* El ✦ del placeholder es deliberado (ver espec §4): es la puerta de entrada
    que enseña que se puede escribir un lugar inventado. Fuera del placeholder
    el símbolo sigue reservado a destinos ficticios. */
