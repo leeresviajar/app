@@ -145,7 +145,9 @@ async function addEntry() {
     if (wasFirstEntry) showAuthCtaToast();
 
     const stats = getBadgeStats();
-    checkNewBadges(stats);
+    // fromEntry: único sitio que lo pasa. Habilita los logros conmemorativos,
+    // que premian añadir un destino y no la mera carga de la app.
+    checkNewBadges(stats, false, false, true);
 
     updateList(); updateStats(); updateOriginNarrative(); saveState();
     invalidateCommunityCache();

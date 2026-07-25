@@ -156,6 +156,22 @@ const BADGES_DEF = [
     desc: 'Cinco lecturas distintas te llevaron al mismo lugar.',
     progressFn: (stats) => ({ actual: stats.maxBooksPerDest, meta: 5 }),
   },
+  // CONMEMORATIVO. El único logro que no es función pura de las entradas:
+  // depende de CUÁNDO actuaste, no de qué tienes guardado. De ahí que se
+  // conceda solo desde addEntry (ver badgeConcedido) y que se enmascare y
+  // caduque por su ventana (ver badgeVisibility). No se anuncia en la app.
+  // Sobrevive a un navegador nuevo porque los logros se sincronizan a
+  // profiles.badges y se fusionan por unión al cargar.
+  {
+    id: 'expedicion_2',
+    icon: '⛵',
+    name: 'Formé parte de la segunda expedición',
+    desc: 'Añadiste un destino en agosto de 2026, cuando zarpó la segunda expedición.',
+    conmemorativo: { desde: '2026-08-01', hasta: '2026-08-31' },
+    // Existe solo porque badgePct/badgeFrac lo asumen. No concede nada: nunca
+    // está en estado 'locked', así que su barra tampoco llega a pintarse.
+    progressFn: () => ({ actual: 0, meta: 1 }),
+  },
 ];
 
 // ===================== PROGRESO NUMÉRICO =====================
@@ -203,8 +219,27 @@ function isBadgeRevealed(id, stats, unlocked) {
   return !pred || isBadgeUnlocked(pred, stats);
 }
 
+// Fecha LOCAL en YYYY-MM-DD, para comparar con las ventanas de los
+// conmemorativos. No vale toISOString(): en agosto España va UTC+2, y un
+// guardado a las 01:00 del día 1 saldría como "31 de julio" en UTC.
+function hoyLocal() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// Cuarto estado, solo para los conmemorativos: 'oculto' = no existe para esta
+// persona ahora mismo. renderBadges construye sus listas por inclusión, así que
+// un 'oculto' cae fuera de las tres: ni fila, ni cuenta en "Por conseguir · N".
+// No contradice la regla del 25 de julio ("todos los logros ocupan fila"): esa
+// regla habla de los logros alcanzables, y un conmemorativo caducado ya no lo es.
 function badgeVisibility(badge, stats, unlocked) {
   if (unlocked.includes(badge.id)) return 'unlocked';
+  if (badge.conmemorativo) {
+    const hoy = hoyLocal();
+    if (hoy < badge.conmemorativo.desde || hoy > badge.conmemorativo.hasta) return 'oculto';
+    return 'masked';   // durante la ventana: "Logro oculto", no se anuncia
+  }
   if (badge.revelaSi && !isBadgeRevealed(badge.revelaSi, stats, unlocked)) return 'masked';
   if (badge.secreto) return 'masked';
   return 'locked';
@@ -276,11 +311,25 @@ function loadUnlocked() {
 }
 function saveUnlocked(arr) { localStorage.setItem('lev_badges', JSON.stringify(arr)); }
 
-function checkNewBadges(stats, silent = false, seeding = false) {
+// Los conmemorativos se conceden por fecha y SOLO al añadir una entrada. Si
+// bastara con isBadgeUnlocked, abrir la app en agosto con lecturas viejas ya lo
+// daría, porque checkNewBadges también corre en la carga y en la siembra: se
+// premia añadir un destino, no asomarse. De las cuatro llamadas a
+// checkNewBadges, solo la de addEntry pasa fromEntry.
+function badgeConcedido(badge, stats, fromEntry) {
+  if (badge.conmemorativo) {
+    if (!fromEntry) return false;
+    const hoy = hoyLocal();
+    return hoy >= badge.conmemorativo.desde && hoy <= badge.conmemorativo.hasta;
+  }
+  return isBadgeUnlocked(badge, stats);
+}
+
+function checkNewBadges(stats, silent = false, seeding = false, fromEntry = false) {
   const unlocked = loadUnlocked();
   const newOnes = [];
   for (const badge of BADGES_DEF) {
-    if (!unlocked.includes(badge.id) && isBadgeUnlocked(badge, stats)) {
+    if (!unlocked.includes(badge.id) && badgeConcedido(badge, stats, fromEntry)) {
       unlocked.push(badge.id);
       newOnes.push(badge);
     }
@@ -295,7 +344,10 @@ function checkNewBadges(stats, silent = false, seeding = false) {
     }
     // silent: al cargar desde la nube marcamos los logros ya conseguidos sin
     // lanzar la lluvia de toasts por logros que el usuario ya tenía.
-    if (!silent) showBadgeUnlockToast(newOnes[0]);
+    // Solo se avisa de uno. El conmemorativo pasa delante porque no se anuncia
+    // en ninguna parte: el toast ES el descubrimiento, y va al final del array,
+    // así que sin esto lo taparía cualquier logro normal caído a la vez.
+    if (!silent) showBadgeUnlockToast(newOnes.find(b => b.conmemorativo) || newOnes[0]);
   }
 }
 
@@ -307,7 +359,7 @@ function checkNewBadges(stats, silent = false, seeding = false) {
 // La versión sube cada vez que se añaden logros nuevos: así vuelve a sembrar
 // una única vez por despliegue.
 const BADGE_SEED_KEY = 'lev_badges_seed';
-const BADGE_SEED_VERSION = 1;
+const BADGE_SEED_VERSION = 2;
 
 function seedBadgesOnce() {
   if (localStorage.getItem(BADGE_SEED_KEY) === String(BADGE_SEED_VERSION)) return false;
