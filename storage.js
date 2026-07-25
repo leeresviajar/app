@@ -225,6 +225,8 @@ function migrateDiary() {
     });
   });
   saveDiary(newDiary.reverse()); // más reciente primero
-  // Comprobar badges con el estado migrado
-  checkNewBadges(getBadgeStats());
+  // Comprobar badges con el estado migrado, en silencio: esto corre dentro de
+  // loadState(), o sea antes de seedBadgesOnce(), y sus logros son de entradas
+  // viejas que se acaban de migrar — ninguno se acaba de conseguir.
+  checkNewBadges(getBadgeStats(), true);
 }

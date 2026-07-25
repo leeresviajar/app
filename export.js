@@ -195,8 +195,7 @@ async function buildExportCanvas() {
   const km      = Math.round(exFiltered.reduce((s,e) => s+e.km, 0));
   const books   = new Set(exFiltered.map(e => e.book.toLowerCase().trim())).size;
   const places  = new Set(exFiltered.map(e => e.dest.toLowerCase())).size;
-  const countries = new Set(exFiltered.filter(e=>!e.fictional)
-    .map(e=>e.countryCode||e.country||'').filter(Boolean)).size;
+  const countries = countriesFrom(exFiltered).size;
   const pioneers = loadDiary().filter(e=>e.pioneer).length;
   const fictional = new Set(exFiltered.filter(e=>e.fictional).map(e=>e.dest.toLowerCase())).size;
 

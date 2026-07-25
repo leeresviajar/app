@@ -68,6 +68,101 @@ function _matchesFictional(key, k) {
   return re.test(key);
 }
 
+// País real de un lugar imaginario: código ISO-2 cuando el lugar está anclado
+// en un país que existe (Hogwarts en Reino Unido, Macondo en Colombia), y null
+// cuando vive en un mundo aparte (Narnia, la Tierra Media, Ankh-Morpork).
+// Curación manual: casi todo se queda en null a propósito. NO deducirlo de las
+// coordenadas — las de FICTIONAL son colocaciones inventadas para el mapa, no
+// ubicaciones geográficas. Mismas claves que FICTIONAL, alias incluidos: los
+// alias de un mismo lugar llevan el mismo valor.
+//
+// REGLA para ampliar el catálogo: anclar solo si el país existe con ese nombre
+// y en ese mundo. Quedan fuera, y son las tres trampas habituales:
+//   · mundos que no son la Tierra — Konoha está en el País del Fuego, y que la
+//     inspiración sea japonesa no la pone en Japón
+//   · lugares deliberadamente sin ubicar — Omelas viene de leer "Salem, Oregon"
+//     al revés, pero eso es el origen del nombre, no una ubicación
+//   · estados sucesores — Panem, Gilead y Oceanía ocupan geografía real pero
+//     sustituyen al país: anclar Panem a US diría que quien lee Los juegos del
+//     hambre ha viajado a un Estados Unidos que en ese libro ya no existe
+const FICTIONAL_REAL_COUNTRY = {
+  'hobbiton':null,'la comarca':null,'the shire':null,
+  'mordor':null,'gondor':null,'rohan':null,
+  'rivendell':null,'rivendel':null,'minas tirith':null,
+  'lothlórien':null,'lothloren':null,'erebor':null,
+  'isengard':null,'moria':null,
+  'hogwarts':'GB','hogsmeade':'GB','azkaban':'GB',
+  'diagon alley':'GB','el callejón diagon':'GB',
+  'macondo':'CO','comala':'MX',
+  'vetusta':'ES','orbajosa':'ES','región':'ES',
+  'marineda':'ES','oleza':'ES',
+  'arrakis':null,'dune':null,'giedi prime':null,'caladan':null,
+  'terramar':null,'earthsea':null,'anarres':null,'omelas':null,
+  'narnia':null,'cair paravel':null,
+  'westeros':null,'desembarco del rey':null,'kings landing':null,
+  'winterfell':null,'rocadragón':null,'dragonstone':null,
+  'oceania':null,'oceanía':null,'airstrip one':null,
+  'gilead':null,'panem':null,
+  'coketown':'GB','wuthering heights':'GB','thornfield':'GB',
+  'manderley':'GB','mansfield park':'GB',
+  'tlön':null,'uqbar':null,
+  'neverwhere':'GB','stardust':null,'american gods':null,
+  'ankh-morpork':null,'lancre':null,
+  'capricorno':null,'ombra':null,'tintamundo':null,
+  'isla misteriosa':null,'centro de la tierra':null,
+  'el castillo':null,'the castle':null,
+  'dorothea':null,'anastasia':null,'isidora':null,'octavia':null,
+  'trost':null,'paradis':null,
+  'konoha':null,'konohagakure':null,
+  'alabasta':null,'dressrosa':null,
+  'tarbean':null,'imre':null,
+  'luthadel':null,'roshar':null,
+  'bolvangar':null,'cittàgazze':null,
+  'mid-world':null,'la torre oscura':null,
+  'yoknapatawpha':'US','zenda':null,
+  // Memorias de Idhún — Laura Gallego
+  'vanis':null,'vanissar':null,
+  'thalis':null,'raheld':null,
+  'nurgon':null,'nandelt':null,
+  'nanetten':null,'dingra':null,
+  'shia':null,'arén':null,
+  'celestia':null,
+  'rhyrr':null,'kelesban':null,
+  'haai-sil':null,'vaisel':null,
+  'nanhai':null,'gran oráculo':null,
+  'kash-tar':null,'kosh':null,
+  'lumbak':null,'nin':null,
+  'bosque de awa':null,'awa':null,
+  'derbhad':null,'torre de derbhad':null,
+  'alis lithban':null,'bosque de alis lithban':null,
+  'awinor':null,'torre de awinor':null,
+  'drackwen':null,'torre de drackwen':null,
+  'kazlunn':null,'torre de kazlunn':null,
+  'monte lunn':null,
+  'shur-ikail':null,'anillo de hielo':null,
+  'raden':null,
+  'gantadd':null,'oráculo de gantadd':null,
+  'oráculo de awa':null,'oráculo de raden':null,
+  'limbhad':null,'umadhun':null,
+};
+
+// Clave canónica de un lugar imaginario, con el mismo emparejador y el mismo
+// orden de recorrido que geocode(): gana la primera que casa. Aquí no sirve
+// normalizeName(): las claves llevan tildes ('rocadragón', 'tlön', 'arén') y
+// quitarlas dejaría de casar.
+function fictionalKeyFor(name) {
+  const key = (name || '').toLowerCase().trim();
+  for (const k of Object.keys(FICTIONAL)) {
+    if (_matchesFictional(key, k)) return k;
+  }
+  return null;
+}
+
+function realCountryForFictional(name) {
+  const k = fictionalKeyFor(name);
+  return k ? (FICTIONAL_REAL_COUNTRY[k] || null) : null;
+}
+
 async function geocode(place, askUser = false, fieldLabel = 'destino') {
   const key = place.toLowerCase().trim();
   for (const [k, v] of Object.entries(FICTIONAL)) {
