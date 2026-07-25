@@ -254,6 +254,13 @@ function getBadgeStats() {
     ? realRoutes.reduce((m,e) => Math.min(m, e.km), Infinity)
     : 0;
   const countries = new Set(entries.filter(e => !e.fictional).map(e => e.countryCode || e.country || '').filter(Boolean));
+  // Los lugares imaginarios anclados en un país que existe también suman país;
+  // los de mundo aparte no pueden. Deduplicado contra los destinos reales: si
+  // ya habías estado en Reino Unido, Hogwarts no añade uno nuevo.
+  entries.filter(e => e.fictional).forEach(e => {
+    const cc = realCountryForFictional(e.dest);
+    if (cc) countries.add(cc);
+  });
   // Dispersión y convergencia: los ficticios cuentan en las dos, y se calculan
   // sobre las entradas sin resolver — la cadena de orígenes no afecta ni al
   // libro ni al destino.
