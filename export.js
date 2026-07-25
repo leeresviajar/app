@@ -594,6 +594,7 @@ function drawGlobeExport(ctx, canvas, W, H) {
   const paper='#faf7f2', ink='#1a1a18', teal='#1d9e75', forest='#0f6e56',
         rojo='#e8593c', orange='#e8913c', muted='#9a948d';
   const grid='rgba(15,110,86,0.09)', edge='rgba(15,110,86,0.20)';
+  const GRAD_FLOOR = 0.35; // suelo del degradado por recencia — calibrar con datos de beta
 
   const exFiltered = getExportEntries();
 
@@ -615,25 +616,33 @@ function drawGlobeExport(ctx, canvas, W, H) {
   const headerH = 330, footerH = 210;
   const bY = headerH, bH = H - headerH - footerH;
 
-  // Rutas en orden cronológico (mismo patrón que el mapa plano)
+  // Rutas en orden cronológico ascendente (índice 0 = más antiguo → base del degradado)
   const sorted = exFiltered.slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
   const routes = sorted.map(en => ({
     from: [en.fromLng, en.fromLat], fromName: en.fromName,
     to: [en.destLng, en.destLat], toName: en.dest,
     fict: !!en.fictional
   }));
+  const n = routes.length;
+  function recT(i){ return n<=1 ? 1 : i/(n-1); }              // 0 (antiguo) .. 1 (reciente)
+  function recOp(t){ return GRAD_FLOOR + (1-GRAD_FLOOR)*t; }  // opacidad con suelo
+
+  // Nombres ficticios: cualquier destino con fict=true. Sirven para excluirlos de lo "real".
+  const fictNames = new Set();
+  routes.forEach(r => { if (r.fict) fictNames.add(r.toName); });
+  const isFict = name => fictNames.has(name);
 
   // Esfera: centro y radio
   const scx = W/2, scy = bY + bH/2;
   const SR = Math.min(W - 140, bH) / 2 * 0.72;
   const rad = Math.PI/180;
 
-  // Rotación: centroide de los puntos reales (media de vectores unitarios, robusta al meridiano ±180)
+  // Rotación: centroide de los puntos REALES (media de vectores unitarios)
   function unit(lat, lng){ const p=lat*rad, l=lng*rad; return [Math.cos(p)*Math.cos(l), Math.cos(p)*Math.sin(l), Math.sin(p)]; }
   let sx=0, sy=0, sz=0;
   routes.forEach(r => {
-    let v = unit(r.from[1], r.from[0]); sx+=v[0]; sy+=v[1]; sz+=v[2];       // origen: siempre real
-    if (!r.fict) { v = unit(r.to[1], r.to[0]); sx+=v[0]; sy+=v[1]; sz+=v[2]; } // destino real
+    if(!isFict(r.fromName)){ const v=unit(r.from[1], r.from[0]); sx+=v[0]; sy+=v[1]; sz+=v[2]; }
+    if(!r.fict){ const v=unit(r.to[1], r.to[0]); sx+=v[0]; sy+=v[1]; sz+=v[2]; }
   });
   let lat0=20, lng0=0;
   if (sx || sy || sz) { const m=Math.hypot(sx,sy,sz)||1; lat0=Math.asin(sz/m)/rad; lng0=Math.atan2(sy,sx)/rad; }
@@ -646,7 +655,7 @@ function drawGlobeExport(ctx, canvas, W, H) {
              vis: cosc >= 0 };
   }
   function ll(v){ return [Math.asin(v[2])/rad, Math.atan2(v[1],v[0])/rad]; }
-  function gcArc(a, b){ // a,b = [lng,lat]
+  function gcArc(a, b){
     const v1=unit(a[1],a[0]), v2=unit(b[1],b[0]);
     let d=v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]; d=Math.max(-1,Math.min(1,d));
     const om=Math.acos(d), so=Math.sin(om), out=[];
@@ -663,13 +672,8 @@ function drawGlobeExport(ctx, canvas, W, H) {
     for(let i=0;i<seg.length;i++){ if(seg[i].vis){ started?ctx.lineTo(seg[i].x,seg[i].y):ctx.moveTo(seg[i].x,seg[i].y); started=true; } else started=false; }
     ctx.stroke(); ctx.setLineDash([]);
   }
-  function label(x, y, text, color, font){
-    ctx.font=font; ctx.fillStyle=color; ctx.textBaseline='middle';
-    ctx.textAlign = x>scx ? 'left' : 'right';
-    ctx.fillText(text, x + (x>scx?14:-14), y);
-  }
 
-  // Globo esquemático: rejilla tenue, hemisferio frontal, recortada al círculo
+  // Globo esquemático: rejilla tenue (sin degradado), hemisferio frontal
   ctx.save();
   ctx.beginPath(); ctx.arc(scx, scy, SR, 0, Math.PI*2); ctx.clip();
   ctx.strokeStyle=grid; ctx.lineWidth=1.5;
@@ -680,44 +684,143 @@ function drawGlobeExport(ctx, canvas, W, H) {
   ctx.restore();
   ctx.beginPath(); ctx.arc(scx, scy, SR, 0, Math.PI*2); ctx.strokeStyle=edge; ctx.lineWidth=2; ctx.stroke();
 
-  // Rutas reales: arcos de círculo máximo (solo tramo visible)
-  routes.forEach(r => { if(!r.fict) drawPolyVisible(gcArc(r.from, r.to), rojo, 4); });
+  // Rutas reales (ambos extremos reales): arco de círculo máximo, opacidad por recencia.
+  // Se acumulan los segmentos visibles para que las etiquetas los esquiven.
+  const arcSegs = [];
+  routes.forEach((r,i) => {
+    if(r.fict || isFict(r.fromName)) return; // tramo que toca ficticio → sin arco rojo
+    const seg = gcArc(r.from, r.to);
+    ctx.globalAlpha = recOp(recT(i));
+    drawPolyVisible(seg, rojo, 4);
+    ctx.globalAlpha = 1;
+    for(let k=1;k<seg.length;k++){ if(seg[k-1].vis && seg[k].vis) arcSegs.push({a:seg[k-1], b:seg[k]}); }
+  });
 
-  // Marcadores reales (solo cara visible). El origen del primer viaje es "casa" (teal)
+  // Marcadores reales (cara visible). Recencia por lugar = viaje más reciente que lo toca.
   const homeName = routes.length ? routes[0].fromName : null;
   const uniqReal = {};
-  routes.forEach(r => {
-    if(!uniqReal[r.fromName]) uniqReal[r.fromName]={ lon:r.from[0], lat:r.from[1], name:r.fromName };
-    if(!r.fict && !uniqReal[r.toName]) uniqReal[r.toName]={ lon:r.to[0], lat:r.to[1], name:r.toName };
-  });
+  function bump(name, lon, lat, t){
+    if(isFict(name)) return;
+    if(!uniqReal[name]) uniqReal[name] = { lon, lat, name, t };
+    else uniqReal[name].t = Math.max(uniqReal[name].t, t);
+  }
+  routes.forEach((r,i) => { bump(r.fromName, r.from[0], r.from[1], recT(i)); if(!r.fict) bump(r.toName, r.to[0], r.to[1], recT(i)); });
+
+  const markerPts = [];  // {x,y} para colisión de etiquetas
+  const labelReqs = [];  // {x,y,text,font,color,t,fict}
   Object.values(uniqReal).forEach(p => {
-    const q=GP(p.lat, p.lon); if(!q.vis) return;
+    const q = GP(p.lat, p.lon); if(!q.vis) return;
     const isHome = p.name===homeName;
+    const op = isHome ? 1 : recOp(p.t);            // casa siempre a plena opacidad (es el ancla, no la estela)
+    ctx.globalAlpha = op;
     ctx.beginPath(); ctx.arc(q.x, q.y, isHome?11:9, 0, Math.PI*2);
     ctx.fillStyle = isHome?teal:forest; ctx.fill();
     ctx.strokeStyle=paper; ctx.lineWidth=3.5; ctx.stroke();
-    label(q.x, q.y, p.name, ink, "500 28px 'Inter', sans-serif");
+    ctx.globalAlpha = 1;
+    markerPts.push({ x:q.x, y:q.y });
+    labelReqs.push({ x:q.x, y:q.y, text:p.name, font:"500 28px 'Inter', sans-serif", color:ink, t:isHome?1:p.t });
   });
 
   // Destinos ficticios: flotando fuera del globo, hilo desde el origen real
   const seenFict = {};
-  routes.forEach(r => {
+  routes.forEach((r,i) => {
     if(!r.fict || seenFict[r.toName]) return; seenFict[r.toName]=true;
     const gp = GP(r.to[1], r.to[0]);
-    let ang = Math.atan2(gp.y-scy, gp.x-scx);
-    if(!isFinite(ang)) ang = 0;
+    let ang = Math.atan2(gp.y-scy, gp.x-scx); if(!isFinite(ang)) ang = 0;
     const fx = scx + Math.cos(ang)*(SR+52), fy = scy + Math.sin(ang)*(SR+52);
     const o = GP(r.from[1], r.from[0]);
-    if(o.vis){
+    ctx.globalAlpha = recOp(recT(i));
+    if(o.vis && !isFict(r.fromName)){
       ctx.strokeStyle=orange; ctx.lineWidth=4; ctx.setLineDash([12,8]);
       ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(fx, fy); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.beginPath(); ctx.arc(fx, fy, 9, 0, Math.PI*2); ctx.fillStyle=orange; ctx.fill();
     ctx.strokeStyle=paper; ctx.lineWidth=3.5; ctx.stroke();
-    label(fx, fy, '✦ ' + r.toName, orange, "italic 32px 'Instrument Serif', serif");
+    ctx.globalAlpha = 1;
+    markerPts.push({ x:fx, y:fy });
+    labelReqs.push({ x:fx, y:fy, text:'✦ ' + r.toName, font:"italic 32px 'Instrument Serif', serif", color:orange, t:recT(i), fict:true });
   });
 
-  // Pie: km y nº de destinos reales (calculados de verdad)
+  // ---- Pasada de etiquetas: 8 candidatas + líneas guía. Las recientes eligen primero. ----
+  function rectsOverlap(a,b){ return !(a.x+a.w<b.x || b.x+b.w<a.x || a.y+a.h<b.y || b.y+b.h<a.y); }
+  function segSeg(p,p2,q,q2){
+    const D=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+    const d1=D(q,q2,p), d2=D(q,q2,p2), d3=D(p,p2,q), d4=D(p,p2,q2);
+    return ((d1>0)!==(d2>0)) && ((d3>0)!==(d4>0));
+  }
+  function segRect(a,b,r){
+    const ins=pt=>pt.x>=r.x&&pt.x<=r.x+r.w&&pt.y>=r.y&&pt.y<=r.y+r.h;
+    if(ins(a)||ins(b)) return true;
+    const c=[{x:r.x,y:r.y},{x:r.x+r.w,y:r.y},{x:r.x+r.w,y:r.y+r.h},{x:r.x,y:r.y+r.h}];
+    for(let i=0;i<4;i++) if(segSeg(a,b,c[i],c[(i+1)%4])) return true;
+    return false;
+  }
+  function scoreBox(bx, ownx, owny){
+    let s=0;
+    if(bx.x<20 || bx.y<bY-60 || bx.x+bx.w>W-20 || bx.y+bx.h>bY+bH+160) s+=1000; // fuera de zona útil
+    for(const sg of arcSegs) if(segRect(sg.a, sg.b, bx)) s+=10;
+    for(const m of markerPts){ if(Math.abs(m.x-ownx)<0.5 && Math.abs(m.y-owny)<0.5) continue;
+      if(m.x>=bx.x-4 && m.x<=bx.x+bx.w+4 && m.y>=bx.y-4 && m.y<=bx.y+bx.h+4) s+=8; }
+    for(const pb of placedBoxes) if(rectsOverlap(bx, pb)) s+=6;
+    return s;
+  }
+  const HO=16, VO=18;
+  function cands(px,py,tw,th){
+    const hw=tw/2, hh=th/2;
+    const mk=(align,ax,ay,bx,by)=>({ align, ax, ay, box:{ x:bx, y:by, w:tw+8, h:th } });
+    return [
+      mk('left',   px+HO, py,    px+HO-4,    py-hh),    // E
+      mk('right',  px-HO, py,    px-HO-tw-4, py-hh),    // O
+      mk('center', px,    py-VO, px-hw-4,    py-VO-hh), // N
+      mk('center', px,    py+VO, px-hw-4,    py+VO-hh), // S
+      mk('left',   px+HO, py-VO, px+HO-4,    py-VO-hh), // NE
+      mk('right',  px-HO, py-VO, px-HO-tw-4, py-VO-hh), // NO
+      mk('left',   px+HO, py+VO, px+HO-4,    py+VO-hh), // SE
+      mk('right',  px-HO, py+VO, px-HO-tw-4, py+VO-hh), // SO
+    ];
+  }
+
+  const placedBoxes = [];
+  labelReqs.sort((a,b) => b.t - a.t); // recientes primero: eligen la mejor posición
+  labelReqs.forEach(L => {
+    ctx.font = L.font;
+    const tw = ctx.measureText(L.text).width;
+    const th = L.fict ? 42 : 38;
+
+    let best=null, bestScore=Infinity;
+    cands(L.x, L.y, tw, th).forEach((c, idx) => {
+      const s = scoreBox(c.box, L.x, L.y) + idx*0.1; // desempate: E/O, luego N/S, luego diagonales
+      if(s < bestScore){ bestScore=s; best=c; }
+    });
+
+    let leader=null;
+    if(bestScore >= 6){ // sigue chocando con ruta/marcador/etiqueta → línea guía hacia fuera
+      let ang = Math.atan2(L.y-scy, L.x-scx); if(!isFinite(ang)) ang=0;
+      for(let rr=44; rr<=200; rr+=18){
+        const lx = L.x + Math.cos(ang)*rr, ly = L.y + Math.sin(ang)*rr;
+        const align = lx>scx ? 'left' : 'right';
+        const box = { x:(align==='left'? lx : lx-tw)-4, y:ly-th/2, w:tw+8, h:th };
+        if(scoreBox(box, L.x, L.y) < 6){ best={ align, ax:lx, ay:ly, box }; leader={ x0:L.x, y0:L.y, align }; break; }
+      }
+    }
+    if(!best) return;
+    placedBoxes.push(best.box);
+
+    const op = recOp(L.t);
+    if(leader){
+      ctx.globalAlpha = op * 0.7;
+      ctx.strokeStyle = muted; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+      const attachX = leader.align==='left' ? best.box.x : best.box.x + best.box.w;
+      ctx.beginPath(); ctx.moveTo(leader.x0, leader.y0); ctx.lineTo(attachX, best.ay); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.globalAlpha = op;
+    ctx.font = L.font; ctx.fillStyle = L.color; ctx.textBaseline = 'middle'; ctx.textAlign = best.align;
+    ctx.fillText(L.text, best.ax, best.ay);
+    ctx.globalAlpha = 1;
+  });
+
+  // Pie: km y nº de destinos reales
   const km = Math.round(exFiltered.reduce((s,e)=>s+e.km,0));
   const places = new Set(exFiltered.map(e=>e.dest.toLowerCase())).size;
   ctx.textAlign='center';
