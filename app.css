@@ -102,7 +102,12 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .ac-loading { padding: 0.75rem; text-align: center; font-size: 0.78rem; color: var(--muted); }
 
 /* META-LÍNEA — el único sitio donde se menciona el origen */
-.meta-line { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 13px; color: var(--muted); padding: 20px 0 22px; }
+/* Sin padding inferior a propósito: el spotlight del onboarding resalta el
+   rect de getBoundingClientRect, y ese padding metía el hueco dentro del
+   recuadro, que acababa invadiendo el CTA. El espacio vive ahora en el
+   margin-top de lo que viene detrás (.edit-panel y .add-btn), así que el
+   hueco visual es el mismo pero el rect se ciñe al contenido. */
+.meta-line { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 13px; color: var(--muted); padding: 20px 0 0; }
 .meta-item { display: inline-flex; align-items: center; gap: 0.35rem; }
 .meta-ico { width: 15px; height: 15px; flex-shrink: 0; }
 .meta-val { color: var(--ink); font-weight: 500; }
@@ -110,7 +115,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 /* margin-left:auto lo empuja a la derecha, y al partir en dos líneas en
    móvil estrecho cae solo al final sin romper la línea. */
 .meta-edit { margin-left: auto; font-size: 13px; color: var(--teal); background: none; border: none; border-bottom: 1px solid var(--teal); padding: 0; cursor: pointer; font-family: 'Inter', sans-serif; }
-.meta-line-empty { padding: 20px 0 22px; }
+.meta-line-empty { padding: 20px 0 0; }
 .meta-set-origin { font-size: 13px; color: var(--teal); background: none; border: none; border-bottom: 1px solid var(--teal); padding: 0; cursor: pointer; font-family: 'Inter', sans-serif; }
 
 /* MICROTEXTO DE VALIDACIÓN
@@ -120,7 +125,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .field-error:empty { display: none; }
 
 /* PANEL EDITAR — origen y fecha juntos */
-.edit-panel { border-top: 1px solid var(--line); padding: 0.9rem 0 0.2rem; margin-bottom: 1rem; animation: depSlide 0.22s ease; }
+.edit-panel { border-top: 1px solid var(--line); padding: 0.9rem 0 0.2rem; margin-top: 22px; margin-bottom: 1rem; animation: depSlide 0.22s ease; }
 /* Únicas micro-etiquetas que sobreviven al rediseño: dentro del panel sí
    hay dos grupos que distinguir. */
 .edit-panel-label { font-family: 'Instrument Serif', serif; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 0.5rem; }
@@ -149,7 +154,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 /* ADD BUTTON */
 /* Único bloque teal sólido del formulario. Si aparece un segundo, algo se
    ha colado: el CTA deja de ser el punto de mayor peso de la pantalla. */
-.add-btn { width: 100%; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+.add-btn { width: 100%; margin-top: 22px; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: background 0.15s, transform 0.1s; }
 .add-btn:hover { background: var(--forest-mid); }
 .add-btn:active { transform: scale(0.98); }
 
