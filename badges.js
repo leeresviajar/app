@@ -70,6 +70,14 @@ const BADGES_DEF = [
     metaText: '10.000',
   },
   {
+    id: 'fictional_5',
+    icon: '🔮',
+    name: 'He visitado 5 lugares imaginarios',
+    desc: 'Cinco destinos que solo existen en la ficción.',
+    revelaSi: 'fictional',
+    progressFn: (stats) => ({ actual: stats.fictionalCount, meta: 5 }),
+  },
+  {
     id: 'explorer_10',
     icon: '⚓',
     name: 'Estuve antes que nadie en 10 destinos',
@@ -82,7 +90,7 @@ const BADGES_DEF = [
     icon: '🪄',
     name: 'He visitado 10 lugares imaginarios',
     desc: 'Diez destinos que solo existen en la ficción.',
-    revelaSi: 'fictional',
+    revelaSi: 'fictional_5',
     progressFn: (stats) => ({ actual: stats.fictionalCount, meta: 10 }),
   },
   {
