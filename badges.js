@@ -34,6 +34,7 @@ const BADGES_DEF = [
     icon: '📗',
     name: 'He añadido 10 lecturas a mi itinerario',
     desc: 'Diez viajes trazados en tu mapa lector.',
+    revelaSi: 'books_5',
     progressFn: (stats) => ({ actual: stats.booksCount, meta: 10 }),
   },
   {
@@ -41,6 +42,7 @@ const BADGES_DEF = [
     icon: '🗺️',
     name: 'He cartografiado 3 destinos',
     desc: 'Llegaste antes que nadie a 3 destinos distintos.',
+    revelaSi: 'explorer_1',
     progressFn: (stats) => ({ actual: stats.pioneersCount, meta: 3 }),
   },
   {
@@ -55,6 +57,7 @@ const BADGES_DEF = [
     icon: '🌍',
     name: 'He añadido 20 lecturas a mi itinerario',
     desc: 'Veinte viajes trazados en tu mapa lector.',
+    revelaSi: 'books_10',
     progressFn: (stats) => ({ actual: stats.booksCount, meta: 20 }),
   },
   {
@@ -62,6 +65,7 @@ const BADGES_DEF = [
     icon: '🌐',
     name: 'He recorrido más de 10.000 km leyendo',
     desc: 'Una vuelta al mundo en páginas.',
+    revelaSi: 'km_1k',
     progressFn: (stats) => ({ actual: stats.totalKm, meta: 10000 }),
     metaText: '10.000',
   },
@@ -70,6 +74,7 @@ const BADGES_DEF = [
     icon: '⚓',
     name: 'Estuve antes que nadie en 10 destinos',
     desc: '10 destinos donde pusiste el pie antes que nadie.',
+    revelaSi: 'explorer_3',
     progressFn: (stats) => ({ actual: stats.pioneersCount, meta: 10 }),
   },
   {
@@ -77,6 +82,7 @@ const BADGES_DEF = [
     icon: '🪄',
     name: 'He visitado 10 lugares imaginarios',
     desc: 'Diez destinos que solo existen en la ficción.',
+    revelaSi: 'fictional',
     progressFn: (stats) => ({ actual: stats.fictionalCount, meta: 10 }),
   },
   {
@@ -84,6 +90,7 @@ const BADGES_DEF = [
     icon: '🌎',
     name: 'He viajado a 15 países',
     desc: 'Tus lecturas te han llevado por buena parte del mundo.',
+    revelaSi: 'countries_5',
     progressFn: (stats) => ({ actual: stats.countriesCount, meta: 15 }),
   },
   {
@@ -99,12 +106,13 @@ const BADGES_DEF = [
     icon: '📕',
     name: 'He añadido 50 lecturas a mi itinerario',
     desc: 'Cincuenta viajes. Tu mapa ya cuenta una historia.',
+    revelaSi: 'books_20',
     progressFn: (stats) => ({ actual: stats.booksCount, meta: 50 }),
   },
   {
     id: 'antipodes',
     icon: '🎯',
-    hidden: true,
+    secreto: true,
     name: 'He llegado a las antípodas',
     desc: 'Un solo libro te llevó a más de 15.000 km de tu punto de partida.',
     progressFn: (stats) => ({ actual: stats.maxRouteKm, meta: 15000 }),
@@ -113,7 +121,7 @@ const BADGES_DEF = [
   {
     id: 'near_home',
     icon: '🏠',
-    hidden: true,
+    secreto: true,
     name: 'Casi en casa',
     desc: 'Un libro te dejó a menos de 10 km de donde saliste.',
     // Criterio inverso (mejor = más cerca): no hay progreso monótono que
@@ -147,6 +155,30 @@ function badgePct(badge, stats) {
 function badgeFrac(badge, stats) {
   const { actual, meta } = badge.progressFn(stats);
   return `${fmtBadgeNum(Math.min(actual, meta))}/${badge.metaText || fmtBadgeNum(meta)}`;
+}
+
+// ===================== VISIBILIDAD =====================
+// Cuatro estados, porque "oculto" no es una cosa sino dos:
+//   'unlocked' conseguido · 'locked' texto real y barra de progreso
+//   'masked'   secreto: fila "Logro oculto", igual que siempre
+//   'none'     eslabón de cadena sin revelar: no se pinta nada
+//
+// El predecesor cuenta como caído si está en la lista persistida O si su
+// criterio ya se cumple. Solo con lo segundo, borrar lecturas volvería a
+// esconder un eslabón ya revelado, y los logros no se revocan nunca.
+function isBadgeRevealed(id, stats, unlocked) {
+  if (unlocked.includes(id)) return true;
+  const pred = BADGES_DEF.find(b => b.id === id);
+  // Id inexistente (errata en revelaSi): se da por revelado, para que una
+  // errata no deje un logro invisible para siempre.
+  return !pred || isBadgeUnlocked(pred, stats);
+}
+
+function badgeVisibility(badge, stats, unlocked) {
+  if (unlocked.includes(badge.id)) return 'unlocked';
+  if (badge.revelaSi && !isBadgeRevealed(badge.revelaSi, stats, unlocked)) return 'none';
+  if (badge.secreto) return 'masked';
+  return 'locked';
 }
 
 function getBadgeStats() {
@@ -194,8 +226,12 @@ function renderBadges() {
   const unlocked = loadUnlocked();
   const container = document.getElementById('badges-container');
 
-  const unlockedBadges = BADGES_DEF.filter(b => unlocked.includes(b.id));
-  const lockedBadges   = BADGES_DEF.filter(b => !unlocked.includes(b.id));
+  // "Por conseguir · N" cuenta exactamente lo que se pinta: los secretos
+  // enmascarados sí, los eslabones sin revelar no. La N crece conforme se
+  // revelan cadenas.
+  const state = new Map(BADGES_DEF.map(b => [b.id, badgeVisibility(b, stats, unlocked)]));
+  const unlockedBadges = BADGES_DEF.filter(b => state.get(b.id) === 'unlocked');
+  const lockedBadges   = BADGES_DEF.filter(b => ['locked', 'masked'].includes(state.get(b.id)));
 
   let html = '';
   if (unlockedBadges.length) {
@@ -213,7 +249,7 @@ function renderBadges() {
   if (lockedBadges.length) {
     html += `<div class="badges-section-title">Por conseguir · ${lockedBadges.length}</div>`;
     html += lockedBadges.map(b => {
-      if (b.hidden) {
+      if (state.get(b.id) === 'masked') {
         return `
       <div class="badge-row locked badge-hidden">
         <span class="badge-row-icon">🔒</span>
