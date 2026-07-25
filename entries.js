@@ -157,61 +157,6 @@ function setDep(mode) {
   updateOriginNarrative();
 }
 
-// ===================== AUTOR =====================
-// Línea subordinada bajo el título, no un campo más: nunca es obligatoria y
-// por eso no lleva marca "opcional" — la propia línea ya se lee como
-// accesoria. El valor sigue viviendo en #book-author, que es lo que leen
-// addEntry(), selectBook() y el borrado de onBookInput(); aquí solo se
-// alterna su tipo entre hidden y text.
-let authorEditing = false;
-
-function renderAuthorLine() {
-  const text = document.getElementById('author-text');
-  const input = document.getElementById('book-author');
-  const action = document.getElementById('author-action');
-  if (!text || !input || !action) return;
-  const val = input.value.trim();
-
-  if (authorEditing) {
-    input.type = 'text';
-    text.textContent = '';
-    text.style.display = 'none';
-    action.style.display = 'none';
-    return;
-  }
-
-  input.type = 'hidden';
-  text.style.display = '';
-  action.style.display = '';
-  if (val) {
-    text.innerHTML = `de <span class="author-name">${esc(val)}</span>`;
-    action.textContent = 'cambiar';
-    action.className = 'author-action';
-  } else {
-    text.innerHTML = '';
-    action.textContent = 'añadir autor';
-    action.className = 'author-action author-action-add';
-  }
-}
-
-function toggleAuthorEdit() {
-  authorEditing = true;
-  renderAuthorLine();
-  document.getElementById('book-author').focus();
-}
-
-// Cerrar por blur o por Enter: no hay botón de confirmar porque el valor ya
-// está escrito en el input que lee addEntry(); cerrar solo cambia cómo se ve.
-function closeAuthorEdit() {
-  authorEditing = false;
-  renderAuthorLine();
-}
-
-function onAuthorKeydown(e) {
-  if (e.key === 'Enter') { e.preventDefault(); closeAuthorEdit(); }
-  else if (e.key === 'Escape') { e.preventDefault(); closeAuthorEdit(); }
-}
-
 // ===================== VALIDACIÓN EN LÍNEA =====================
 // El CTA nunca se deshabilita: un botón gris no explica qué falta y en móvil
 // no enseña tooltip. Al pulsar, el foco va al primer campo vacío y aparece un
@@ -332,7 +277,6 @@ async function addEntry() {
 
     document.getElementById('book-title').value = '';
     document.getElementById('book-author').value = '';
-    closeAuthorEdit(); // vuelve a "añadir autor" y cierra el input si estaba abierto
     document.getElementById('destination').value = '';
     const noteEl = document.getElementById('book-note');
     noteEl.value = ''; autoGrowNote(noteEl); // vaciarlo no basta: hay que devolverlo a una línea

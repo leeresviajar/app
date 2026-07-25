@@ -68,30 +68,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 #book-title::placeholder, #book-note::placeholder { color: #b8b2ab; }
 /* Paddings propios: el título respira más porque le precede el destino,
    que es el elemento grande de la pantalla. */
-#book-title { padding: 24px 0 4px; }
-
-/* TÍTULO + AUTOR — un solo bloque visual
-   El borde vive aquí y no en el input: si estuviera en el input, título y
-   autor se leerían como dos campos y el autor dejaría de ser subordinado. */
-.book-block { border-bottom: 1px solid var(--line); margin-bottom: 0.55rem; }
-.book-block:focus-within { border-bottom-color: var(--teal); }
-.book-block #book-title { border-bottom: none; }
-.book-block .book-input-wrap { margin-bottom: 0; }
-
-.author-line { display: flex; align-items: baseline; gap: 0.5rem; padding-bottom: 10px; min-height: 20px; }
-.author-text { font-size: 13px; color: var(--muted); }
-.author-name { color: var(--ink); }
-/* Nunca obligatorio y sin marca "opcional": la línea ya se lee como
-   accesoria por tamaño y color. */
-.author-action { margin-left: auto; flex-shrink: 0; font-size: 12px; color: var(--teal); background: none; border: none; border-bottom: 1px solid var(--teal); padding: 0; cursor: pointer; font-family: 'Inter', sans-serif; }
-/* Sin autor todavía: el enlace es lo único que hay, así que no se empuja
-   a la derecha — arranca donde arrancaría el texto. */
-.author-action-add { margin-left: 0; }
-/* Sin filete propio: el del bloque ya se pone teal con :focus-within, y dos
-   líneas apiladas rompían la lectura de título y autor como un solo bloque. */
-.author-input { flex: 1; font-size: 13px; padding: 0; border: none; border-radius: 0; background: transparent; margin: 0; }
-.author-input:focus { box-shadow: none; }
-.author-input::placeholder { color: #b8b2ab; }
+#book-title { padding: 24px 0 10px; }
 /* Una línea en reposo; crece al escribir (autoGrowNote en entries.js).
    El hueco muerto de la caja fija era lo que hacía que el placeholder de
    una línea dentro de tres se leyera raro. */
