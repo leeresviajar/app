@@ -3,6 +3,12 @@ let acResults = [], acIndex = -1, acTimer = null;
 
 function onBookInput(val) {
   selectedBookRef = null;
+  // El autor solo puede venir de una elección del desplegable. Si el título
+  // se toca a mano, deja de corresponder: se limpia junto con selectedBookRef
+  // o se queda pegado al libro equivocado (elegir "Ulises" y luego escribir
+  // "Rayuela" guardaba Rayuela, de Joyce). selectBook() lo reasigna después,
+  // y asignar .value por código no dispara este handler.
+  document.getElementById('book-author').value = '';
   clearTimeout(acTimer);
   if (val.length < 3) { closeDropdown(); return; }
   acTimer = setTimeout(() => searchBooks(val), 350);
