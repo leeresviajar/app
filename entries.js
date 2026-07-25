@@ -1,40 +1,103 @@
 // ===================== ORIGIN =====================
-function updateOriginNarrative() {
-  const section = document.getElementById('origin-section');
-  const narrative = document.getElementById('origin-narrative');
-  const el = document.getElementById('origin-narrative-text');
-  if (!origin) {
-    section.style.display = 'block';
-    narrative.style.display = 'none';
-    return;
+const META_PIN_SVG = '<svg class="meta-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+const META_CAL_SVG = '<svg class="meta-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>';
+
+// Única fuente de verdad de "desde dónde sale este viaje". La comparten
+// addEntry() y el render de la meta-línea, para que no puedan discrepar.
+// Devuelve siempre modo y nombre; las coordenadas solo cuando se saben sin
+// preguntar a nadie: 'other' exige geocodificar y eso es asíncrono, así que
+// lo resuelve addEntry() encima de esto. El render nunca geocodifica.
+// `error` dice por qué no hay origen, y quien llama decide si avisa.
+function resolveOrigen() {
+  // Sin viajes previos no hay cadena que seguir: el primero sale de casa
+  // sea cual sea el modo elegido. Es la regla que ya aplicaba addEntry().
+  if (departure === 'home' || entries.length === 0) {
+    if (!origin) return { mode: 'home', name: null, coords: null, error: 'sin-origen' };
+    return { mode: 'home', name: origin.name, coords: { lat: origin.lat, lng: origin.lng } };
   }
-  section.style.display = 'none';
-  narrative.style.display = 'flex';
-  const last = currentEntry();
-  let text = `Saliste de <strong>${origin.name}</strong>`;
-  if (last) text += ` · Ahora estás en <strong>${last.dest}</strong>`;
-  el.innerHTML = text;
+  if (departure === 'last') {
+    const last = currentEntry();
+    if (!last) return { mode: 'last', name: null, coords: null, error: 'sin-origen' };
+    return { mode: 'last', name: last.dest, coords: { lat: last.destLat, lng: last.destLng } };
+  }
+  const other = document.getElementById('dep-other-input').value.trim();
+  if (!other) return { mode: 'other', name: null, coords: null, error: 'sin-lugar' };
+  return { mode: 'other', name: other, coords: null };
 }
 
-function toggleOriginEdit() {
+// Pinta la meta-línea y sincroniza el panel. Conserva el nombre antiguo
+// porque storage.js la llama en tres sitios.
+function updateOriginNarrative() {
+  const line = document.getElementById('meta-line');
+  if (!line) return;
   if (!origin) {
-    const wrap = document.getElementById('origin-input-wrap');
-    wrap.classList.toggle('visible');
-    if (wrap.classList.contains('visible')) document.getElementById('origin-input').focus();
+    // Sin origen no se puede decir "Sales de X": la línea entera se
+    // sustituye por la llamada a definirlo. No se vuelve a este estado.
+    line.className = 'meta-line meta-line-empty';
+    line.innerHTML = '<button type="button" class="meta-set-origin" id="meta-set-origin" onclick="openEditPanelAtHome()">Elige desde dónde sales</button>';
   } else {
-    document.getElementById('origin-section').style.display = 'block';
-    document.getElementById('origin-narrative').style.display = 'none';
-    document.getElementById('origin-name').textContent = origin.name;
-    const wrap = document.getElementById('origin-input-wrap');
-    wrap.classList.add('visible');
-    document.getElementById('origin-input').focus();
+    const o = resolveOrigen();
+    line.className = 'meta-line';
+    line.innerHTML =
+      `<span class="meta-item">${META_PIN_SVG}Sales de <span class="meta-val">${esc(o.name || '…')}</span></span>` +
+      '<span class="meta-sep"></span>' +
+      `<span class="meta-item">${META_CAL_SVG}<span class="meta-val">${esc(formatDate(selectedDate))}</span></span>` +
+      '<button type="button" class="meta-edit" id="meta-edit" onclick="toggleEditPanel()">editar</button>';
   }
+  syncDepRows();
+}
+
+// Refleja el estado actual en las filas del panel: cuál va marcada, qué
+// valor muestra cada una y si Casa ofrece "definir".
+function syncDepRows() {
+  const hasEntries = entries.length > 0;
+  const lastRow = document.getElementById('dep-last');
+  // Sin viajes todavía no existe "último destino" que ofrecer: la fila sobra.
+  if (lastRow) lastRow.style.display = hasEntries ? '' : 'none';
+
+  const active = resolveOrigen().mode;
+  ['last', 'home', 'other'].forEach(m => {
+    const row = document.getElementById('dep-' + m);
+    if (row) row.classList.toggle('active', m === active);
+  });
+
+  const lastVal = document.getElementById('dep-last-val');
+  if (lastVal) { const c = currentEntry(); lastVal.textContent = c ? c.dest : ''; }
+  const homeVal = document.getElementById('origin-name');
+  if (homeVal) homeVal.textContent = origin ? origin.name : '';
+  const define = document.getElementById('dep-home-define');
+  if (define) define.style.display = origin ? 'none' : '';
+}
+
+function setEditPanel(open) {
+  const panel = document.getElementById('edit-panel');
+  if (panel) panel.style.display = open ? 'block' : 'none';
+}
+
+function toggleEditPanel() {
+  const panel = document.getElementById('edit-panel');
+  if (panel) setEditPanel(panel.style.display === 'none');
+}
+
+// Entrada desde la meta-línea vacía: abre el panel con Casa ya elegida y
+// el input desplegado, para que no haya que buscar dónde escribir.
+function openEditPanelAtHome() {
+  setEditPanel(true);
+  setDep('home');
+}
+
+// Sin argumento alterna; con argumento fuerza el estado.
+function toggleOriginEdit(forceOpen) {
+  const wrap = document.getElementById('origin-input-wrap');
+  const open = (forceOpen === undefined) ? !wrap.classList.contains('visible') : !!forceOpen;
+  wrap.classList.toggle('visible', open);
+  if (open) setTimeout(() => document.getElementById('origin-input').focus(), 60);
 }
 
 async function setOrigin() {
   const val = document.getElementById('origin-input').value.trim();
   if (!val) return;
-  const btn = document.querySelector('#origin-input-wrap .add-btn');
+  const btn = document.querySelector('#origin-input-wrap .origin-ok');
   const prevText = btn.textContent;
   btn.textContent = 'Buscando…'; btn.disabled = true;
   try {
@@ -79,12 +142,17 @@ function addOriginMarker() {
 // ===================== DEPARTURE =====================
 function setDep(mode) {
   departure = mode;
-  ['last','home','other'].forEach(m => document.getElementById('dep-'+m).classList.toggle('active', m === mode));
   const wrap = document.getElementById('dep-other-wrap');
   wrap.style.display = mode === 'other' ? 'block' : 'none';
   if (mode === 'other') {
     setTimeout(() => document.getElementById('dep-other-input').focus(), 60);
   }
+  // Casa sin coordenadas todavía: se despliega el input en vez de dejar la
+  // fila elegida pero vacía.
+  if (mode === 'home' && !origin) toggleOriginEdit(true);
+  else if (mode !== 'home') toggleOriginEdit(false);
+  // La meta-línea sigue al modo elegido: es donde se lee el resultado.
+  updateOriginNarrative();
 }
 
 // ===================== ADD ENTRY =====================
@@ -99,19 +167,17 @@ async function addEntry() {
   btn.textContent = 'Buscando…'; btn.disabled = true;
 
   try {
-    let fromName, fromCoords;
-    if (departure === 'home' || entries.length === 0) {
-      if (!origin) { alert('Primero indica tu ciudad de origen.'); return; }
-      fromName = origin.name; fromCoords = { lat: origin.lat, lng: origin.lng };
-    } else if (departure === 'last') {
-      const last = currentEntry();
-      fromName = last.dest; fromCoords = { lat: last.destLat, lng: last.destLng };
-    } else {
-      const other = document.getElementById('dep-other-input').value.trim();
-      if (!other) { alert('Indica el lugar de partida.'); return; }
-      const geo = await geocode(other, false, 'origen');
+    const partida = resolveOrigen();
+    if (partida.error === 'sin-origen') { alert('Primero indica tu ciudad de origen.'); return; }
+    if (partida.error === 'sin-lugar') { alert('Indica el lugar de partida.'); return; }
+    const fromName = partida.name;
+    let fromCoords = partida.coords;
+    // Solo 'other' llega sin coordenadas: es el único modo que hay que
+    // geocodificar, y por eso no puede resolverse en el render.
+    if (!fromCoords) {
+      const geo = await geocode(fromName, false, 'origen');
       if (!geo) { alert('No encontré ese lugar de partida.'); return; }
-      fromName = other; fromCoords = { lat: geo.lat, lng: geo.lng };
+      fromCoords = { lat: geo.lat, lng: geo.lng };
     }
 
     const destGeo = await geocode(dest, true);
@@ -164,7 +230,7 @@ async function addEntry() {
     const lats = [fromCoords.lat, destGeo.lat], lngs = [fromCoords.lng, destGeo.lng];
     map.fitBounds([[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]], { padding: [80,80] });
   } finally {
-    btn.textContent = '+ Añadir al mapa'; btn.disabled = false;
+    btn.textContent = 'Añadir al mapa'; btn.disabled = false;
   }
 }
 

@@ -30,20 +30,12 @@ html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--w
 .stat-label { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 0.3rem; }
 .sidebar-body { display: none; }
 
-/* ORIGIN NARRATIVE */
-.origin-narrative { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
-#origin-narrative-text { font-size: 0.92rem; color: var(--muted); font-style: italic; font-family: 'Instrument Serif', serif; line-height: 1.5; }
-#origin-narrative-text strong { font-size: 0.8rem; color: var(--ink); font-style: normal; font-family: 'Inter', sans-serif; font-weight: 500; }
-
 /* ORIGIN */
-.origin-section { margin-bottom: 1rem; padding: 0; background: transparent; border: none; border-radius: 0; }
-.origin-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.5rem; font-weight: 500; }
-.origin-display { display: flex; align-items: center; gap: 0.5rem; }
-.origin-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--forest); flex-shrink: 0; border: 2px solid var(--teal); }
-.origin-name { font-size: 0.95rem; color: var(--ink); font-weight: 500; flex: 1; }
-.origin-change { font-size: 0.72rem; color: var(--teal); cursor: pointer; background: none; border: none; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
-.origin-input-wrap { display: none; margin-top: 0.5rem; gap: 0.5rem; }
+.origin-input-wrap { display: none; margin: 0.15rem 0 0.6rem; gap: 0.5rem; padding-left: 1.6rem; }
 .origin-input-wrap.visible { display: flex; }
+/* De texto, no sólido: el CTA es el único bloque teal de la pantalla. */
+.origin-ok { flex-shrink: 0; padding: 0.4rem 0.7rem; background: none; color: var(--teal); border: 1px solid var(--teal); border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.78rem; cursor: pointer; }
+.origin-ok:disabled { opacity: 0.55; cursor: default; }
 
 /* FORM */
 .section-title { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.6rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
@@ -103,21 +95,44 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .ac-author { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
 .ac-loading { padding: 0.75rem; text-align: center; font-size: 0.78rem; color: var(--muted); }
 
-/* DATE ROW */
-.date-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.55rem; }
-.date-label { font-size: 0.72rem; color: var(--muted); flex-shrink: 0; }
-.date-val { font-size: 0.78rem; color: var(--ink); font-weight: 500; }
-.date-change { font-size: 0.72rem; color: var(--teal); cursor: pointer; background: none; border: none; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
+/* META-LÍNEA — el único sitio donde se menciona el origen */
+.meta-line { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 13px; color: var(--muted); padding: 20px 0 22px; }
+.meta-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+.meta-ico { width: 15px; height: 15px; flex-shrink: 0; }
+.meta-val { color: var(--ink); font-weight: 500; }
+.meta-sep { width: 1px; height: 13px; background: var(--line); }
+/* margin-left:auto lo empuja a la derecha, y al partir en dos líneas en
+   móvil estrecho cae solo al final sin romper la línea. */
+.meta-edit { margin-left: auto; font-size: 13px; color: var(--teal); background: none; border: none; border-bottom: 1px solid var(--teal); padding: 0; cursor: pointer; font-family: 'Inter', sans-serif; }
+.meta-line-empty { padding: 20px 0 22px; }
+.meta-set-origin { font-size: 13px; color: var(--teal); background: none; border: none; border-bottom: 1px solid var(--teal); padding: 0; cursor: pointer; font-family: 'Inter', sans-serif; }
 
-/* DEPARTURE TOGGLE */
-.departure-toggle { display: flex; margin-bottom: 0.55rem; border: 0.5px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--white); }
-.dep-opt { flex: 1; padding: 0.5rem 0.4rem; font-size: 0.72rem; text-align: center; cursor: pointer; color: var(--muted); border: none; background: none; transition: all 0.15s; line-height: 1.3; font-family: 'Inter', sans-serif; }
-.dep-opt:not(:last-child) { border-right: 0.5px solid var(--line); }
-.dep-opt.active { background: var(--teal); color: white; }
-.dep-other-wrap { background: rgba(29,158,117,0.05); border-left: 2px solid var(--teal); border-radius: 0 8px 8px 0; padding: 0.6rem 0.75rem 0.55rem; margin-bottom: 0.7rem; animation: depSlide 0.22s ease; }
-.dep-other-label { display: block; font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 500; color: var(--teal); margin-bottom: 0.35rem; }
-.dep-other-wrap #dep-other-input { border-bottom-color: rgba(29,158,117,0.3); padding-top: 0; margin: 0; }
+/* PANEL EDITAR — origen y fecha juntos */
+.edit-panel { border-top: 1px solid var(--line); padding: 0.9rem 0 0.2rem; margin-bottom: 1rem; animation: depSlide 0.22s ease; }
+/* Únicas micro-etiquetas que sobreviven al rediseño: dentro del panel sí
+   hay dos grupos que distinguir. */
+.edit-panel-label { font-family: 'Instrument Serif', serif; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 0.5rem; }
+.edit-panel-label + .date-row { margin-bottom: 0.2rem; }
+.dep-row { display: flex; align-items: center; gap: 0.55rem; width: 100%; text-align: left; padding: 0.55rem 0.7rem; margin-bottom: 0.35rem; background: none; border: 1px solid transparent; border-radius: 8px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.85rem; color: var(--ink); transition: border-color 0.15s; }
+.dep-row:hover { border-color: var(--line); }
+/* Seleccionada: borde y check. Sin fondo sólido — el CTA es el único. */
+.dep-row.active { border-color: var(--teal); }
+.dep-ico { width: 16px; height: 16px; flex-shrink: 0; color: var(--muted); }
+.dep-row-name { flex-shrink: 0; }
+.dep-row-val { flex: 1; text-align: right; color: var(--muted); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* El subrayado va en el texto, no en la caja: si fuera borde, el flex lo
+   estiraría de lado a lado. */
+.dep-row-define { flex: 1; text-align: right; font-size: 0.78rem; color: var(--teal); text-decoration: underline; text-underline-offset: 2px; }
+.dep-check { width: 16px; height: 16px; flex-shrink: 0; color: var(--teal); opacity: 0; margin-left: 0.35rem; }
+.dep-row.active .dep-check { opacity: 1; }
+.dep-other-wrap { padding-left: 1.6rem; margin-bottom: 0.7rem; animation: depSlide 0.22s ease; }
+.dep-other-wrap #dep-other-input { margin: 0; }
 @keyframes depSlide { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* DATE ROW — dentro del panel */
+.date-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.55rem; padding-left: 0.7rem; }
+.date-val { font-size: 0.85rem; color: var(--ink); font-weight: 500; background: none; border: none; border-bottom: 1px solid var(--line); padding: 0 0 2px; cursor: pointer; font-family: 'Inter', sans-serif; }
+.date-val:hover { border-bottom-color: var(--teal); }
 
 /* ADD BUTTON */
 /* Único bloque teal sólido del formulario. Si aparece un segundo, algo se
