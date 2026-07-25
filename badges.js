@@ -183,10 +183,14 @@ function badgeFrac(badge, stats) {
 }
 
 // ===================== VISIBILIDAD =====================
-// Cuatro estados, porque "oculto" no es una cosa sino dos:
+// Tres estados, dos de ellos de render (decisión revisada, 25 jul 2026: todos
+// los logros ocupan fila siempre; antes los eslabones sin revelar no se
+// pintaban):
 //   'unlocked' conseguido · 'locked' texto real y barra de progreso
-//   'masked'   secreto: fila "Logro oculto", igual que siempre
-//   'none'     eslabón de cadena sin revelar: no se pinta nada
+//   'masked'   fila "Logro oculto" — tapa por igual a los secretos y a los
+//              eslabones de cadena sin revelar; la diferencia sigue en la
+//              lógica (un revelaSi se destapa al caer su predecesor, un
+//              secreto solo al cumplirse), pero visualmente son idénticos
 //
 // El predecesor cuenta como caído si está en la lista persistida O si su
 // criterio ya se cumple. Solo con lo segundo, borrar lecturas volvería a
@@ -201,7 +205,7 @@ function isBadgeRevealed(id, stats, unlocked) {
 
 function badgeVisibility(badge, stats, unlocked) {
   if (unlocked.includes(badge.id)) return 'unlocked';
-  if (badge.revelaSi && !isBadgeRevealed(badge.revelaSi, stats, unlocked)) return 'none';
+  if (badge.revelaSi && !isBadgeRevealed(badge.revelaSi, stats, unlocked)) return 'masked';
   if (badge.secreto) return 'masked';
   return 'locked';
 }
@@ -317,12 +321,15 @@ function renderBadges() {
   const unlocked = loadUnlocked();
   const container = document.getElementById('badges-container');
 
-  // "Por conseguir · N" cuenta exactamente lo que se pinta: los secretos
-  // enmascarados sí, los eslabones sin revelar no. La N crece conforme se
-  // revelan cadenas.
+  // Todos los logros ocupan fila: "Por conseguir · N" cuenta todos los no
+  // cumplidos, revelados o no. Las filas enmascaradas van juntas al final —
+  // intercalarlas en su posición delataría la estructura de escaleras.
   const state = new Map(BADGES_DEF.map(b => [b.id, badgeVisibility(b, stats, unlocked)]));
   const unlockedBadges = BADGES_DEF.filter(b => state.get(b.id) === 'unlocked');
-  const lockedBadges   = BADGES_DEF.filter(b => ['locked', 'masked'].includes(state.get(b.id)));
+  const lockedBadges   = [
+    ...BADGES_DEF.filter(b => state.get(b.id) === 'locked'),
+    ...BADGES_DEF.filter(b => state.get(b.id) === 'masked'),
+  ];
 
   let html = '';
   if (unlockedBadges.length) {
