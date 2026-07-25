@@ -5,126 +5,101 @@ const BADGES_DEF = [
     icon: '📚',
     name: 'He añadido 5 lecturas a mi itinerario',
     desc: 'Cinco viajes trazados en tu mapa lector.',
-    unlockFn: (stats) => stats.booksCount >= 5,
-    progress: (stats) => `${stats.booksCount}/5 libros`,
-    pct: (stats) => Math.min(1, stats.booksCount / 5),
+    progressFn: (stats) => ({ actual: stats.booksCount, meta: 5 }),
   },
   {
     id: 'explorer_1',
     icon: '🧭',
     name: 'He llegado antes que nadie',
     desc: 'Registraste un destino que nadie había visitado.',
-    unlockFn: (stats) => stats.pioneersCount >= 1,
-    progress: (stats) => `${Math.min(stats.pioneersCount,1)}/1 primera llegada`,
-    pct: (stats) => Math.min(1, stats.pioneersCount / 1),
+    progressFn: (stats) => ({ actual: stats.pioneersCount, meta: 1 }),
   },
   {
     id: 'fictional',
     icon: '✨',
     name: 'He viajado a un lugar imaginario',
     desc: 'Has visitado un lugar que solo existe en la ficción.',
-    unlockFn: (stats) => stats.fictionalCount >= 1,
-    progress: (stats) => `${Math.min(stats.fictionalCount,1)}/1 lugar ficticio`,
-    pct: (stats) => Math.min(1, stats.fictionalCount / 1),
+    progressFn: (stats) => ({ actual: stats.fictionalCount, meta: 1 }),
   },
   {
     id: 'km_1k',
     icon: '🥾',
     name: 'He recorrido mis primeros 1.000 km',
     desc: 'Mil kilómetros de lecturas a tus espaldas.',
-    unlockFn: (stats) => stats.totalKm >= 1000,
-    progress: (stats) => `${Math.round(stats.totalKm).toLocaleString()}/1.000 km`,
-    pct: (stats) => Math.min(1, stats.totalKm / 1000),
+    progressFn: (stats) => ({ actual: stats.totalKm, meta: 1000 }),
+    metaText: '1.000',
   },
   {
     id: 'books_10',
     icon: '📗',
     name: 'He añadido 10 lecturas a mi itinerario',
     desc: 'Diez viajes trazados en tu mapa lector.',
-    unlockFn: (stats) => stats.booksCount >= 10,
-    progress: (stats) => `${stats.booksCount}/10 libros`,
-    pct: (stats) => Math.min(1, stats.booksCount / 10),
+    progressFn: (stats) => ({ actual: stats.booksCount, meta: 10 }),
   },
   {
     id: 'explorer_3',
     icon: '🗺️',
     name: 'He cartografiado 3 destinos',
     desc: 'Llegaste antes que nadie a 3 destinos distintos.',
-    unlockFn: (stats) => stats.pioneersCount >= 3,
-    progress: (stats) => `${stats.pioneersCount}/3 primeras llegadas`,
-    pct: (stats) => Math.min(1, stats.pioneersCount / 3),
+    progressFn: (stats) => ({ actual: stats.pioneersCount, meta: 3 }),
   },
   {
     id: 'countries_5',
     icon: '🛂',
     name: 'He viajado a 5 países distintos',
     desc: 'Tus lecturas te han llevado por medio mundo.',
-    unlockFn: (stats) => stats.countriesCount >= 5,
-    progress: (stats) => `${stats.countriesCount}/5 países`,
-    pct: (stats) => Math.min(1, stats.countriesCount / 5),
+    progressFn: (stats) => ({ actual: stats.countriesCount, meta: 5 }),
   },
   {
     id: 'books_20',
     icon: '🌍',
     name: 'He añadido 20 lecturas a mi itinerario',
     desc: 'Veinte viajes trazados en tu mapa lector.',
-    unlockFn: (stats) => stats.booksCount >= 20,
-    progress: (stats) => `${stats.booksCount}/20 libros`,
-    pct: (stats) => Math.min(1, stats.booksCount / 20),
+    progressFn: (stats) => ({ actual: stats.booksCount, meta: 20 }),
   },
   {
     id: 'km_10k',
     icon: '🌐',
     name: 'He recorrido más de 10.000 km leyendo',
     desc: 'Una vuelta al mundo en páginas.',
-    unlockFn: (stats) => stats.totalKm >= 10000,
-    progress: (stats) => `${Math.round(stats.totalKm).toLocaleString()}/10.000 km`,
-    pct: (stats) => Math.min(1, stats.totalKm / 10000),
+    progressFn: (stats) => ({ actual: stats.totalKm, meta: 10000 }),
+    metaText: '10.000',
   },
   {
     id: 'explorer_10',
     icon: '⚓',
     name: 'Estuve antes que nadie en 10 destinos',
     desc: '10 destinos donde pusiste el pie antes que nadie.',
-    unlockFn: (stats) => stats.pioneersCount >= 10,
-    progress: (stats) => `${stats.pioneersCount}/10 primeras llegadas`,
-    pct: (stats) => Math.min(1, stats.pioneersCount / 10),
+    progressFn: (stats) => ({ actual: stats.pioneersCount, meta: 10 }),
   },
   {
     id: 'fictional_10',
     icon: '🪄',
     name: 'He visitado 10 lugares imaginarios',
     desc: 'Diez destinos que solo existen en la ficción.',
-    unlockFn: (stats) => stats.fictionalCount >= 10,
-    progress: (stats) => `${stats.fictionalCount}/10 ficticios`,
-    pct: (stats) => Math.min(1, stats.fictionalCount / 10),
+    progressFn: (stats) => ({ actual: stats.fictionalCount, meta: 10 }),
   },
   {
     id: 'countries_15',
     icon: '🌎',
     name: 'He viajado a 15 países',
     desc: 'Tus lecturas te han llevado por buena parte del mundo.',
-    unlockFn: (stats) => stats.countriesCount >= 15,
-    progress: (stats) => `${stats.countriesCount}/15 países`,
-    pct: (stats) => Math.min(1, stats.countriesCount / 15),
+    progressFn: (stats) => ({ actual: stats.countriesCount, meta: 15 }),
   },
   {
     id: 'km_40k',
     icon: '🌏',
     name: 'He dado la vuelta al mundo',
     desc: 'Más de 40.000 km leyendo: una vuelta completa al planeta.',
-    unlockFn: (stats) => stats.totalKm >= 40075,
-    progress: (stats) => `${Math.round(stats.totalKm).toLocaleString()}/40.075 km`,
-    pct: (stats) => Math.min(1, stats.totalKm / 40075),
+    progressFn: (stats) => ({ actual: stats.totalKm, meta: 40075 }),
+    metaText: '40.075',
   },
   {
     id: 'books_50',
     icon: '📕',
     name: 'He añadido 50 lecturas a mi itinerario',
     desc: 'Cincuenta viajes. Tu mapa ya cuenta una historia.',
-    unlockFn: (stats) => stats.booksCount >= 50,
-    progress: (stats) => `${stats.booksCount}/50 libros`,
-    pct: (stats) => Math.min(1, stats.booksCount / 50),
+    progressFn: (stats) => ({ actual: stats.booksCount, meta: 50 }),
   },
   {
     id: 'antipodes',
@@ -132,9 +107,8 @@ const BADGES_DEF = [
     hidden: true,
     name: 'He llegado a las antípodas',
     desc: 'Un solo libro te llevó a más de 15.000 km de tu punto de partida.',
-    unlockFn: (stats) => stats.maxRouteKm >= 15000,
-    progress: (stats) => `${Math.round(stats.maxRouteKm).toLocaleString()}/15.000 km`,
-    pct: (stats) => Math.min(1, stats.maxRouteKm / 15000),
+    progressFn: (stats) => ({ actual: stats.maxRouteKm, meta: 15000 }),
+    metaText: '15.000',
   },
   {
     id: 'near_home',
@@ -142,11 +116,38 @@ const BADGES_DEF = [
     hidden: true,
     name: 'Casi en casa',
     desc: 'Un libro te dejó a menos de 10 km de donde saliste.',
-    unlockFn: (stats) => stats.minRouteKm > 0 && stats.minRouteKm <= 10,
-    progress: (stats) => (stats.minRouteKm > 0 ? Math.round(stats.minRouteKm) : '—') + ' km más cerca',
-    pct: (stats) => stats.minRouteKm > 0 ? Math.min(1, 10 / stats.minRouteKm) : 0,
+    // Criterio inverso (mejor = más cerca): no hay progreso monótono que
+    // exponer, así que va en forma de hito. Es oculto, su barra no se pinta.
+    progressFn: (stats) => ({
+      actual: (stats.minRouteKm > 0 && stats.minRouteKm <= 10) ? 1 : 0,
+      meta: 1,
+    }),
   },
 ];
+
+// ===================== PROGRESO NUMÉRICO =====================
+// Cada logro expone { actual, meta } y está cumplido cuando actual >= meta.
+// Los hitos únicos (sin progreso natural) usan meta 1 y actual 0 | 1.
+const fmtBadgeNum = (v) => Math.round(v).toLocaleString();
+
+function isBadgeUnlocked(badge, stats) {
+  const { actual, meta } = badge.progressFn(stats);
+  return actual >= meta;
+}
+
+function badgePct(badge, stats) {
+  const { actual, meta } = badge.progressFn(stats);
+  return meta > 0 ? Math.min(1, actual / meta) : 0;
+}
+
+// La fracción se corta a la meta: un logro pendiente nunca la supera, y así
+// los hitos únicos leen "0/1" en vez de "3/1".
+// metaText conserva los rótulos que ya eran literales (1.000, 40.075…) para
+// que la fracción se imprima igual en cualquier idioma del navegador.
+function badgeFrac(badge, stats) {
+  const { actual, meta } = badge.progressFn(stats);
+  return `${fmtBadgeNum(Math.min(actual, meta))}/${badge.metaText || fmtBadgeNum(meta)}`;
+}
 
 function getBadgeStats() {
   const diary = loadDiary();
@@ -173,7 +174,7 @@ function checkNewBadges(stats, silent = false) {
   const unlocked = loadUnlocked();
   const newOnes = [];
   for (const badge of BADGES_DEF) {
-    if (!unlocked.includes(badge.id) && badge.unlockFn(stats)) {
+    if (!unlocked.includes(badge.id) && isBadgeUnlocked(badge, stats)) {
       unlocked.push(badge.id);
       newOnes.push(badge);
     }
@@ -228,8 +229,8 @@ function renderBadges() {
         <div class="badge-row-body">
           <div class="badge-row-name">${b.name}</div>
           <div class="badge-row-track">
-            <div class="badge-row-bar-bg"><div class="badge-row-bar" style="width:${Math.round(b.pct(stats)*100)}%"></div></div>
-            <span class="badge-row-frac">${b.progress(stats).split(' ')[0]}</span>
+            <div class="badge-row-bar-bg"><div class="badge-row-bar" style="width:${Math.round(badgePct(b, stats)*100)}%"></div></div>
+            <span class="badge-row-frac">${badgeFrac(b, stats)}</span>
           </div>
         </div>
       </div>`;
