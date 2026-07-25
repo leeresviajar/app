@@ -106,6 +106,7 @@ const BADGES_DEF = [
     icon: '🌏',
     name: 'He dado la vuelta al mundo',
     desc: 'Más de 40.000 km leyendo: una vuelta completa al planeta.',
+    revelaSi: 'km_10k',
     progressFn: (stats) => ({ actual: stats.totalKm, meta: 40075 }),
     metaText: '40.075',
   },

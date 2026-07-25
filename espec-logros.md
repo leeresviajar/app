@@ -94,7 +94,7 @@ Cadenas de revelado:
 | Cadena | Secuencia | ids |
 |---|---|---|
 | Lecturas | 5 → 10 → 20 → 50 | `books_5` → `books_10` → `books_20` → `books_50` |
-| Kilómetros | 1.000 → 10.000 | `km_1k` → `km_10k` |
+| Kilómetros | 1.000 → 10.000 → 40.075 | `km_1k` → `km_10k` → `km_40k` |
 | Países | 5 → 15 | `countries_5` → `countries_15` |
 | Ficticios | 1 → 5 → 10 | `fictional` → `fictional_5` → `fictional_10` |
 | Pioneros | 1 → 3 → 10 | `explorer_1` → `explorer_3` → `explorer_10` |
@@ -103,7 +103,7 @@ El **primer eslabón de cada cadena es público**: visible desde el primer día.
 
 La cadena de **pioneros** no estaba en la espec original y se añade: que una escalera esté oculta y otra visible sería incoherente.
 
-**`km_40k` ("He dado la vuelta al mundo") se queda público**, sin `revelaSi`. No es tercer eslabón de la cadena de kilómetros.
+**`km_40k` sí es el tercer eslabón** de la cadena de kilómetros (decisión revisada, 25 jul 2026). Dejarlo público abría un hueco: se veían los peldaños 1 y 3 con el 2 escondido, peor que cualquiera de las dos opciones limpias. Y el "0/40.075" del día uno es el mismo error que ya se rechazó con el 2,5% de los países — un número honesto que desinfla. La tesis del producto la carga `km_1k`, que es visible desde el primer día y además alcanzable.
 
 Comprobar cuáles de estos logros ya existen. Los que existan solo reciben `revelaSi`; los que no, se crean con el criterio correspondiente.
 
