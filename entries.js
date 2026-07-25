@@ -167,17 +167,34 @@ async function addEntry() {
 }
 
 // ===================== STATS =====================
+// Regla ÚNICA de conteo de países. La comparten los tres sitios que los cuentan
+// —la cabecera, los logros y la exportación—: países de los destinos reales, más
+// el país anclado de los destinos imaginarios que lo tienen
+// (FICTIONAL_REAL_COUNTRY), deduplicado entre sí. Si ya habías estado en Reino
+// Unido, Hogwarts no añade uno nuevo.
+// Recibe la lista en vez de leerla porque cada sitio cuenta sobre un conjunto
+// distinto: la cabecera filtra por año, los logros usan todas las entradas y la
+// exportación su propia selección. Si aparece un cuarto sitio, que llame aquí.
+function countriesFrom(list) {
+  const countries = new Set(
+    list
+      .filter(e => !e.fictional)
+      .map(e => e.countryCode || e.country || '')
+      .filter(c => c.length > 0)
+  );
+  list.filter(e => e.fictional).forEach(e => {
+    const cc = realCountryForFictional(e.dest);
+    if (cc) countries.add(cc);
+  });
+  return countries;
+}
+
 function updateStats() {
   const filtered = resolvedFiltered();
   const books = new Set(filtered.map(e => e.book.toLowerCase().trim())).size;
   const km = filtered.reduce((s,e) => s+e.km, 0);
   const places = new Set(filtered.map(e => e.dest.toLowerCase())).size;
-  const countries = new Set(
-    filtered
-      .filter(e => !e.fictional)
-      .map(e => e.countryCode || e.country || '')
-      .filter(c => c.length > 0)
-  ).size;
+  const countries = countriesFrom(filtered).size;
 
   document.getElementById('stat-books').textContent = books;
   document.getElementById('stat-km').textContent = km >= 1000 ? (km/1000).toFixed(1)+'k' : km;
