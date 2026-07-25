@@ -17,36 +17,36 @@ const ONBOARDING_STEPS_MOBILE = [
   }
 ];
 
+// Escritorio: 4 pasos. Los antiguos 2 (origen) y 5 (segmentado «Sales desde»)
+// se fusionan en el último: los dos valores viven ahora en la meta-línea y su
+// panel, y resaltar dos veces casi el mismo rectángulo no aportaba nada.
 const ONBOARDING_STEPS = [
   {
-    label: 'Paso 1 de 5',
+    label: 'Paso 1 de 4',
     icon: '🗺',
     text: '<em>Este mapa está vivo.</em> Cada ruta es un viaje lector y lo construimos leyendo.',
     target: '#map', placement: 'center', pad: -28
   },
   {
-    label: 'Paso 2 de 5',
-    icon: '🏠',
-    text: '<em>Este es tu punto de partida.</em> Desde aquí arranca tu viaje: tu ciudad, tu casa, tu biblioteca.',
-    target: ['.origin-section', '.origin-narrative'], placement: 'right', pad: 8
-  },
-  {
-    label: 'Paso 3 de 5',
+    label: 'Paso 2 de 4',
     icon: '📍',
-    text: '<em>¿Adónde te lleva tu lectura?</em> Puede ser un lugar real… o uno que solo existe en los libros.',
+    text: '<em>Escribe aquí tu destino.</em> Ciudad, isla, planeta o reino: si te llevó un libro, cuenta.',
     target: '#destination', placement: 'right', pad: 8
   },
   {
-    label: 'Paso 4 de 5',
+    label: 'Paso 3 de 4',
     icon: '📖',
     text: '<em>¿Qué estás leyendo?</em> Cada destino queda unido al libro que te llevó hasta él.',
     target: '#book-title', placement: 'right', pad: 8
   },
   {
-    label: 'Paso 5 de 5',
+    // Un solo selector: #meta-line es el contenedor en sus dos estados, y
+    // cuando aún no hay origen su único contenido es el enlace, así que el
+    // recuadro cae sobre él sin necesidad de ramificar.
+    label: 'Paso 4 de 4',
     icon: '🧭',
-    text: '<em>Cada viaje puede empezar donde quieras.</em> No tienes por qué partir siempre desde casa.',
-    target: '.departure-toggle', placement: 'right', pad: 8
+    text: '<em>De aquí sales y este es el día.</em> Puedes cambiarlo cuando quieras.',
+    target: '#meta-line', placement: 'right', pad: 8
   }
 ];
 
@@ -59,9 +59,30 @@ function initOnboarding() {
   showOnboardingStep(0);
 }
 
+// ¿Sigue existiendo algo a lo que apuntar? Se comprueba EXISTENCIA, no
+// tamaño: un elemento puede medir cero un instante mientras el layout se
+// asienta (le pasa a #map justo tras un resize) y saltar el paso por eso
+// sería un falso positivo. Del tamaño ya se ocupa positionOnboarding(), que
+// simplemente esconde el recuadro. Un paso sin target declarado es válido:
+// la tarjeta se muestra centrada.
+function stepHasTarget(step) {
+  const selectors = Array.isArray(step.target) ? step.target : (step.target ? [step.target] : []);
+  if (!selectors.length) return true;
+  return selectors.some(sel => document.querySelector(sel));
+}
+
 function showOnboardingStep(i) {
   const overlay = document.getElementById('onboarding-overlay');
   const step = window._obSteps[i];
+  if (!step) { finishOnboarding(); return; }
+
+  // Un selector obsoleto dejaba la tarjeta en pantalla sin recuadro y podía
+  // cortar la secuencia. Peor momento posible: la primera visita. Se salta.
+  if (!stepHasTarget(step)) {
+    if (i < window._obSteps.length - 1) showOnboardingStep(i + 1);
+    else finishOnboarding();
+    return;
+  }
 
   overlay.style.display = 'block';
   overlay.style.pointerEvents = 'auto';
