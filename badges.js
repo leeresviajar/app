@@ -277,7 +277,7 @@ function loadUnlocked() {
 }
 function saveUnlocked(arr) { localStorage.setItem('lev_badges', JSON.stringify(arr)); }
 
-function checkNewBadges(stats, silent = false) {
+function checkNewBadges(stats, silent = false, seeding = false) {
   const unlocked = loadUnlocked();
   const newOnes = [];
   for (const badge of BADGES_DEF) {
@@ -288,12 +288,33 @@ function checkNewBadges(stats, silent = false) {
   }
   if (newOnes.length) {
     saveUnlocked(unlocked);
-    const tab = document.getElementById('tab-logros');
-    tab.innerHTML = 'Logros <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--teal);vertical-align:middle;margin-left:3px;"></span>';
+    // seeding: los logros no son nuevos, solo se ponen al día tras un
+    // despliegue, así que tampoco se marca la pestaña con el punto de aviso.
+    if (!seeding) {
+      const tab = document.getElementById('tab-logros');
+      tab.innerHTML = 'Logros <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--teal);vertical-align:middle;margin-left:3px;"></span>';
+    }
     // silent: al cargar desde la nube marcamos los logros ya conseguidos sin
     // lanzar la lluvia de toasts por logros que el usuario ya tenía.
     if (!silent) showBadgeUnlockToast(newOnes[0]);
   }
+}
+
+// ===================== SIEMBRA SILENCIOSA =====================
+// Un despliegue que añade logros encontraría a los usuarios de siempre con
+// varios ya cumplidos: sin esto, quien lleve 20 lecturas recibe el aviso de un
+// logro que no acaba de conseguir. En la primera carga tras el despliegue se
+// marcan como vistos sin aviso, sin animación y sin punto en la pestaña.
+// La versión sube cada vez que se añaden logros nuevos: así vuelve a sembrar
+// una única vez por despliegue.
+const BADGE_SEED_KEY = 'lev_badges_seed';
+const BADGE_SEED_VERSION = 1;
+
+function seedBadgesOnce() {
+  if (localStorage.getItem(BADGE_SEED_KEY) === String(BADGE_SEED_VERSION)) return false;
+  checkNewBadges(getBadgeStats(), true, true);
+  localStorage.setItem(BADGE_SEED_KEY, String(BADGE_SEED_VERSION));
+  return true;
 }
 
 function renderBadges() {
