@@ -9,6 +9,7 @@ function onBookInput(val) {
   // "Rayuela" guardaba Rayuela, de Joyce). selectBook() lo reasigna después,
   // y asignar .value por código no dispara este handler.
   document.getElementById('book-author').value = '';
+  renderAuthorLine();
   clearTimeout(acTimer);
   if (val.length < 3) { closeDropdown(); return; }
   acTimer = setTimeout(() => searchBooks(val), 350);
@@ -91,6 +92,7 @@ function selectBook(i) {
   const b = acResults[i]; if (!b) return;
   document.getElementById('book-title').value = b.title;
   document.getElementById('book-author').value = b.author || '';
+  renderAuthorLine();
   selectedBookRef = b.ref || null;
   closeDropdown(); document.getElementById('destination').focus();
 }

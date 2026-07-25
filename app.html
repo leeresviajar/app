@@ -54,10 +54,22 @@
   <div class="tab-panel active" id="panel-añadir">
     <input type="text" id="destination" placeholder="✦ Un lugar real… o no" autocomplete="off" oninput="clearFieldError('err-destination')"/>
     <div class="field-error" id="err-destination"></div>
-    <div class="book-input-wrap">
-      <input type="text" id="book-title" placeholder="Título del libro" autocomplete="off" oninput="onBookInput(this.value); clearFieldError('err-book')" onkeydown="onBookKeydown(event)"/>
-      <input type="hidden" id="book-author"/>
-      <div class="ac-dropdown" id="ac-dropdown"></div>
+    <!-- Título y autor son un solo bloque visual: comparten el borde inferior,
+         que vive en .book-block y no en el input. La línea de autor es
+         subordinada, nunca un cuarto campo. -->
+    <div class="book-block">
+      <div class="book-input-wrap">
+        <input type="text" id="book-title" placeholder="Título del libro" autocomplete="off" oninput="onBookInput(this.value); clearFieldError('err-book')" onkeydown="onBookKeydown(event)"/>
+        <div class="ac-dropdown" id="ac-dropdown"></div>
+      </div>
+      <div class="author-line" id="author-line">
+        <span class="author-text" id="author-text"></span>
+        <!-- Misma fuente de verdad de siempre: addEntry(), selectBook() y el
+             borrado de onBookInput() leen y escriben este input. Solo alterna
+             entre hidden y text según se esté editando. -->
+        <input type="hidden" id="book-author" class="author-input" placeholder="Autor" autocomplete="off" onkeydown="onAuthorKeydown(event)" onblur="closeAuthorEdit()"/>
+        <button type="button" class="author-action" id="author-action" onclick="toggleAuthorEdit()"></button>
+      </div>
     </div>
     <div class="field-error" id="err-book"></div>
     <div class="note-row">
@@ -522,6 +534,7 @@ window.addEventListener('load', async () => {
   updateOriginNarrative();
   // Alto inicial del campo de notas: el del placeholder, que depende del ancho.
   autoGrowNote(document.getElementById('book-note'));
+  renderAuthorLine();
 });
 </script>
 
