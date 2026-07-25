@@ -155,6 +155,15 @@ function setDep(mode) {
   updateOriginNarrative();
 }
 
+// ===================== NOTAS =====================
+// El textarea mide una línea en reposo y crece con el contenido. Al
+// vaciarlo vuelve a una línea: 'auto' antes de leer scrollHeight es lo que
+// permite que también encoja, no solo que crezca.
+function autoGrowNote(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
 // ===================== ADD ENTRY =====================
 async function addEntry() {
   const book = document.getElementById('book-title').value.trim();
@@ -221,7 +230,8 @@ async function addEntry() {
     document.getElementById('book-title').value = '';
     document.getElementById('book-author').value = '';
     document.getElementById('destination').value = '';
-    document.getElementById('book-note').value = '';
+    const noteEl = document.getElementById('book-note');
+    noteEl.value = ''; autoGrowNote(noteEl); // vaciarlo no basta: hay que devolverlo a una línea
     document.getElementById('dep-other-input').value = '';
     selectedBookRef = null;
     closeDropdown(); resetDate();

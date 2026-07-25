@@ -69,7 +69,10 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 /* Paddings propios: el título respira más porque le precede el destino,
    que es el elemento grande de la pantalla. */
 #book-title { padding: 24px 0 10px; }
-#book-note { resize: none; padding: 18px 0 10px; min-height: 3.6rem; }
+/* Una línea en reposo; crece al escribir (autoGrowNote en entries.js).
+   El hueco muerto de la caja fija era lo que hacía que el placeholder de
+   una línea dentro de tres se leyera raro. */
+#book-note { resize: none; overflow: hidden; padding: 18px 0 10px; }
 
 /* NOTAS + MARCA DE OPCIONAL
    La línea inferior vive en el contenedor, no en el textarea, para que
