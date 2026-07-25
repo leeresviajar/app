@@ -68,16 +68,16 @@
       <span id="origin-narrative-text"></span>
       <button class="origin-change" onclick="toggleOriginEdit()">cambiar</button>
     </div>
-    <div class="section-title destino-q">¿Cuál es tu destino?</div>
-    <input type="text" id="destination" placeholder="✦ Puede estar en este mundo… o en otro" autocomplete="off"/>
-    <div style="font-size:0.68rem;color:var(--muted);font-style:italic;margin-top:-0.35rem;margin-bottom:0.55rem;"></div>
+    <input type="text" id="destination" placeholder="✦ Un lugar real… o no" autocomplete="off"/>
     <div class="book-input-wrap">
       <input type="text" id="book-title" placeholder="Título del libro" autocomplete="off" oninput="onBookInput(this.value)" onkeydown="onBookKeydown(event)"/>
       <input type="hidden" id="book-author"/>
       <div class="ac-dropdown" id="ac-dropdown"></div>
     </div>
-    
-    <textarea id="book-note" rows="3" placeholder="Notas de viaje (opcional)"></textarea>
+    <div class="note-row">
+      <textarea id="book-note" rows="3" placeholder="Una frase, una escena, algo que recordar"></textarea>
+      <span class="opt-mark">opcional</span>
+    </div>
     <div class="date-row">
       <span class="date-label">Fecha de visita:</span>
       <span class="date-val" id="date-display"></span>
@@ -94,7 +94,7 @@
       <label class="dep-other-label" for="dep-other-input">¿Desde dónde sales esta vez?</label>
       <input type="text" id="dep-other-input" placeholder="Escribe la ciudad de salida" autocomplete="off"/>
     </div>
-    <button class="add-btn" id="add-btn" onclick="addEntry()">+ Añadir al mapa</button>
+    <button class="add-btn" id="add-btn" onclick="addEntry()">Añadir al mapa</button>
   </div>
 
   <!-- PANEL ITINERARIO -->
