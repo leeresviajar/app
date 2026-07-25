@@ -42,29 +42,28 @@ Tres cosas que esta espec suponía y el código contradice. Manda el código.
 
 ## Modelo de visibilidad
 
-**Criterio revisado (25 jul 2026, tras el merge):** todos los logros ocupan fila siempre. La primera versión de esta espec pedía no renderizar los eslabones sin revelar; se descartó. Dos estados de render para los no cumplidos:
+Hoy los logros tienen dos estados. Pasan a tener **cuatro**, porque "oculto" no es una cosa sino dos:
 
-1. **Enmascarado** — fila "Logro oculto / Sigue viajando para descubrirlo". Tapa por igual a los `secreto: true` y a los `revelaSi` cuyo predecesor no ha caído. La diferencia entre ambos sigue en la lógica —un `revelaSi` se destapa cuando cae su predecesor, un secreto solo al cumplirse— pero visualmente son idénticos mientras están tapados.
-2. **Visible y bloqueado** — texto real y barra de progreso.
-3. **Desbloqueado** — fila normal en "Conseguidos".
+1. **Enmascarado** (`secreto: true`) — se renderiza la fila "Logro oculto / Sigue viajando para descubrirlo", **exactamente como hoy**. No se revierte el commit `96c7c0a`.
+2. **No renderizado** (`revelaSi` sin cumplir) — no aparece nada, no se intuye que existe.
+3. **Visible y bloqueado** — se ve el texto real y la barra de progreso
+4. **Desbloqueado**
 
 Dos campos nuevos en la definición de cada logro:
 
-- `secreto: boolean` — por defecto `false`. Es el `hidden` que ya existía, renombrado.
+- `secreto: boolean` — por defecto `false`. Es el `hidden` que ya existe hoy, renombrado.
 - `revelaSi: string | null` — id del logro predecesor de la misma cadena
 
 Resolución:
 
 ```
 si cumplido                        → desbloqueado
-si no, y revelaSi != null          → bloqueado si el predecesor está cumplido, si no ENMASCARADO
+si no, y revelaSi != null          → bloqueado si el predecesor está cumplido, si no NO RENDERIZADO
 si no, y secreto === true          → enmascarado
 si no                              → bloqueado
 ```
 
-**Orden de render:** las filas enmascaradas van todas juntas al final de "Por conseguir", nunca intercaladas en su posición de cadena — la adyacencia delataría la estructura de escaleras.
-
-**Contador.** No existe ningún "X de Y": los títulos de sección son "Conseguidos · N" y "Por conseguir · N". **"Por conseguir · N" cuenta todos los no cumplidos, revelados o no.** En una cuenta vacía: 19.
+**Contador.** No existe ningún "X de Y": los títulos de sección son "Conseguidos · N" y "Por conseguir · N". La regla es que **"Por conseguir · N" cuenta exactamente lo que se renderiza**: los secretos enmascarados cuentan (como hoy), los eslabones sin revelar no. N crece conforme se revelan cadenas.
 
 ---
 
@@ -184,7 +183,7 @@ Cambio de criterio respecto a la primera versión de esta espec: la frase a dest
 ## Verificación antes del merge
 
 - [ ] Ningún logro existente cambia de estado tras el commit 1
-- [ ] Un logro con `revelaSi` sale enmascarado ("Logro oculto") hasta que cae su predecesor, y con texto real después
+- [ ] Un logro con `revelaSi` no aparece hasta que cae su predecesor
 - [ ] La barra de progreso muestra el valor real, no un placeholder
 - [ ] Los dos logros secretos no se intuyen en la interfaz antes de cumplirse
 - [ ] Con una cuenta que ya tenga logros cumplidos, la primera carga tras el despliegue no lanza avisos
