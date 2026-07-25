@@ -139,6 +139,22 @@ const BADGES_DEF = [
       meta: 1,
     }),
   },
+  {
+    id: 'book_spread_5',
+    icon: '🧳',
+    secreto: true,
+    name: 'Un mismo libro me ha llevado a 5 destinos',
+    desc: 'Un solo libro te llevó a cinco destinos distintos.',
+    progressFn: (stats) => ({ actual: stats.maxDestsPerBook, meta: 5 }),
+  },
+  {
+    id: 'dest_converge_5',
+    icon: '🚉',
+    secreto: true,
+    name: 'He llegado al mismo lugar con 5 lecturas distintas',
+    desc: 'Cinco lecturas distintas te llevaron al mismo lugar.',
+    progressFn: (stats) => ({ actual: stats.maxBooksPerDest, meta: 5 }),
+  },
 ];
 
 // ===================== PROGRESO NUMÉRICO =====================
@@ -189,6 +205,42 @@ function badgeVisibility(badge, stats, unlocked) {
   return 'locked';
 }
 
+// ===================== AGRUPACIÓN POR LIBRO Y POR DESTINO =====================
+// Identidad de libro: dos entradas son el mismo libro si comparten bookRef.
+// Cuando a alguna le falta (entradas anteriores al autocompletado, o escritas
+// a mano), se cae al título normalizado. Un título con un único bookRef adopta
+// ese ref, para que las entradas con y sin ref del mismo libro no se partan en
+// dos grupos. Si un mismo título tiene varios refs (homónimos de distinto
+// autor), las que no llevan ref se quedan en su propio grupo: no hay forma de
+// saber a cuál de los libros pertenecen.
+function bookIdentities(list) {
+  const refsByTitle = new Map();
+  list.forEach(e => {
+    const title = normalizeName(e.book).trim();
+    if (!refsByTitle.has(title)) refsByTitle.set(title, new Set());
+    if (e.bookRef) refsByTitle.get(title).add(e.bookRef);
+  });
+  return list.map(e => {
+    if (e.bookRef) return 'ref:' + e.bookRef;
+    const title = normalizeName(e.book).trim();
+    const refs = refsByTitle.get(title);
+    return refs.size === 1 ? 'ref:' + [...refs][0] : 'title:' + title;
+  });
+}
+
+// Tamaño del grupo más nutrido, contando elementos DISTINTOS: dos entradas del
+// mismo libro al mismo destino cuentan como una.
+function maxDistinctPerGroup(pairs) {
+  const groups = new Map();
+  pairs.forEach(([group, item]) => {
+    if (!groups.has(group)) groups.set(group, new Set());
+    groups.get(group).add(item);
+  });
+  let max = 0;
+  groups.forEach(set => { max = Math.max(max, set.size); });
+  return max;
+}
+
 function getBadgeStats() {
   const diary = loadDiary();
   const pioneersCount = diary.filter(e => e.pioneer).length;
@@ -202,7 +254,15 @@ function getBadgeStats() {
     ? realRoutes.reduce((m,e) => Math.min(m, e.km), Infinity)
     : 0;
   const countries = new Set(entries.filter(e => !e.fictional).map(e => e.countryCode || e.country || '').filter(Boolean));
-  return { pioneersCount, booksCount, fictionalCount, totalKm, maxRouteKm, minRouteKm, countriesCount: countries.size };
+  // Dispersión y convergencia: los ficticios cuentan en las dos, y se calculan
+  // sobre las entradas sin resolver — la cadena de orígenes no afecta ni al
+  // libro ni al destino.
+  const bookIds = bookIdentities(entries);
+  const destKeys = entries.map(e => normalizeName(e.dest).trim());
+  const maxDestsPerBook = maxDistinctPerGroup(entries.map((e, i) => [bookIds[i], destKeys[i]]));
+  const maxBooksPerDest = maxDistinctPerGroup(entries.map((e, i) => [destKeys[i], bookIds[i]]));
+  return { pioneersCount, booksCount, fictionalCount, totalKm, maxRouteKm, minRouteKm,
+           countriesCount: countries.size, maxDestsPerBook, maxBooksPerDest };
 }
 
 function loadUnlocked() {
