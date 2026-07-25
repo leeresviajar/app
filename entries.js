@@ -101,9 +101,11 @@ async function setOrigin() {
   const prevText = btn.textContent;
   btn.textContent = 'Buscando…'; btn.disabled = true;
   try {
+    clearFieldError('err-origin-input');
     const geo = await geocode(val, false, 'origen');
-    if (!geo) { alert('No encontré ese lugar. Prueba con otro nombre.'); return; }
+    if (!geo) { showFieldError('err-origin-input', 'No encontré ese lugar. Prueba con otro nombre.'); return; }
     origin = { name: val, lat: geo.lat, lng: geo.lng };
+    clearFieldError('err-origin');
     document.getElementById('origin-input-wrap').classList.remove('visible');
     document.getElementById('origin-input').value = '';
     addOriginMarker();
@@ -155,6 +157,26 @@ function setDep(mode) {
   updateOriginNarrative();
 }
 
+// ===================== VALIDACIÓN EN LÍNEA =====================
+// El CTA nunca se deshabilita: un botón gris no explica qué falta y en móvil
+// no enseña tooltip. Al pulsar, el foco va al primer campo vacío y aparece un
+// microtexto bajo su línea. Sin color de error de momento: el rojo está
+// reservado a "tus rutas" y estrenar un color para esto no está decidido.
+function showFieldError(id, msg, focusEl) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = msg;
+  if (focusEl) focusEl.focus();
+}
+
+function clearFieldError(id) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = '';
+}
+
+function clearAllFieldErrors() {
+  ['err-destination', 'err-book', 'err-origin', 'err-dep-other', 'err-origin-input'].forEach(clearFieldError);
+}
+
 // ===================== NOTAS =====================
 // El textarea mide una línea en reposo y crece con el contenido. Al
 // vaciarlo vuelve a una línea: 'auto' antes de leer scrollHeight es lo que
@@ -170,22 +192,37 @@ async function addEntry() {
   const author = document.getElementById('book-author').value.trim();
   const dest = document.getElementById('destination').value.trim();
   const note = document.getElementById('book-note').value.trim();
-  if (!book || !dest) { alert('Necesito al menos el título y el destino.'); return; }
+  clearAllFieldErrors();
+  if (!dest) { showFieldError('err-destination', 'Necesitas un destino', document.getElementById('destination')); return; }
+  if (!book) { showFieldError('err-book', 'Necesitas un libro', document.getElementById('book-title')); return; }
 
   const btn = document.getElementById('add-btn');
   btn.textContent = 'Buscando…'; btn.disabled = true;
 
   try {
     const partida = resolveOrigen();
-    if (partida.error === 'sin-origen') { alert('Primero indica tu ciudad de origen.'); return; }
-    if (partida.error === 'sin-lugar') { alert('Indica el lugar de partida.'); return; }
+    if (partida.error === 'sin-origen') {
+      // El enlace de la meta-línea es el punto de entrada: el mismo trato
+      // que un campo obligatorio vacío.
+      showFieldError('err-origin', 'Necesitas un punto de partida', document.getElementById('meta-set-origin'));
+      return;
+    }
+    if (partida.error === 'sin-lugar') {
+      setEditPanel(true);
+      showFieldError('err-dep-other', 'Necesitas un lugar de partida', document.getElementById('dep-other-input'));
+      return;
+    }
     const fromName = partida.name;
     let fromCoords = partida.coords;
     // Solo 'other' llega sin coordenadas: es el único modo que hay que
     // geocodificar, y por eso no puede resolverse en el render.
     if (!fromCoords) {
       const geo = await geocode(fromName, false, 'origen');
-      if (!geo) { alert('No encontré ese lugar de partida.'); return; }
+      if (!geo) {
+        setEditPanel(true);
+        showFieldError('err-dep-other', 'No encontré ese lugar', document.getElementById('dep-other-input'));
+        return;
+      }
       fromCoords = { lat: geo.lat, lng: geo.lng };
     }
 

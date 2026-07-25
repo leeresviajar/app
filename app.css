@@ -110,6 +110,12 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .meta-line-empty { padding: 20px 0 22px; }
 .meta-set-origin { font-size: 13px; color: var(--teal); background: none; border: none; border-bottom: 1px solid var(--teal); padding: 0; cursor: pointer; font-family: 'Inter', sans-serif; }
 
+/* MICROTEXTO DE VALIDACIÓN
+   Sin color de error: el rojo está reservado a "tus rutas". Si al verlo en
+   uso el gris resulta insuficiente, añadir color es un cambio de minutos. */
+.field-error { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.field-error:empty { display: none; }
+
 /* PANEL EDITAR — origen y fecha juntos */
 .edit-panel { border-top: 1px solid var(--line); padding: 0.9rem 0 0.2rem; margin-bottom: 1rem; animation: depSlide 0.22s ease; }
 /* Únicas micro-etiquetas que sobreviven al rediseño: dentro del panel sí

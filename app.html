@@ -52,12 +52,14 @@
 
   <!-- PANEL AÑADIR -->
   <div class="tab-panel active" id="panel-añadir">
-    <input type="text" id="destination" placeholder="✦ Un lugar real… o no" autocomplete="off"/>
+    <input type="text" id="destination" placeholder="✦ Un lugar real… o no" autocomplete="off" oninput="clearFieldError('err-destination')"/>
+    <div class="field-error" id="err-destination"></div>
     <div class="book-input-wrap">
-      <input type="text" id="book-title" placeholder="Título del libro" autocomplete="off" oninput="onBookInput(this.value)" onkeydown="onBookKeydown(event)"/>
+      <input type="text" id="book-title" placeholder="Título del libro" autocomplete="off" oninput="onBookInput(this.value); clearFieldError('err-book')" onkeydown="onBookKeydown(event)"/>
       <input type="hidden" id="book-author"/>
       <div class="ac-dropdown" id="ac-dropdown"></div>
     </div>
+    <div class="field-error" id="err-book"></div>
     <div class="note-row">
       <textarea id="book-note" rows="1" placeholder="Una frase, una escena, algo que recordar" oninput="autoGrowNote(this)"></textarea>
       <span class="opt-mark">opcional</span>
@@ -65,6 +67,7 @@
     <!-- META-LÍNEA: el único sitio de la pantalla donde se menciona el origen.
          Tiene dos estados y los pinta updateOriginNarrative() en entries.js. -->
     <div class="meta-line" id="meta-line"></div>
+    <div class="field-error" id="err-origin"></div>
 
     <!-- PANEL «EDITAR»: origen y fecha juntos. Un solo punto de entrada para
          los dos valores que tienen defecto, en vez de dos enlaces «cambiar»
@@ -88,16 +91,18 @@
       </button>
       <!-- Justo debajo de Casa: el input pertenece a esa fila, no al panel. -->
       <div class="origin-input-wrap" id="origin-input-wrap">
-        <input type="text" id="origin-input" placeholder="Ciudad de origen…" autocomplete="off" style="margin:0; flex:1" onkeydown="if(event.key==='Enter') setOrigin()"/>
+        <input type="text" id="origin-input" placeholder="Ciudad de origen…" autocomplete="off" style="margin:0; flex:1" oninput="clearFieldError('err-origin-input')" onkeydown="if(event.key==='Enter') setOrigin()"/>
         <button class="origin-ok" onclick="setOrigin()">OK</button>
       </div>
+      <div class="field-error" id="err-origin-input"></div>
       <button type="button" class="dep-row" id="dep-other" onclick="setDep('other')">
         <svg class="dep-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><ellipse cx="12" cy="12" rx="4" ry="9"/></svg>
         <span class="dep-row-name">Otro lugar</span>
         <svg class="dep-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
       </button>
       <div class="dep-other-wrap" id="dep-other-wrap" style="display:none">
-        <input type="text" id="dep-other-input" placeholder="Escribe la ciudad de salida" autocomplete="off" oninput="updateOriginNarrative()"/>
+        <input type="text" id="dep-other-input" placeholder="Escribe la ciudad de salida" autocomplete="off" oninput="updateOriginNarrative(); clearFieldError('err-dep-other')"/>
+        <div class="field-error" id="err-dep-other"></div>
       </div>
       <div class="edit-panel-label">Fecha de visita</div>
       <div class="date-row">
