@@ -49,7 +49,7 @@ const BADGES_DEF = [
     id: 'countries_5',
     icon: '🛂',
     name: 'He viajado a 5 países distintos',
-    desc: 'Tus lecturas te han llevado por medio mundo.',
+    desc: 'Cinco de los 195 países del mundo. Tu mapa empieza a tener forma.',
     progressFn: (stats) => ({ actual: stats.countriesCount, meta: 5 }),
   },
   {
@@ -97,7 +97,7 @@ const BADGES_DEF = [
     id: 'countries_15',
     icon: '🌎',
     name: 'He viajado a 15 países',
-    desc: 'Tus lecturas te han llevado por buena parte del mundo.',
+    desc: 'Quince de los 195 países del mundo. Tu mapa ya se lee de lejos.',
     revelaSi: 'countries_5',
     progressFn: (stats) => ({ actual: stats.countriesCount, meta: 15 }),
   },
