@@ -1,10 +1,16 @@
 // ===================== ORIGIN =====================
-const META_PIN_SVG = '<svg class="meta-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+// El mismo símbolo que el marcador de origen del mapa (addOriginMarker, más
+// abajo en este archivo), no uno parecido. Allí es un div de 14px con
+// box-sizing:border-box, así que sus tres anillos concéntricos miden:
+//     núcleo  #1a3a2a   0 → 4      (los 8px de caja de contenido)
+//     aro     #1d9e75   4 → 7      (el borde de 3px)
+//     aro     blanco    7 → 9      (el box-shadow de 2px)
+// El viewBox va en esas mismas unidades para que los radios sean literalmente
+// los del marcador; el atributo width lo escala. Si allí cambian los grosores,
+// cambiarlos aquí: el símbolo tiene que seguir siendo reconocible como el
+// mismo, no solo parecerse.
+const META_ORIGEN_SVG = '<svg class="meta-ico meta-ico-origen" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="9" fill="#fff"/><circle cx="9" cy="9" r="5.5" fill="none" stroke="#1d9e75" stroke-width="3"/><circle cx="9" cy="9" r="4" fill="#1a3a2a"/></svg>';
 const META_CAL_SVG = '<svg class="meta-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>';
-// El mismo pin, en teal, para el estado vacío. Se deriva del anterior en vez
-// de duplicar el trazado: así los dos no pueden divergir, que es justo lo que
-// haría saltar el icono de sitio al fijar el origen.
-const META_PIN_TEAL_SVG = META_PIN_SVG.replace('meta-ico', 'meta-ico meta-ico-teal');
 
 // Única fuente de verdad de "desde dónde sale este viaje". La comparten
 // addEntry() y el render de la meta-línea, para que no puedan discrepar.
@@ -41,12 +47,12 @@ function updateOriginNarrative() {
     // que el pin caiga en la misma posición y no salte al fijar el origen.
     line.className = 'meta-line meta-line-empty';
     line.innerHTML =
-      `<span class="meta-item">${META_PIN_TEAL_SVG}<button type="button" class="meta-set-origin" id="meta-set-origin" onclick="openEditPanelAtHome()">Elige desde dónde sales</button></span>`;
+      `<span class="meta-item">${META_ORIGEN_SVG}<button type="button" class="meta-set-origin" id="meta-set-origin" onclick="openEditPanelAtHome()">Elige desde dónde sales</button></span>`;
   } else {
     const o = resolveOrigen();
     line.className = 'meta-line';
     line.innerHTML =
-      `<span class="meta-item">${META_PIN_SVG}Sales de <span class="meta-val">${esc(o.name || '…')}</span></span>` +
+      `<span class="meta-item">${META_ORIGEN_SVG}Sales de <span class="meta-val">${esc(o.name || '…')}</span></span>` +
       '<span class="meta-sep"></span>' +
       `<span class="meta-item">${META_CAL_SVG}<span class="meta-val">${esc(formatDate(selectedDate))}</span></span>` +
       '<button type="button" class="meta-edit" id="meta-edit" onclick="toggleEditPanel()">editar</button>';

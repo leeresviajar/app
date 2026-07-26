@@ -179,15 +179,21 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .meta-line { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 13px; color: var(--muted); }
 .meta-item { display: inline-flex; align-items: center; gap: 0.35rem; }
 .meta-ico { width: 15px; height: 15px; flex-shrink: 0; }
-/* El pin del estado vacío: mismo icono y mismo tamaño que el del estado
-   lleno, solo cambia el color. */
-.meta-ico-teal { color: var(--teal); }
+/* El símbolo de origen es el marcador del mapa, no un icono de trazo: lleva
+   sus colores dentro del SVG y no hereda currentColor. 14px para que su aro
+   teal case con el texto de 13px sin pasarse del calendario, que es de 15.
+   Idéntico en los dos estados de la meta-línea. */
+.meta-ico-origen { width: 14px; height: 14px; }
 .meta-val { color: var(--ink); font-weight: 500; }
 .meta-sep { width: 1px; height: 13px; background: var(--line); }
 /* margin-left:auto lo empuja a la derecha, y al partir en dos líneas en
    móvil estrecho cae solo al final sin romper la línea. */
-.meta-edit { margin-left: auto; font-size: 13px; color: var(--teal); background: none; border: none; border-bottom: 1px solid var(--teal); padding: 0; cursor: pointer; font-family: 'Inter', sans-serif; }
-.meta-set-origin { font-size: 13px; color: var(--teal); background: none; border: none; border-bottom: 1px solid var(--teal); padding: 0; cursor: pointer; font-family: 'Inter', sans-serif; }
+/* line-height explícito en los dos botones: el navegador fuerza `normal` en
+   <button> y eso NO hereda de .meta-line. Sin esto su caja mide 16,5px en vez
+   de 24 y el símbolo de origen cambia de altura entre los dos estados de la
+   meta-línea, que es justo lo que no debe pasar al fijar el origen. */
+.meta-edit { margin-left: auto; font-size: 13px; line-height: 24px; color: var(--teal); background: none; border: none; text-decoration: underline; text-underline-offset: 2px; padding: 0; cursor: pointer; font-family: 'Inter', sans-serif; }
+.meta-set-origin { font-size: 13px; line-height: 24px; color: var(--teal); background: none; border: none; text-decoration: underline; text-underline-offset: 2px; padding: 0; cursor: pointer; font-family: 'Inter', sans-serif; }
 
 /* MICROTEXTO DE VALIDACIÓN
    Sin color de error: el rojo está reservado a "tus rutas". Si al verlo en
