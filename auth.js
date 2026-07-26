@@ -546,8 +546,17 @@ async function authSignOut() {
 function showAuthCtaToast() {
   if (currentUser) return; // ya tiene cuenta
   if (localStorage.getItem('lev_auth_cta_dismissed')) return; // ya lo cerró antes
-  const toast = document.getElementById('auth-cta-toast');
-  toast.classList.add('show');
+  // El CTA comparte posición con la familia .lev-toast: espera a que no quede
+  // ninguno visible (viaje 4s, pionera 8s, logro 7s) antes de entrar.
+  const tryShow = () => {
+    if (currentUser) return; // se registró mientras tanto
+    if (localStorage.getItem('lev_auth_cta_dismissed')) return;
+    const busy = ['pioneer-toast', 'entry-added-toast', 'badge-unlock-toast']
+      .some(id => document.getElementById(id).classList.contains('show'));
+    if (busy) { setTimeout(tryShow, 600); return; }
+    document.getElementById('auth-cta-toast').classList.add('show');
+  };
+  setTimeout(tryShow, 4600);
 }
 function dismissAuthCtaToast() {
   document.getElementById('auth-cta-toast').classList.remove('show');

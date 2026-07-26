@@ -367,15 +367,13 @@
 </div>
 
 <!-- AUTH CTA TOAST (aparece al añadir el primer libro, si no hay sesión) -->
-<div class="pioneer-toast" id="auth-cta-toast" style="cursor:default">
-  <div class="p-icon">✦</div>
-  <div>
-    <div class="p-title">Guarda tus rutas</div>
-    <div class="p-text">Crea un perfil para no perder tu mapa lector si cambias de dispositivo.</div>
-    <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
-      <button onclick="openAuthFromCta()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:0.35rem 0.75rem;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;">Crear cuenta</button>
-      <button onclick="dismissAuthCtaToast()" style="background:none;border:none;color:var(--muted);font-size:0.75rem;cursor:pointer;font-family:inherit;">Ahora no</button>
-    </div>
+<div class="lev-toast" id="auth-cta-toast">
+  <div class="lt-kicker">TU MAPA LECTOR</div>
+  <div class="lt-name">Guarda tus rutas</div>
+  <div class="lt-desc">Crea un perfil para no perder tu mapa si cambias de dispositivo.</div>
+  <div class="lt-actions">
+    <button class="lt-btn" onclick="openAuthFromCta()">Crear cuenta</button>
+    <button class="lt-dismiss" onclick="dismissAuthCtaToast()">Ahora no</button>
   </div>
 </div>
 
