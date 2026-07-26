@@ -41,7 +41,7 @@ App web en español: mapa literario donde lectores registran libros ligados a de
 ## Copy y tono
 
 - Todo el copy de cara al usuario en español, tono literario y sobrio, sin lenguaje con género en mensajes de éxito.
-- El modal de ficticios siempre muestra el mensaje de comunidad ("X viajeros lo han colocado en..."), nunca queda en silencio ni dice "todavía nadie".
+- El modal de ficticios siempre muestra un mensaje de colocación, nunca queda en silencio. Pero NUNCA cuantifica ni atribuye conducta a otras personas: solo la región curada ("La comunidad suele situarlo en: …"), y si el lugar no está en el catálogo, "Aún no tenemos una ubicación habitual para X". Prohibido "N viajeros lo han colocado" y prohibido "todavía nadie": los `votes` de COMMUNITY_POSITIONS son cifras semilla inventadas, no datos reales.
 
 ## Mapa de funcionalidades
 

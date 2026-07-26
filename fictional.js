@@ -1,5 +1,8 @@
 // ===================== FICTIONAL COMMUNITY DATA =====================
 // Estructura preparada para API real: GET /api/fictional-positions/{placeKey}
+// `votes` NO se renderiza: son cifras semilla de la curación, no datos
+// reales. Solo se muestra `regionName`. No exponer votes hasta que salga
+// de una consulta a Supabase.
 const COMMUNITY_POSITIONS = {
   // Tolkien
   'minas tirith':    { votes: 876,  regionName: 'Anatolia occidental (Turquía)' },
@@ -208,12 +211,12 @@ function openFictionalModal(placeKey, onResolve) {
     section.style.display = '';
     intro.style.display = 'none';
     document.getElementById('fic-votes').textContent =
-      `${community.votes.toLocaleString()} viajeros lo han colocado en:`;
+      'La comunidad suele situarlo en:';
     document.getElementById('fic-community-place').textContent = community.regionName;
   } else {
     section.style.display = 'none';
     intro.style.display = 'block';
-    intro.innerHTML = `Todavía nadie ha situado <strong style="color:var(--ink)">${niceName}</strong> en el mapa. Colócalo donde tú lo imaginas — será tu rincón.`;
+    intro.innerHTML = `Aún no tenemos una ubicación habitual para <strong style="color:var(--ink)">${niceName}</strong>. Colócalo donde tú lo imaginas — será tu rincón.`;
   }
 
   document.getElementById('fic-custom-input').value = '';
