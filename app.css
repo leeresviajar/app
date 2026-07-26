@@ -260,8 +260,18 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 
 /* DATE ROW — dentro del panel */
 .date-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.55rem; padding-left: 0.7rem; }
-.date-val { font-size: 0.85rem; color: var(--ink); font-weight: 500; background: none; border: none; border-bottom: 1px solid var(--line); padding: 0 0 2px; cursor: pointer; font-family: 'Inter', sans-serif; }
-.date-val:hover { border-bottom-color: var(--teal); }
+.date-input {
+  font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 500;
+  color: var(--ink); background: none; border: none;
+  border-bottom: 1px solid var(--line); border-radius: 0;
+  padding: 0 0 2px; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  min-width: 0; max-width: 100%;
+}
+.date-input:hover { border-bottom-color: var(--teal); }
+.date-input:focus { outline: none; border-bottom-color: var(--teal); }
+.date-input::-webkit-calendar-picker-indicator { opacity: .45; padding-left: 4px; cursor: pointer; }
+.date-input:hover::-webkit-calendar-picker-indicator { opacity: 1; }
 
 /* ADD BUTTON */
 /* Único bloque teal sólido del formulario. Si aparece un segundo, algo se

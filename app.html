@@ -122,8 +122,10 @@
       </div>
       <div class="edit-panel-label">Fecha de visita</div>
       <div class="date-row">
-        <button type="button" class="date-val" id="date-display" onclick="toggleDatePicker()"></button>
-        <input type="date" id="date-picker" style="display:none" onchange="onDateChange(this.value)"/>
+        <!-- min no es decorativo: es lo que hace que checkValidity() rechace los
+             años parciales (0002 al teclear "2023") en onDateChange. No quitar. -->
+        <input type="date" class="date-input" id="date-picker" min="1900-01-01"
+               onchange="onDateChange(this.value)" onblur="onDateBlur()"/>
       </div>
     </div>
     <button class="add-btn" id="add-btn" onclick="addEntry()">Añadir al mapa</button>
