@@ -201,6 +201,12 @@ function autoGrowNote(el) {
     h = el.scrollHeight;
     el.value = '';
   }
+  // Cuadrado a líneas enteras. Chrome devuelve un scrollHeight un píxel corto
+  // para una línea (23 en vez de 24), y ese píxel desalinea la línea base
+  // respecto al resto de filas, que sí miden caja de línea exacta. Ver la
+  // compensación óptica de .field-row en app.css.
+  const lh = parseFloat(getComputedStyle(el).lineHeight);
+  if (lh > 0) h = Math.max(lh, Math.ceil(h / lh) * lh);
   el.style.height = h + 'px';
 }
 
