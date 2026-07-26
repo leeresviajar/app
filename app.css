@@ -202,7 +202,11 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
    sin entrar en el rect del recuadro NI empujar la fila siguiente. Un
    elemento en flujo, aunque fuera hermano de .field-row, desplazaría todo
    lo que va debajo cada vez que se dispara. */
-.field-error { position: absolute; top: 100%; left: 0; margin-top: 5px; font-size: 12px; line-height: 1.2; color: var(--muted); }
+/* Pegado a la línea de SU fila, no flotando en el hueco: se lee como parte
+   del campo que falla, no del elemento de abajo. El offset descuenta el
+   filete con la misma variable que usa el padding, así que el texto visible
+   queda a ~5px del filete en las cuatro filas pese a que midan 2, 1, 1 y 0. */
+.field-error { position: absolute; top: 100%; left: 0; margin-top: calc(2px + var(--optica-borde)); font-size: 12px; line-height: 1.2; color: var(--muted); }
 .field-error:empty { display: none; }
 
 /* PANEL EDITAR — origen y fecha juntos */
@@ -235,7 +239,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 /* ADD BUTTON */
 /* Único bloque teal sólido del formulario. Si aparece un segundo, algo se
    ha colado: el CTA deja de ser el punto de mayor peso de la pantalla. */
-.add-btn { width: 100%; margin-top: 20px; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+.add-btn { width: 100%; margin-top: 32px; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: background 0.15s, transform 0.1s; }
 .add-btn:hover { background: var(--forest-mid); }
 .add-btn:active { transform: scale(0.98); }
 
