@@ -31,13 +31,13 @@ const ONBOARDING_STEPS = [
     label: 'Paso 2 de 4',
     icon: '📍',
     text: '<em>Escribe aquí tu destino.</em> Ciudad, isla, planeta o reino: si te llevó un libro, cuenta.',
-    target: '#destination', placement: 'right', pad: 8
+    target: '#row-destination', placement: 'right', pad: 8
   },
   {
     label: 'Paso 3 de 4',
     icon: '📖',
     text: '<em>¿Qué estás leyendo?</em> Cada destino queda unido al libro que te llevó hasta él.',
-    target: '#book-title', placement: 'right', pad: 8
+    target: '#row-book', placement: 'right', pad: 8
   },
   {
     // Un solo selector: #meta-line es el contenedor en sus dos estados, y
@@ -46,7 +46,7 @@ const ONBOARDING_STEPS = [
     label: 'Paso 4 de 4',
     icon: '🧭',
     text: '<em>De aquí sales y este es el día.</em> Puedes cambiarlo cuando quieras.',
-    target: '#meta-line', placement: 'right', pad: 8
+    target: '#row-meta', placement: 'right', pad: 8
   }
 ];
 
