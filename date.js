@@ -16,6 +16,8 @@ function initDate() {
   selectedDate = todayStr();
   document.getElementById('date-display').textContent = formatDate(selectedDate);
   document.getElementById('date-picker').value = selectedDate;
+  // La fecha también se lee en la meta-línea del formulario, fuera del panel.
+  if (typeof updateOriginNarrative === 'function') updateOriginNarrative();
 }
 function resetDate() { initDate(); document.getElementById('date-picker').style.display = 'none'; }
 function toggleDatePicker() {
@@ -27,4 +29,5 @@ function onDateChange(val) {
   selectedDate = val;
   document.getElementById('date-display').textContent = formatDate(val);
   document.getElementById('date-picker').style.display = 'none';
+  if (typeof updateOriginNarrative === 'function') updateOriginNarrative();
 }

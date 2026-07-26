@@ -52,49 +52,79 @@
 
   <!-- PANEL AÑADIR -->
   <div class="tab-panel active" id="panel-añadir">
-    <div class="origin-section" id="origin-section">
-      <div class="origin-label">Comienza el viaje</div>
-      <div class="origin-display">
-        <div class="origin-dot"></div>
-        <span class="origin-name" id="origin-name">¿Desde dónde partes?</span>
-        <button class="origin-change" onclick="toggleOriginEdit()">cambiar</button>
+    <!-- Cada elemento resaltable va en una .field-row de padding vertical
+         uniforme y simétrico: es lo que hace que todos los recuadros del
+         spotlight guarden la misma relación con su contenido, sin offsets
+         por paso. El filete y la separación viven en la fila, no en el
+         input. Los targets del onboarding son estos ids. -->
+    <div class="field-row" id="row-destination">
+      <input type="text" id="destination" placeholder="✦ Un lugar real… o no" autocomplete="off" oninput="clearFieldError('err-destination')"/>
+      <div class="field-error" id="err-destination"></div>
+    </div>
+    <div class="field-row" id="row-book">
+      <div class="book-input-wrap">
+        <input type="text" id="book-title" placeholder="Título del libro" autocomplete="off" oninput="onBookInput(this.value); clearFieldError('err-book')" onkeydown="onBookKeydown(event)"/>
+        <input type="hidden" id="book-author"/>
+        <div class="ac-dropdown" id="ac-dropdown"></div>
       </div>
+      <div class="field-error" id="err-book"></div>
+    </div>
+    <div class="field-row" id="row-note">
+      <div class="note-row">
+        <textarea id="book-note" rows="1" placeholder="Una cita, una escena…" oninput="autoGrowNote(this)"></textarea>
+        <span class="opt-mark">opcional</span>
+      </div>
+    </div>
+    <!-- META-LÍNEA: el único sitio de la pantalla donde se menciona el origen.
+         Tiene dos estados y los pinta updateOriginNarrative() en entries.js.
+         Su fila no lleva filete. -->
+    <div class="field-row field-row-plain" id="row-meta">
+      <div class="meta-line" id="meta-line"></div>
+      <div class="field-error" id="err-origin"></div>
+    </div>
+
+    <!-- PANEL «EDITAR»: origen y fecha juntos. Un solo punto de entrada para
+         los dos valores que tienen defecto, en vez de dos enlaces «cambiar»
+         de alcances distintos. -->
+    <div class="edit-panel" id="edit-panel" style="display:none">
+      <div class="edit-panel-label">Sales desde</div>
+      <button type="button" class="dep-row" id="dep-last" onclick="setDep('last')">
+        <svg class="dep-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span class="dep-row-name">Tu último destino</span>
+        <span class="dep-row-val" id="dep-last-val"></span>
+        <svg class="dep-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
+      </button>
+      <button type="button" class="dep-row" id="dep-home" onclick="setDep('home')">
+        <svg class="dep-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+        <span class="dep-row-name">Casa</span>
+        <!-- id heredado: storage.js escribe aquí el nombre del origen en tres
+             sitios. Conservarlo evita tocar ese archivo. -->
+        <span class="dep-row-val" id="origin-name"></span>
+        <span class="dep-row-define" id="dep-home-define">definir</span>
+        <svg class="dep-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
+      </button>
+      <!-- Justo debajo de Casa: el input pertenece a esa fila, no al panel. -->
       <div class="origin-input-wrap" id="origin-input-wrap">
-        <input type="text" id="origin-input" placeholder="Ciudad de origen…" autocomplete="off" style="margin:0; flex:1" onkeydown="if(event.key==='Enter') setOrigin()"/>
-        <button class="add-btn" style="width:auto;padding:0.5rem 0.85rem;font-size:0.8rem" onclick="setOrigin()">OK</button>
+        <input type="text" id="origin-input" placeholder="Ciudad de origen…" autocomplete="off" style="margin:0; flex:1" oninput="clearFieldError('err-origin-input')" onkeydown="if(event.key==='Enter') setOrigin()"/>
+        <button class="origin-ok" onclick="setOrigin()">OK</button>
+      </div>
+      <div class="field-error" id="err-origin-input"></div>
+      <button type="button" class="dep-row" id="dep-other" onclick="setDep('other')">
+        <svg class="dep-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><ellipse cx="12" cy="12" rx="4" ry="9"/></svg>
+        <span class="dep-row-name">Otro lugar</span>
+        <svg class="dep-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
+      </button>
+      <div class="dep-other-wrap" id="dep-other-wrap" style="display:none">
+        <input type="text" id="dep-other-input" placeholder="Escribe la ciudad de salida" autocomplete="off" oninput="updateOriginNarrative(); clearFieldError('err-dep-other')"/>
+        <div class="field-error" id="err-dep-other"></div>
+      </div>
+      <div class="edit-panel-label">Fecha de visita</div>
+      <div class="date-row">
+        <button type="button" class="date-val" id="date-display" onclick="toggleDatePicker()"></button>
+        <input type="date" id="date-picker" style="display:none" onchange="onDateChange(this.value)"/>
       </div>
     </div>
-    <div class="origin-narrative" id="origin-narrative" style="display:none">
-      <span id="origin-narrative-text"></span>
-      <button class="origin-change" onclick="toggleOriginEdit()">cambiar</button>
-    </div>
-    <div class="section-title destino-q">¿Cuál es tu destino?</div>
-    <input type="text" id="destination" placeholder="✦ Puede estar en este mundo… o en otro" autocomplete="off"/>
-    <div style="font-size:0.68rem;color:var(--muted);font-style:italic;margin-top:-0.35rem;margin-bottom:0.55rem;"></div>
-    <div class="book-input-wrap">
-      <input type="text" id="book-title" placeholder="Título del libro" autocomplete="off" oninput="onBookInput(this.value)" onkeydown="onBookKeydown(event)"/>
-      <input type="hidden" id="book-author"/>
-      <div class="ac-dropdown" id="ac-dropdown"></div>
-    </div>
-    
-    <textarea id="book-note" rows="3" placeholder="Notas de viaje (opcional)"></textarea>
-    <div class="date-row">
-      <span class="date-label">Fecha de visita:</span>
-      <span class="date-val" id="date-display"></span>
-      <button class="date-change" onclick="toggleDatePicker()">cambiar</button>
-      <input type="date" id="date-picker" style="display:none" onchange="onDateChange(this.value)"/>
-    </div>
-    <div class="origin-label" style="margin-bottom:0.4rem">Sales desde</div>
-    <div class="departure-toggle">
-      <button class="dep-opt active" id="dep-last" onclick="setDep('last')">Último<br>destino</button>
-      <button class="dep-opt" id="dep-home" onclick="setDep('home')">Casa</button>
-      <button class="dep-opt" id="dep-other" onclick="setDep('other')">Otro lugar</button>
-    </div>
-    <div class="dep-other-wrap" id="dep-other-wrap" style="display:none">
-      <label class="dep-other-label" for="dep-other-input">¿Desde dónde sales esta vez?</label>
-      <input type="text" id="dep-other-input" placeholder="Escribe la ciudad de salida" autocomplete="off"/>
-    </div>
-    <button class="add-btn" id="add-btn" onclick="addEntry()">+ Añadir al mapa</button>
+    <button class="add-btn" id="add-btn" onclick="addEntry()">Añadir al mapa</button>
   </div>
 
   <!-- PANEL ITINERARIO -->
@@ -500,10 +530,12 @@ window.addEventListener('load', async () => {
   startActivityStrip();
   initOnboarding();
   initMobile();
-  if (!origin) {
-    document.getElementById('origin-input-wrap').classList.add('visible');
-    if (!isMobile()) document.getElementById('origin-input').focus();
-  }
+  // Render final de la meta-línea: loadState() ya la pinta en sus rutas
+  // normales, pero sale por return si falla la lectura de la nube
+  // (storage.js) y ahí se quedaría el hueco vacío.
+  updateOriginNarrative();
+  // Alto inicial del campo de notas: el del placeholder, que depende del ancho.
+  autoGrowNote(document.getElementById('book-note'));
 });
 </script>
 

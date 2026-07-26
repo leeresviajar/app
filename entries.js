@@ -1,46 +1,124 @@
 // ===================== ORIGIN =====================
-function updateOriginNarrative() {
-  const section = document.getElementById('origin-section');
-  const narrative = document.getElementById('origin-narrative');
-  const el = document.getElementById('origin-narrative-text');
-  if (!origin) {
-    section.style.display = 'block';
-    narrative.style.display = 'none';
-    return;
+// El mismo símbolo que el marcador de origen del mapa (addOriginMarker, más
+// abajo en este archivo), no uno parecido. Allí es un div de 14px con
+// box-sizing:border-box, así que sus tres anillos concéntricos miden:
+//     núcleo  #1a3a2a   0 → 4      (los 8px de caja de contenido)
+//     aro     #1d9e75   4 → 7      (el borde de 3px)
+//     aro     blanco    7 → 9      (el box-shadow de 2px)
+// El viewBox va en esas mismas unidades para que los radios sean literalmente
+// los del marcador; el atributo width lo escala. Si allí cambian los grosores,
+// cambiarlos aquí: el símbolo tiene que seguir siendo reconocible como el
+// mismo, no solo parecerse.
+const META_ORIGEN_SVG = '<svg class="meta-ico meta-ico-origen" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="9" fill="#fff"/><circle cx="9" cy="9" r="5.5" fill="none" stroke="#1d9e75" stroke-width="3"/><circle cx="9" cy="9" r="4" fill="#1a3a2a"/></svg>';
+const META_CAL_SVG = '<svg class="meta-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>';
+
+// Única fuente de verdad de "desde dónde sale este viaje". La comparten
+// addEntry() y el render de la meta-línea, para que no puedan discrepar.
+// Devuelve siempre modo y nombre; las coordenadas solo cuando se saben sin
+// preguntar a nadie: 'other' exige geocodificar y eso es asíncrono, así que
+// lo resuelve addEntry() encima de esto. El render nunca geocodifica.
+// `error` dice por qué no hay origen, y quien llama decide si avisa.
+function resolveOrigen() {
+  // Sin viajes previos no hay cadena que seguir: el primero sale de casa
+  // sea cual sea el modo elegido. Es la regla que ya aplicaba addEntry().
+  if (departure === 'home' || entries.length === 0) {
+    if (!origin) return { mode: 'home', name: null, coords: null, error: 'sin-origen' };
+    return { mode: 'home', name: origin.name, coords: { lat: origin.lat, lng: origin.lng } };
   }
-  section.style.display = 'none';
-  narrative.style.display = 'flex';
-  const last = currentEntry();
-  let text = `Saliste de <strong>${origin.name}</strong>`;
-  if (last) text += ` · Ahora estás en <strong>${last.dest}</strong>`;
-  el.innerHTML = text;
+  if (departure === 'last') {
+    const last = currentEntry();
+    if (!last) return { mode: 'last', name: null, coords: null, error: 'sin-origen' };
+    return { mode: 'last', name: last.dest, coords: { lat: last.destLat, lng: last.destLng } };
+  }
+  const other = document.getElementById('dep-other-input').value.trim();
+  if (!other) return { mode: 'other', name: null, coords: null, error: 'sin-lugar' };
+  return { mode: 'other', name: other, coords: null };
 }
 
-function toggleOriginEdit() {
+// Pinta la meta-línea y sincroniza el panel. Conserva el nombre antiguo
+// porque storage.js la llama en tres sitios.
+function updateOriginNarrative() {
+  const line = document.getElementById('meta-line');
+  if (!line) return;
   if (!origin) {
-    const wrap = document.getElementById('origin-input-wrap');
-    wrap.classList.toggle('visible');
-    if (wrap.classList.contains('visible')) document.getElementById('origin-input').focus();
+    // Sin origen no se puede decir "Sales de X": la línea entera se
+    // sustituye por la llamada a definirlo. No se vuelve a este estado.
+    // Mismo envoltorio .meta-item que el estado lleno: es lo que garantiza
+    // que el pin caiga en la misma posición y no salte al fijar el origen.
+    line.className = 'meta-line meta-line-empty';
+    line.innerHTML =
+      `<span class="meta-item">${META_ORIGEN_SVG}<button type="button" class="meta-set-origin" id="meta-set-origin" onclick="openEditPanelAtHome()">Elige desde dónde sales</button></span>`;
   } else {
-    document.getElementById('origin-section').style.display = 'block';
-    document.getElementById('origin-narrative').style.display = 'none';
-    document.getElementById('origin-name').textContent = origin.name;
-    const wrap = document.getElementById('origin-input-wrap');
-    wrap.classList.add('visible');
-    document.getElementById('origin-input').focus();
+    const o = resolveOrigen();
+    line.className = 'meta-line';
+    line.innerHTML =
+      `<span class="meta-item">${META_ORIGEN_SVG}Sales de <span class="meta-val">${esc(o.name || '…')}</span></span>` +
+      '<span class="meta-sep"></span>' +
+      `<span class="meta-item">${META_CAL_SVG}<span class="meta-val">${esc(formatDate(selectedDate))}</span></span>` +
+      '<button type="button" class="meta-edit" id="meta-edit" onclick="toggleEditPanel()">editar</button>';
   }
+  syncDepRows();
+}
+
+// Refleja el estado actual en las filas del panel: cuál va marcada, qué
+// valor muestra cada una y si Casa ofrece "definir".
+function syncDepRows() {
+  const hasEntries = entries.length > 0;
+  const lastRow = document.getElementById('dep-last');
+  // Sin viajes todavía no existe "último destino" que ofrecer: la fila sobra.
+  if (lastRow) lastRow.style.display = hasEntries ? '' : 'none';
+
+  const active = resolveOrigen().mode;
+  ['last', 'home', 'other'].forEach(m => {
+    const row = document.getElementById('dep-' + m);
+    if (row) row.classList.toggle('active', m === active);
+  });
+
+  const lastVal = document.getElementById('dep-last-val');
+  if (lastVal) { const c = currentEntry(); lastVal.textContent = c ? c.dest : ''; }
+  const homeVal = document.getElementById('origin-name');
+  if (homeVal) homeVal.textContent = origin ? origin.name : '';
+  const define = document.getElementById('dep-home-define');
+  if (define) define.style.display = origin ? 'none' : '';
+}
+
+function setEditPanel(open) {
+  const panel = document.getElementById('edit-panel');
+  if (panel) panel.style.display = open ? 'block' : 'none';
+}
+
+function toggleEditPanel() {
+  const panel = document.getElementById('edit-panel');
+  if (panel) setEditPanel(panel.style.display === 'none');
+}
+
+// Entrada desde la meta-línea vacía: abre el panel con Casa ya elegida y
+// el input desplegado, para que no haya que buscar dónde escribir.
+function openEditPanelAtHome() {
+  setEditPanel(true);
+  setDep('home');
+}
+
+// Sin argumento alterna; con argumento fuerza el estado.
+function toggleOriginEdit(forceOpen) {
+  const wrap = document.getElementById('origin-input-wrap');
+  const open = (forceOpen === undefined) ? !wrap.classList.contains('visible') : !!forceOpen;
+  wrap.classList.toggle('visible', open);
+  if (open) setTimeout(() => document.getElementById('origin-input').focus(), 60);
 }
 
 async function setOrigin() {
   const val = document.getElementById('origin-input').value.trim();
   if (!val) return;
-  const btn = document.querySelector('#origin-input-wrap .add-btn');
+  const btn = document.querySelector('#origin-input-wrap .origin-ok');
   const prevText = btn.textContent;
   btn.textContent = 'Buscando…'; btn.disabled = true;
   try {
+    clearFieldError('err-origin-input');
     const geo = await geocode(val, false, 'origen');
-    if (!geo) { alert('No encontré ese lugar. Prueba con otro nombre.'); return; }
+    if (!geo) { showFieldError('err-origin-input', 'No encontré ese lugar. Prueba con otro nombre.'); return; }
     origin = { name: val, lat: geo.lat, lng: geo.lng };
+    clearFieldError('err-origin');
     document.getElementById('origin-input-wrap').classList.remove('visible');
     document.getElementById('origin-input').value = '';
     addOriginMarker();
@@ -79,12 +157,63 @@ function addOriginMarker() {
 // ===================== DEPARTURE =====================
 function setDep(mode) {
   departure = mode;
-  ['last','home','other'].forEach(m => document.getElementById('dep-'+m).classList.toggle('active', m === mode));
   const wrap = document.getElementById('dep-other-wrap');
   wrap.style.display = mode === 'other' ? 'block' : 'none';
   if (mode === 'other') {
     setTimeout(() => document.getElementById('dep-other-input').focus(), 60);
   }
+  // Casa sin coordenadas todavía: se despliega el input en vez de dejar la
+  // fila elegida pero vacía.
+  if (mode === 'home' && !origin) toggleOriginEdit(true);
+  else if (mode !== 'home') toggleOriginEdit(false);
+  // La meta-línea sigue al modo elegido: es donde se lee el resultado.
+  updateOriginNarrative();
+}
+
+// ===================== VALIDACIÓN EN LÍNEA =====================
+// El CTA nunca se deshabilita: un botón gris no explica qué falta y en móvil
+// no enseña tooltip. Al pulsar, el foco va al primer campo vacío y aparece un
+// microtexto bajo su línea. Sin color de error de momento: el rojo está
+// reservado a "tus rutas" y estrenar un color para esto no está decidido.
+function showFieldError(id, msg, focusEl) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = msg;
+  if (focusEl) focusEl.focus();
+}
+
+function clearFieldError(id) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = '';
+}
+
+function clearAllFieldErrors() {
+  ['err-destination', 'err-book', 'err-origin', 'err-dep-other', 'err-origin-input'].forEach(clearFieldError);
+}
+
+// ===================== NOTAS =====================
+// El campo se dimensiona a su contenido en todo momento: nunca sobra alto.
+// Vacío mide lo que ocupe el placeholder (una o dos líneas según el ancho);
+// con contenido, crece y decrece con el texto. 'auto' antes de leer
+// scrollHeight es lo que permite que también encoja, no solo que crezca.
+function autoGrowNote(el) {
+  el.style.height = 'auto';
+  let h = el.scrollHeight;
+  if (!el.value) {
+    // scrollHeight no cuenta el placeholder. Para medirlo se escribe en el
+    // propio campo y se borra: mismas métricas exactas que el texto real, y
+    // asignar value por código no dispara 'input', así que no hay recursión.
+    el.value = el.placeholder;
+    el.style.height = 'auto';
+    h = el.scrollHeight;
+    el.value = '';
+  }
+  // Cuadrado a líneas enteras. Chrome devuelve un scrollHeight un píxel corto
+  // para una línea (23 en vez de 24), y ese píxel desalinea la línea base
+  // respecto al resto de filas, que sí miden caja de línea exacta. Ver la
+  // compensación óptica de .field-row en app.css.
+  const lh = parseFloat(getComputedStyle(el).lineHeight);
+  if (lh > 0) h = Math.max(lh, Math.ceil(h / lh) * lh);
+  el.style.height = h + 'px';
 }
 
 // ===================== ADD ENTRY =====================
@@ -93,25 +222,38 @@ async function addEntry() {
   const author = document.getElementById('book-author').value.trim();
   const dest = document.getElementById('destination').value.trim();
   const note = document.getElementById('book-note').value.trim();
-  if (!book || !dest) { alert('Necesito al menos el título y el destino.'); return; }
+  clearAllFieldErrors();
+  if (!dest) { showFieldError('err-destination', 'Necesitas un destino', document.getElementById('destination')); return; }
+  if (!book) { showFieldError('err-book', 'Necesitas un libro', document.getElementById('book-title')); return; }
 
   const btn = document.getElementById('add-btn');
   btn.textContent = 'Buscando…'; btn.disabled = true;
 
   try {
-    let fromName, fromCoords;
-    if (departure === 'home' || entries.length === 0) {
-      if (!origin) { alert('Primero indica tu ciudad de origen.'); return; }
-      fromName = origin.name; fromCoords = { lat: origin.lat, lng: origin.lng };
-    } else if (departure === 'last') {
-      const last = currentEntry();
-      fromName = last.dest; fromCoords = { lat: last.destLat, lng: last.destLng };
-    } else {
-      const other = document.getElementById('dep-other-input').value.trim();
-      if (!other) { alert('Indica el lugar de partida.'); return; }
-      const geo = await geocode(other, false, 'origen');
-      if (!geo) { alert('No encontré ese lugar de partida.'); return; }
-      fromName = other; fromCoords = { lat: geo.lat, lng: geo.lng };
+    const partida = resolveOrigen();
+    if (partida.error === 'sin-origen') {
+      // El enlace de la meta-línea es el punto de entrada: el mismo trato
+      // que un campo obligatorio vacío.
+      showFieldError('err-origin', 'Necesitas un punto de partida', document.getElementById('meta-set-origin'));
+      return;
+    }
+    if (partida.error === 'sin-lugar') {
+      setEditPanel(true);
+      showFieldError('err-dep-other', 'Necesitas un lugar de partida', document.getElementById('dep-other-input'));
+      return;
+    }
+    const fromName = partida.name;
+    let fromCoords = partida.coords;
+    // Solo 'other' llega sin coordenadas: es el único modo que hay que
+    // geocodificar, y por eso no puede resolverse en el render.
+    if (!fromCoords) {
+      const geo = await geocode(fromName, false, 'origen');
+      if (!geo) {
+        setEditPanel(true);
+        showFieldError('err-dep-other', 'No encontré ese lugar', document.getElementById('dep-other-input'));
+        return;
+      }
+      fromCoords = { lat: geo.lat, lng: geo.lng };
     }
 
     const destGeo = await geocode(dest, true);
@@ -155,7 +297,8 @@ async function addEntry() {
     document.getElementById('book-title').value = '';
     document.getElementById('book-author').value = '';
     document.getElementById('destination').value = '';
-    document.getElementById('book-note').value = '';
+    const noteEl = document.getElementById('book-note');
+    noteEl.value = ''; autoGrowNote(noteEl); // vaciarlo no basta: hay que devolverlo a una línea
     document.getElementById('dep-other-input').value = '';
     selectedBookRef = null;
     closeDropdown(); resetDate();
@@ -164,7 +307,7 @@ async function addEntry() {
     const lats = [fromCoords.lat, destGeo.lat], lngs = [fromCoords.lng, destGeo.lng];
     map.fitBounds([[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]], { padding: [80,80] });
   } finally {
-    btn.textContent = '+ Añadir al mapa'; btn.disabled = false;
+    btn.textContent = 'Añadir al mapa'; btn.disabled = false;
   }
 }
 
