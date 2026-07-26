@@ -14,20 +14,27 @@ function formatDate(str) {
 }
 function initDate() {
   selectedDate = todayStr();
-  document.getElementById('date-display').textContent = formatDate(selectedDate);
-  document.getElementById('date-picker').value = selectedDate;
-  // La fecha también se lee en la meta-línea del formulario, fuera del panel.
-  if (typeof updateOriginNarrative === 'function') updateOriginNarrative();
-}
-function resetDate() { initDate(); document.getElementById('date-picker').style.display = 'none'; }
-function toggleDatePicker() {
   const p = document.getElementById('date-picker');
-  p.style.display = p.style.display === 'none' ? 'inline-block' : 'none';
-  if (p.style.display !== 'none') p.focus();
-}
-function onDateChange(val) {
-  selectedDate = val;
-  document.getElementById('date-display').textContent = formatDate(val);
-  document.getElementById('date-picker').style.display = 'none';
+  if (p) p.value = selectedDate;
+  // La fecha se lee en la meta-línea del formulario, fuera del panel.
   if (typeof updateOriginNarrative === 'function') updateOriginNarrative();
+}
+
+function resetDate() { initDate(); }
+
+function onDateChange(val) {
+  const p = document.getElementById('date-picker');
+  // El input nativo dispara change en cada tecla del año: mientras la fecha
+  // no sea válida (año 0002 al teclear "2023") el cambio no se comete.
+  if (!val || (p && !p.checkValidity())) return;
+  selectedDate = val;
+  if (typeof updateOriginNarrative === 'function') updateOriginNarrative();
+}
+
+function onDateBlur() {
+  // Si sale del campo con una fecha incompleta o fuera de rango, se restaura
+  // la última válida en vez de dejar el input y el estado descuadrados.
+  const p = document.getElementById('date-picker');
+  if (!p) return;
+  if (!p.value || !p.checkValidity()) p.value = selectedDate;
 }
