@@ -58,21 +58,24 @@
          por paso. El filete y la separación viven en la fila, no en el
          input. Los targets del onboarding son estos ids. -->
     <div class="field-row" id="row-destination">
-      <input type="text" id="destination" placeholder="✦ Un lugar real… o no" autocomplete="off" oninput="clearFieldError('err-destination')"/>
-      <div class="field-error" id="err-destination"></div>
+      <div class="field-line">
+        <input type="text" id="destination" placeholder="✦ Un lugar real… o no" autocomplete="off"/>
+        <span class="req" id="req-destination" aria-hidden="true">*</span>
+      </div>
     </div>
     <div class="field-row" id="row-book">
-      <div class="book-input-wrap">
-        <input type="text" id="book-title" placeholder="Título del libro" autocomplete="off" oninput="onBookInput(this.value); clearFieldError('err-book')" onkeydown="onBookKeydown(event)"/>
-        <input type="hidden" id="book-author"/>
-        <div class="ac-dropdown" id="ac-dropdown"></div>
+      <div class="field-line">
+        <div class="book-input-wrap">
+          <input type="text" id="book-title" placeholder="Título del libro" autocomplete="off" oninput="onBookInput(this.value)" onkeydown="onBookKeydown(event)"/>
+          <input type="hidden" id="book-author"/>
+          <div class="ac-dropdown" id="ac-dropdown"></div>
+        </div>
+        <span class="req" id="req-book" aria-hidden="true">*</span>
       </div>
-      <div class="field-error" id="err-book"></div>
     </div>
     <div class="field-row" id="row-note">
       <div class="note-row">
         <textarea id="book-note" rows="1" placeholder="Una cita, una escena…" oninput="autoGrowNote(this)"></textarea>
-        <span class="opt-mark">opcional</span>
       </div>
     </div>
     <!-- META-LÍNEA: el único sitio de la pantalla donde se menciona el origen.
@@ -80,7 +83,6 @@
          Su fila no lleva filete. -->
     <div class="field-row field-row-plain" id="row-meta">
       <div class="meta-line" id="meta-line"></div>
-      <div class="field-error" id="err-origin"></div>
     </div>
 
     <!-- PANEL «EDITAR»: origen y fecha juntos. Un solo punto de entrada para

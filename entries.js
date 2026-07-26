@@ -118,7 +118,6 @@ async function setOrigin() {
     const geo = await geocode(val, false, 'origen');
     if (!geo) { showFieldError('err-origin-input', 'No encontré ese lugar. Prueba con otro nombre.'); return; }
     origin = { name: val, lat: geo.lat, lng: geo.lng };
-    clearFieldError('err-origin');
     document.getElementById('origin-input-wrap').classList.remove('visible');
     document.getElementById('origin-input').value = '';
     addOriginMarker();
@@ -170,11 +169,26 @@ function setDep(mode) {
   updateOriginNarrative();
 }
 
-// ===================== VALIDACIÓN EN LÍNEA =====================
+// ===================== VALIDACIÓN =====================
 // El CTA nunca se deshabilita: un botón gris no explica qué falta y en móvil
-// no enseña tooltip. Al pulsar, el foco va al primer campo vacío y aparece un
-// microtexto bajo su línea. Sin color de error de momento: el rojo está
-// reservado a "tus rutas" y estrenar un color para esto no está decidido.
+// no enseña tooltip. Los campos obligatorios llevan un asterisco permanente
+// (.req); al pulsar con uno vacío, el foco va al primero y su asterisco
+// engorda ~1,5s. Sin texto, sin alert y sin color nuevo: el rojo sigue
+// reservado a "tus rutas".
+const PULSE_MS = 1500;
+
+function pulseRequired(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('pulse');
+  void el.offsetWidth; // reinicia la animación si ya estaba marcado
+  el.classList.add('pulse');
+  clearTimeout(el._pulseTimer);
+  el._pulseTimer = setTimeout(() => el.classList.remove('pulse'), PULSE_MS);
+}
+
+// Estos dos siguen vivos solo para el panel «editar», donde el asterisco no
+// llega: ahí se informa de fallos del geocodificador, no de campos vacíos.
 function showFieldError(id, msg, focusEl) {
   const el = document.getElementById(id);
   if (el) el.textContent = msg;
@@ -187,7 +201,7 @@ function clearFieldError(id) {
 }
 
 function clearAllFieldErrors() {
-  ['err-destination', 'err-book', 'err-origin', 'err-dep-other', 'err-origin-input'].forEach(clearFieldError);
+  ['err-dep-other', 'err-origin-input'].forEach(clearFieldError);
 }
 
 // ===================== NOTAS =====================
@@ -223,8 +237,8 @@ async function addEntry() {
   const dest = document.getElementById('destination').value.trim();
   const note = document.getElementById('book-note').value.trim();
   clearAllFieldErrors();
-  if (!dest) { showFieldError('err-destination', 'Necesitas un destino', document.getElementById('destination')); return; }
-  if (!book) { showFieldError('err-book', 'Necesitas un libro', document.getElementById('book-title')); return; }
+  if (!dest) { document.getElementById('destination').focus(); pulseRequired('req-destination'); return; }
+  if (!book) { document.getElementById('book-title').focus(); pulseRequired('req-book'); return; }
 
   const btn = document.getElementById('add-btn');
   btn.textContent = 'Buscando…'; btn.disabled = true;
@@ -232,9 +246,9 @@ async function addEntry() {
   try {
     const partida = resolveOrigen();
     if (partida.error === 'sin-origen') {
-      // El enlace de la meta-línea es el punto de entrada: el mismo trato
-      // que un campo obligatorio vacío.
-      showFieldError('err-origin', 'Necesitas un punto de partida', document.getElementById('meta-set-origin'));
+      // La meta-línea no lleva asterisco: su estado vacío ya dice qué hacer,
+      // así que basta con llevar el foco al enlace.
+      document.getElementById('meta-set-origin')?.focus();
       return;
     }
     if (partida.error === 'sin-lugar') {
