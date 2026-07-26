@@ -47,7 +47,10 @@ function updateOriginNarrative() {
     // que el pin caiga en la misma posición y no salte al fijar el origen.
     line.className = 'meta-line meta-line-empty';
     line.innerHTML =
-      `<span class="meta-item">${META_ORIGEN_SVG}<button type="button" class="meta-set-origin" id="meta-set-origin" onclick="openEditPanelAtHome()">Elige desde dónde sales</button></span>`;
+      `<span class="meta-item">${META_ORIGEN_SVG}<button type="button" class="meta-set-origin" id="meta-set-origin" onclick="openEditPanelAtHome()">Elige desde dónde sales</button></span>` +
+      // El asterisco solo existe en este estado: en el lleno la derecha la
+      // ocupa «editar», y una vez fijado el origen no se vuelve aquí.
+      '<span class="req" id="req-origin" aria-hidden="true">*</span>';
   } else {
     const o = resolveOrigen();
     line.className = 'meta-line';
@@ -246,9 +249,10 @@ async function addEntry() {
   try {
     const partida = resolveOrigen();
     if (partida.error === 'sin-origen') {
-      // La meta-línea no lleva asterisco: su estado vacío ya dice qué hacer,
-      // así que basta con llevar el foco al enlace.
+      // Mismo trato que los otros dos obligatorios: foco al enlace y pulso
+      // en su asterisco. Antes solo enfocaba, y el botón no hacía nada visible.
       document.getElementById('meta-set-origin')?.focus();
+      pulseRequired('req-origin');
       return;
     }
     if (partida.error === 'sin-lugar') {

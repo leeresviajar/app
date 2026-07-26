@@ -161,7 +161,22 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .field-line .book-input-wrap { flex: 1; }
 .field-line > input { flex: 1; }
 .req { flex-shrink: 0; font-size: 15px; line-height: 24px; color: var(--teal); transition: font-weight 0.12s; }
+/* Compensación de línea base, una por pareja. El asterisco (Inter 15px) tiene
+   la suya a 17,5px de su caja de 24; el margen lo desplaza hasta la del
+   vecino, para que alinear no estire la fila y descuadre el recuadro del
+   onboarding.
+     destino   Instrument Serif 18px → 18,0  ·  baja 0,5
+     título    Inter 15px            → 17,5  ·  coincide, no lleva nada
+     origen    .meta-item            → 19,0  ·  baja 1,5
+
+   OJO con el de origen: NO son los 17,0 del texto del enlace. `.meta-item` es
+   un inline-flex cuyo primer hijo es el SVG del marcador, y un elemento
+   reemplazado sin línea base propia aporta como tal su borde inferior. Con el
+   icono de 14px centrado en la caja de 24, ese borde cae a (24+14)/2 = 19.
+   Medido por barrido: 1,5px es el único valor que devuelve la línea a 24,00px
+   exactos. Si cambia el TAMAÑO DEL ICONO o el cuerpo del asterisco, recalcular. */
 #row-destination .req { margin-top: 0.5px; margin-bottom: -0.5px; }
+#req-origin { margin-top: 1.5px; margin-bottom: -1.5px; }
 /* Al pulsar el CTA con el campo vacío: sin texto, sin color nuevo, sin
    alert. Solo el asterisco engorda ~1,5s (ver pulseRequired en entries.js). */
 .req.pulse { font-weight: 600; }
@@ -183,6 +198,11 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 /* META-LÍNEA — el único sitio donde se menciona el origen */
 /* Sin padding propio: el de la fila es el que cuenta para el recuadro. */
 .meta-line { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 13px; color: var(--muted); }
+/* baseline solo en el estado vacío, para sentar el asterisco en la línea del
+   enlace. El estado lleno sigue centrado: ahí conviven iconos, texto y
+   «editar», y centrarlos es lo correcto. */
+.meta-line-empty { align-items: baseline; }
+.meta-line-empty .req { margin-left: auto; }
 .meta-item { display: inline-flex; align-items: center; gap: 0.35rem; }
 .meta-ico { width: 15px; height: 15px; flex-shrink: 0; }
 /* El símbolo de origen es el marcador del mapa, no un icono de trazo: lleva
