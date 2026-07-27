@@ -196,7 +196,6 @@ async function buildExportCanvas() {
   const books   = new Set(exFiltered.map(e => e.book.toLowerCase().trim())).size;
   const places  = new Set(exFiltered.map(e => e.dest.toLowerCase())).size;
   const countries = countriesFrom(exFiltered).size;
-  const pioneers = loadDiary().filter(e=>e.pioneer).length;
   const fictional = new Set(exFiltered.filter(e=>e.fictional).map(e=>e.dest.toLowerCase())).size;
 
   if (exportMode === 'stats') {
@@ -217,12 +216,13 @@ async function buildExportCanvas() {
     ctx.fillStyle = '#faf7f2';
     ctx.fillRect(0, 0, W, H);
 
-    // Solo stats con valor > 0: las de cero se omiten y el resto se recentra
+    // Solo stats con valor > 0: las de cero se omiten y el resto se recentra.
+    // Aquí NO puede entrar ninguna cifra que dependa de isPioneer() mientras
+    // sea local (ver CLAUDE.md): esto se publica en redes.
     const statList = [
       { val: places,    label: places === 1 ? 'destino' : 'destinos' },
       { val: countries, label: countries === 1 ? 'país' : 'países' },
       { val: fictional, label: fictional === 1 ? 'imaginario' : 'imaginarios' },
-      { val: pioneers,  label: pioneers === 1 ? '1ª llegada' : '1as llegadas' },
       { val: books,     label: books === 1 ? 'libro' : 'libros' },
     ].filter(s => s.val > 0);
 

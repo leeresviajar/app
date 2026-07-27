@@ -145,7 +145,6 @@ const CONJUNTOS = {
     // 2024 tiene UNA sola lectura a propósito (caso límite del año escaso);
     // Tokio se repite con dos libros distintos, para ver dos rutas al mismo
     // punto solapadas en el modo mapa.
-    pioneros: 3,
     entries: [
       D('2024-06-12', 'Reikiavik', 64.1466, -21.9426, 'Islandia', 'IS', 'La saga de Njál', '', 'home'),
 
@@ -171,7 +170,6 @@ const CONJUNTOS = {
     etiqueta: 'Escasa — 2 lecturas, ambas en España',
     // Tester recién entrada: stats casi vacías, wrapped sin material y, sobre
     // todo, el globo con un racimo europeo mínimo.
-    pioneros: 1,
     entries: [
       D('2026-06-03', 'Santander', 43.4623, -3.8100, 'España', 'ES', 'Peñas arriba', 'José María de Pereda', 'home'),
       D('2026-07-02', 'Sevilla', 37.3891, -5.9845, 'España', 'ES', 'La feria de los discretos', 'Pío Baroja', 'home'),
@@ -182,7 +180,6 @@ const CONJUNTOS = {
     // Rompe el supuesto de que hay marcadores reales: el globo calcula su
     // rotación con el centroide de los puntos REALES y el mapa elige las
     // etiquetas partiendo de ellos.
-    pioneros: 2,
     entries: [
       D('2026-02-10', 'Mordor', 45.0, 35.0, '', 'FIC', 'El señor de los anillos', 'J.R.R. Tolkien', 'home'),
       D('2026-04-18', 'Narnia', 55.0, -3.5, '', 'FIC', 'El león, la bruja y el armario', 'C.S. Lewis', 'home'),
@@ -196,13 +193,6 @@ Object.values(CONJUNTOS).forEach(c =>
   c.entries.forEach(e => { e.km = haversineKm(e.fromLat, e.fromLng, e.destLat, e.destLng); }));
 
 // ===================== STUBS =====================
-// loadDiary(): el modo stats cuenta primeras llegadas con él. Se sustituye por
-// una lista en memoria. NO se siembra localStorage: la clave 'lev_diary' es la
-// misma que usa la app de verdad y, abriendo esto desde el mismo origen, se
-// machacaría el diario real.
-let PIONEROS = 0;
-loadDiary = function () { return Array.from({ length: PIONEROS }, () => ({ pioneer: true })); };
-
 // Math.random(): generatePhrase() elige la frase de Wrapped al azar y dos
 // ejecuciones dejarían de ser comparables. Se siembra con una semilla derivada
 // de la propia combinación, así que cada celda saca SIEMPRE la misma frase —
@@ -303,7 +293,6 @@ async function renderAll() {
 
   entries = conjunto.entries;
   origin = { ...ORIGEN };
-  PIONEROS = conjunto.pioneros;
 
   rejilla.innerHTML = '';
   RESULTS = [];
