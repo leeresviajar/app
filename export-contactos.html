@@ -1,0 +1,435 @@
+<!-- Herramienta INTERNA de revisión de diseño: datos inventados, no toca Supabase ni localStorage. -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hoja de contactos — exportaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --gris: #8c8c89; --gris-osc: #6f6f6c; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.25rem 1.5rem 4rem;
+    background: var(--gris);
+    font-family: 'Inter', sans-serif; color: #1a1a18;
+  }
+  h1 {
+    font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400;
+    font-size: 1.7rem; margin: 0 0 0.15rem;
+  }
+  .sub { font-size: 0.72rem; color: #2a2a28; opacity: 0.75; margin-bottom: 1rem; letter-spacing: 0.02em; }
+  .sub code { background: rgba(255,255,255,0.35); padding: 0 3px; border-radius: 3px; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 1.1rem; align-items: flex-end;
+    background: rgba(255,255,255,0.28); border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 8px; padding: 0.7rem 0.9rem; margin-bottom: 1.4rem;
+  }
+  .ctl { display: flex; flex-direction: column; gap: 0.25rem; }
+  .ctl label {
+    font-size: 0.6rem; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #2a2a28;
+  }
+  .ctl select {
+    font-family: 'Inter', sans-serif; font-size: 0.78rem; padding: 0.28rem 0.4rem;
+    border: 1px solid rgba(0,0,0,0.2); border-radius: 5px; background: #fff; min-width: 190px;
+  }
+  .estado { font-size: 0.7rem; color: #2a2a28; margin-left: auto; text-align: right; line-height: 1.5; }
+
+  .modo { margin-bottom: 1.6rem; }
+  .modo > h2 {
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+    color: #fff; margin: 0 0 0.6rem; opacity: 0.9;
+  }
+  .fila { display: flex; flex-wrap: wrap; gap: 0.9rem; }
+  .celda { width: 156px; }
+  .celda .tag {
+    font-size: 0.585rem; letter-spacing: 0.045em; color: #fff;
+    margin-bottom: 0.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .celda canvas {
+    display: block; width: 156px; height: auto; cursor: zoom-in;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.28);
+  }
+  .celda .pie { font-size: 0.575rem; color: #fff; opacity: 0.8; margin-top: 0.25rem; }
+  .celda.vacia .pie, .celda.error .pie { opacity: 1; font-weight: 600; }
+  .celda.vacia .pie { color: #ffe27a; }
+  .celda.error  .pie { color: #ff9b8a; }
+  .hueco {
+    width: 156px; height: 200px; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.15); color: #fff; font-size: 0.65rem; text-align: center; padding: 0.5rem;
+  }
+
+  #visor {
+    position: fixed; inset: 0; background: rgba(20,20,19,0.92); z-index: 50;
+    display: none; align-items: center; justify-content: center; flex-direction: column; gap: 0.6rem;
+    cursor: zoom-out;
+  }
+  #visor.on { display: flex; }
+  #visor canvas { max-width: 92vw; max-height: 84vh; box-shadow: 0 8px 40px rgba(0,0,0,0.5); }
+  #visor .vtag { color: #fff; font-size: 0.75rem; letter-spacing: 0.05em; }
+  /* Sonda tipográfica: además de forzar la descarga con document.fonts.load(),
+     deja las dos fuentes en uso real en el DOM. Si algo falla, se ve a simple vista. */
+  .sonda { font-size: 0.72rem; color: #2a2a28; }
+  .sonda .i { font-family: 'Inter', sans-serif; font-weight: 700; }
+  .sonda .s { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 0.95rem; }
+</style>
+</head>
+<body>
+
+<h1>Hoja de contactos — exportaciones</h1>
+<div class="sub">
+  5 modos × 2 formatos × 3 periodos. Dibujado con el <code>buildExportCanvas()</code> real de
+  <code>export.js</code>, sin copiarlo. Click en cualquiera para verlo a tamaño completo.
+  <span class="sonda">· <span class="i">Inter</span> / <span class="s">Instrument Serif</span></span>
+</div>
+
+<div class="controls">
+  <div class="ctl">
+    <label for="sel-datos">Conjunto de datos</label>
+    <select id="sel-datos"></select>
+  </div>
+  <div class="ctl">
+    <label for="sel-anio">Año (periodo «year»)</label>
+    <select id="sel-anio"></select>
+  </div>
+  <div class="ctl">
+    <label for="sel-mes">Mes (periodo «month»)</label>
+    <select id="sel-mes"></select>
+  </div>
+  <div class="estado" id="estado">Cargando tipografías…</div>
+</div>
+
+<div id="rejilla"></div>
+
+<div id="visor"><div class="vtag" id="visor-tag"></div></div>
+
+<!-- Módulos reales de la app. NO se carga map.js (construye un mapa Leaflet al
+     cargarse), ni auth.js (Supabase), ni fictional.js: el dibujo no los necesita.
+     El orden importa: state.js llama a todayStr() de date.js al cargarse. -->
+<script src="date.js"></script>
+<script src="state.js"></script>
+<script src="geocoding.js"></script>
+<script src="diary.js"></script>
+<script src="entries.js"></script>
+<script src="export.js"></script>
+
+<script>
+// ===================== ORIGEN COMÚN =====================
+const ORIGEN = { name: 'Madrid', lat: 40.4168, lng: -3.7038 };
+
+// ===================== CONJUNTOS DE MUESTRA =====================
+// Fijos a propósito: dos ejecuciones tienen que ser comparables. Los km NO se
+// escriben a mano, se calculan abajo con el haversineKm real, para que no se
+// descuadren nunca respecto a las coordenadas.
+const D = (date, dest, destLat, destLng, country, countryCode, book, author, departureMode, from) => ({
+  book, author, dest, note: '',
+  departureMode,
+  fromName: from ? from.name : ORIGEN.name,
+  fromLat:  from ? from.lat  : ORIGEN.lat,
+  fromLng:  from ? from.lng  : ORIGEN.lng,
+  destLat, destLng,
+  fictional: countryCode === 'FIC',
+  country:     countryCode === 'FIC' ? '' : country,
+  countryCode: countryCode === 'FIC' ? '' : countryCode,
+  date, year: Number(date.slice(0, 4))
+});
+const LISBOA = { name: 'Lisboa', lat: 38.7223, lng: -9.1393 };
+
+const CONJUNTOS = {
+  rica: {
+    etiqueta: 'Rica — 16 lecturas, 3 años, 6 continentes',
+    // 2024 tiene UNA sola lectura a propósito (caso límite del año escaso);
+    // Tokio se repite con dos libros distintos, para ver dos rutas al mismo
+    // punto solapadas en el modo mapa.
+    pioneros: 3,
+    entries: [
+      D('2024-06-12', 'Reikiavik', 64.1466, -21.9426, 'Islandia', 'IS', 'La saga de Njál', '', 'home'),
+
+      D('2025-01-18', 'Estambul', 41.0082, 28.9784, 'Turquía', 'TR', 'Estambul. Ciudad y recuerdos', 'Orhan Pamuk', 'home'),
+      D('2025-03-05', 'Macondo', 10.4, -75.5, '', 'FIC', 'Cien años de soledad', 'Gabriel García Márquez', 'last'),
+      D('2025-05-22', 'Tokio', 35.6762, 139.6503, 'Japón', 'JP', 'Tokio blues', 'Haruki Murakami', 'last'),
+      D('2025-08-14', 'San Cristóbal de las Casas', 16.7370, -92.6376, 'México', 'MX', 'Los recuerdos del porvenir', 'Elena Garro', 'other', LISBOA),
+      D('2025-11-30', 'Hogwarts', 57.0, -4.0, '', 'FIC', 'Harry Potter y el prisionero de Azkaban', 'J.K. Rowling', 'home'),
+
+      D('2026-01-09', 'Buenos Aires', -34.6037, -58.3816, 'Argentina', 'AR', 'Ficciones', 'Jorge Luis Borges', 'home'),
+      D('2026-02-14', 'Praga', 50.0755, 14.4378, 'Chequia', 'CZ', 'La insoportable levedad del ser', 'Milan Kundera', 'last'),
+      D('2026-03-02', 'Tokio', 35.6762, 139.6503, 'Japón', 'JP', 'Kafka en la orilla', 'Haruki Murakami', 'last'),
+      D('2026-03-21', 'Arrakis', 23.5, 46.0, '', 'FIC', 'Dune', 'Frank Herbert', 'last'),
+      D('2026-04-02', 'Lagos', 6.5244, 3.3792, 'Nigeria', 'NG', 'Todo se desmorona', 'Chinua Achebe', 'home'),
+      D('2026-05-17', 'Melbourne', -37.8136, 144.9631, 'Australia', 'AU', 'En las antípodas', 'Bill Bryson', 'last'),
+      D('2026-06-08', 'Ciudad del Cabo', -33.9249, 18.4241, 'Sudáfrica', 'ZA', 'Desgracia, seguido de las conferencias sobre la vida de los animales', 'J.M. Coetzee', 'home'),
+      D('2026-06-29', 'Nueva York', 40.7128, -74.0060, 'Estados Unidos', 'US', 'La conjura de los necios', 'John Kennedy Toole', 'last'),
+      D('2026-07-11', 'La Comarca', 52.7, -1.8, '', 'FIC', 'El hobbit', 'J.R.R. Tolkien', 'home'),
+      D('2026-07-24', 'Ulán Bator', 47.8864, 106.9057, 'Mongolia', 'MN', 'Cuentos populares mongoles', '', 'last'),
+    ]
+  },
+  escasa: {
+    etiqueta: 'Escasa — 2 lecturas, ambas en España',
+    // Tester recién entrada: stats casi vacías, wrapped sin material y, sobre
+    // todo, el globo con un racimo europeo mínimo.
+    pioneros: 1,
+    entries: [
+      D('2026-06-03', 'Santander', 43.4623, -3.8100, 'España', 'ES', 'Peñas arriba', 'José María de Pereda', 'home'),
+      D('2026-07-02', 'Sevilla', 37.3891, -5.9845, 'España', 'ES', 'La feria de los discretos', 'Pío Baroja', 'home'),
+    ]
+  },
+  ficticios: {
+    etiqueta: 'Solo ficticios — 3 lecturas, ningún lugar real',
+    // Rompe el supuesto de que hay marcadores reales: el globo calcula su
+    // rotación con el centroide de los puntos REALES y el mapa elige las
+    // etiquetas partiendo de ellos.
+    pioneros: 2,
+    entries: [
+      D('2026-02-10', 'Mordor', 45.0, 35.0, '', 'FIC', 'El señor de los anillos', 'J.R.R. Tolkien', 'home'),
+      D('2026-04-18', 'Narnia', 55.0, -3.5, '', 'FIC', 'El león, la bruja y el armario', 'C.S. Lewis', 'home'),
+      D('2026-06-05', 'Ankh-Morpork', 51.5, -0.1, '', 'FIC', '¡Guardias! ¿Guardias?', 'Terry Pratchett', 'last'),
+    ]
+  }
+};
+
+// km reales con la misma función que la app
+Object.values(CONJUNTOS).forEach(c =>
+  c.entries.forEach(e => { e.km = haversineKm(e.fromLat, e.fromLng, e.destLat, e.destLng); }));
+
+// ===================== STUBS =====================
+// loadDiary(): el modo stats cuenta primeras llegadas con él. Se sustituye por
+// una lista en memoria. NO se siembra localStorage: la clave 'lev_diary' es la
+// misma que usa la app de verdad y, abriendo esto desde el mismo origen, se
+// machacaría el diario real.
+let PIONEROS = 0;
+loadDiary = function () { return Array.from({ length: PIONEROS }, () => ({ pioneer: true })); };
+
+// Math.random(): generatePhrase() elige la frase de Wrapped al azar y dos
+// ejecuciones dejarían de ser comparables. Se siembra con una semilla derivada
+// de la propia combinación, así que cada celda saca SIEMPRE la misma frase —
+// y la ampliación al hacer click coincide con su miniatura.
+const RANDOM_REAL = Math.random;
+function semillaLcg(seed) {
+  let s = seed >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+function hash(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+// ===================== TIPOGRAFÍAS =====================
+// document.fonts.ready NO basta: dibujar en canvas no dispara la descarga de una
+// fuente, así que sin pedirlas explícitamente el navegador no las pide nunca,
+// ready resuelve al instante y el canvas cae a la fuente de sustitución. Hay que
+// cargar cada combinación de peso y estilo que usa export.js.
+const FUENTES = [
+  "400 16px 'Inter'", "500 16px 'Inter'", "600 16px 'Inter'", "700 16px 'Inter'",
+  "400 16px 'Instrument Serif'", "italic 16px 'Instrument Serif'"
+];
+async function cargarFuentes() {
+  const res = await Promise.all(FUENTES.map(f =>
+    document.fonts.load(f).then(l => ({ f, ok: l.length > 0 })).catch(() => ({ f, ok: false }))));
+  await document.fonts.ready;
+  return res;
+}
+
+// ===================== REJILLA =====================
+const MODOS = [
+  ['stats', 'Stats'], ['books', 'Books'], ['wrapped', 'Wrapped'], ['map', 'Mapa'], ['globe', 'Globo']
+];
+const FORMATOS = [['story', 'story'], ['feed', 'feed']];
+const PERIODOS = [['total', 'total'], ['year', 'year'], ['month', 'month']];
+const ANCHO_MINI = 156;
+
+let RESULTS = [];   // informe de la última tanda, legible desde consola
+let dibujando = false;
+
+// Fracción de píxeles que se apartan del color dominante. Sirve para detectar
+// una lámina en blanco sin mirarla: el fondo (papel o degradado) domina y la
+// tinta es lo que se desvía.
+function tinta(canvas) {
+  const w = 54, h = Math.round(canvas.height / canvas.width * w);
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  x.drawImage(canvas, 0, 0, w, h);
+  const d = x.getImageData(0, 0, w, h).data;
+  const cuenta = {};
+  for (let i = 0; i < d.length; i += 4) {
+    const k = (d[i] >> 4) + ',' + (d[i+1] >> 4) + ',' + (d[i+2] >> 4);
+    cuenta[k] = (cuenta[k] || 0) + 1;
+  }
+  let dom = null, max = -1;
+  for (const k in cuenta) if (cuenta[k] > max) { max = cuenta[k]; dom = k.split(',').map(Number); }
+  let fuera = 0, total = w * h;
+  for (let i = 0; i < d.length; i += 4) {
+    const dr = Math.abs((d[i] >> 4) - dom[0]), dg = Math.abs((d[i+1] >> 4) - dom[1]), db = Math.abs((d[i+2] >> 4) - dom[2]);
+    if (dr + dg + db > 1) fuera++;
+  }
+  return fuera / total;
+}
+
+// Fija los globales de export.js para una combinación y devuelve su clave.
+function configurar(modo, formato, periodo) {
+  exportMode = modo;
+  exportFormat = formato;
+  exportPeriod = periodo;
+  if (periodo === 'year')       exportPeriodValue = Number(document.getElementById('sel-anio').value);
+  else if (periodo === 'month') exportPeriodValue = document.getElementById('sel-mes').value || null;
+  else                          exportPeriodValue = null;
+  return `${modo}·${formato}·${periodo}`;
+}
+
+async function dibujarCombo(modo, formato, periodo) {
+  const clave = configurar(modo, formato, periodo);
+  Math.random = semillaLcg(hash(clave));
+  try {
+    return { canvas: await buildExportCanvas(), n: getExportEntries().length, error: null };
+  } catch (err) {
+    return { canvas: null, n: getExportEntries().length, error: String(err && err.message || err) };
+  } finally {
+    Math.random = RANDOM_REAL;
+  }
+}
+
+async function renderAll() {
+  if (dibujando) return;
+  dibujando = true;
+  const estado = document.getElementById('estado');
+  const rejilla = document.getElementById('rejilla');
+  const conjunto = CONJUNTOS[document.getElementById('sel-datos').value];
+
+  entries = conjunto.entries;
+  origin = { ...ORIGEN };
+  PIONEROS = conjunto.pioneros;
+
+  rejilla.innerHTML = '';
+  RESULTS = [];
+  let hechas = 0;
+
+  for (const [modo, tituloModo] of MODOS) {
+    const sec = document.createElement('div');
+    sec.className = 'modo';
+    sec.innerHTML = `<h2>${tituloModo}</h2>`;
+    const fila = document.createElement('div');
+    fila.className = 'fila';
+    sec.appendChild(fila);
+    rejilla.appendChild(sec);
+
+    for (const [formato] of FORMATOS) {
+      for (const [periodo] of PERIODOS) {
+        estado.textContent = `Dibujando ${++hechas} de 30… (${modo} · ${formato} · ${periodo})`;
+        const r = await dibujarCombo(modo, formato, periodo);
+
+        const celda = document.createElement('div');
+        celda.className = 'celda';
+        const etiqueta = `${modo} · ${formato} · ${periodo}`;
+        celda.innerHTML = `<div class="tag">${etiqueta}</div>`;
+
+        let cobertura = null;
+        if (r.canvas) {
+          cobertura = tinta(r.canvas);
+          const mini = document.createElement('canvas');
+          const factor = ANCHO_MINI / r.canvas.width; // ojo: 'esc' es global de state.js, no reutilizar el nombre
+          mini.width = ANCHO_MINI;
+          mini.height = Math.round(r.canvas.height * factor);
+          mini.getContext('2d').drawImage(r.canvas, 0, 0, mini.width, mini.height);
+          mini.title = etiqueta;
+          // El grande se descarta: 30 lienzos a tamaño real serían ~250 MB. Al
+          // hacer click se vuelve a dibujar esa combinación, con la misma
+          // semilla, así que sale idéntica a su miniatura.
+          mini.addEventListener('click', () => ampliar(modo, formato, periodo, etiqueta));
+          celda.appendChild(mini);
+        } else {
+          celda.classList.add('error');
+          celda.insertAdjacentHTML('beforeend', `<div class="hueco">excepción al dibujar</div>`);
+        }
+
+        const vacia = r.n === 0 || (cobertura !== null && cobertura < 0.02);
+        if (r.error) celda.classList.add('error');
+        else if (vacia) celda.classList.add('vacia');
+
+        const pie = r.error ? r.error
+          : (r.n === 0 ? 'SIN LECTURAS en el periodo'
+          : `${r.n} lectura${r.n === 1 ? '' : 's'} · tinta ${(cobertura * 100).toFixed(1)}%${cobertura < 0.02 ? ' · CASI VACÍA' : ''}`);
+        celda.insertAdjacentHTML('beforeend', `<div class="pie">${pie}</div>`);
+        fila.appendChild(celda);
+
+        RESULTS.push({ modo, formato, periodo, n: r.n, tinta: cobertura, error: r.error });
+        // Cede el hilo para que repinte entre láminas. En pestaña oculta
+        // requestAnimationFrame NO dispara y la tanda se quedaría congelada a
+        // medias, así que ahí se cede con un temporizador.
+        await new Promise(r =>
+          document.visibilityState === 'visible' ? requestAnimationFrame(r) : setTimeout(r, 0));
+      }
+    }
+  }
+
+  const conErr = RESULTS.filter(r => r.error).length;
+  const vacias = RESULTS.filter(r => !r.error && (r.n === 0 || r.tinta < 0.02)).length;
+  estado.innerHTML = `${conjunto.etiqueta}<br>30 láminas · ${conErr} con excepción · ${vacias} vacías o casi`;
+  dibujando = false;
+}
+
+async function ampliar(modo, formato, periodo, etiqueta) {
+  const visor = document.getElementById('visor');
+  document.getElementById('visor-tag').textContent = etiqueta + ' — click para cerrar';
+  visor.querySelectorAll('canvas').forEach(c => c.remove());
+  visor.classList.add('on');
+  const r = await dibujarCombo(modo, formato, periodo);
+  if (r.canvas) visor.appendChild(r.canvas);
+  // La configuración queda apuntando a la última combinación ampliada; la
+  // siguiente tanda la reescribe entera, así que no hay estado que limpiar.
+}
+document.getElementById('visor').addEventListener('click', function () { this.classList.remove('on'); });
+
+// ===================== SELECTORES =====================
+// Año y mes se rellenan con las mismas funciones que usa el modal de la app y
+// arrancan en su mismo valor por defecto: el más reciente.
+function poblarPeriodos() {
+  const anios = exportAvailableYears();
+  const meses = exportAvailableMonths();
+  const sa = document.getElementById('sel-anio');
+  const sm = document.getElementById('sel-mes');
+  sa.innerHTML = anios.map(y => `<option value="${y}">${y}</option>`).join('');
+  sm.innerHTML = meses.map(m => `<option value="${m}">${monthLabel(m)}</option>`).join('');
+  if (anios.length) sa.value = String(anios[0]);
+  if (meses.length) sm.value = meses[0];
+}
+
+function initSelectores() {
+  const sd = document.getElementById('sel-datos');
+  sd.innerHTML = Object.entries(CONJUNTOS)
+    .map(([k, v]) => `<option value="${k}">${v.etiqueta}</option>`).join('');
+  sd.addEventListener('change', () => {
+    entries = CONJUNTOS[sd.value].entries; // poblarPeriodos lee entries
+    poblarPeriodos();
+    renderAll();
+  });
+  document.getElementById('sel-anio').addEventListener('change', renderAll);
+  document.getElementById('sel-mes').addEventListener('change', renderAll);
+}
+
+// ===================== ARRANQUE =====================
+(async () => {
+  const estado = document.getElementById('estado');
+  const fuentes = await cargarFuentes();
+  const fallan = fuentes.filter(f => !f.ok).map(f => f.f);
+  if (fallan.length) {
+    estado.textContent = 'AVISO: no cargaron ' + fallan.join(', ');
+    console.warn('[contactos] tipografías no cargadas:', fallan);
+  }
+  entries = CONJUNTOS.rica.entries;
+  origin = { ...ORIGEN };
+  initSelectores();
+  poblarPeriodos();
+  await renderAll();
+})();
+
+// Informe de la última tanda, para leerlo desde la consola.
+window.__informe = () => RESULTS;
+</script>
+
+</body>
+</html>
