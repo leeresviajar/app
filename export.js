@@ -6,10 +6,20 @@ let exportPeriodValue = null;
 let exportCanvas = null;
 const EXPORT_FORMATS = { story: { W: 1080, H: 1920 }, feed: { W: 1080, H: 1350 } };
 
+// Formato con el que abre cada modo. El globo en story deja la esfera nadando
+// en un lienzo 9:16 y sale la lámina más floja de todas; en feed llena mucho
+// mejor. Lo que no esté aquí abre en story.
+const EXPORT_DEFAULT_FORMAT = { globe: 'feed' };
+function defaultExportFormat(mode) { return EXPORT_DEFAULT_FORMAT[mode] || 'story'; }
+// Se levanta en cuanto el usuario toca un botón de formato: desde ahí manda su
+// elección y cambiar de modo ya no se la pisa. Se baja al abrir el modal.
+let exportFormatTouched = false;
+
 function openExportModal() {
   document.getElementById('export-overlay').classList.add('visible');
   exportMode = 'stats';
-  exportFormat = 'story';
+  exportFormat = defaultExportFormat(exportMode);
+  exportFormatTouched = false;
   exportPeriod = 'total';
   exportPeriodValue = null;
   setTimeout(() => {
@@ -37,11 +47,13 @@ function syncExportButtons() {
 }
 function setExportMode(mode) {
   exportMode = mode;
+  if (!exportFormatTouched) exportFormat = defaultExportFormat(mode);
   syncExportButtons();
   renderExportPreview();
 }
 function setExportFormat(fmt) {
   exportFormat = fmt;
+  exportFormatTouched = true;
   syncExportButtons();
   renderExportPreview();
 }
