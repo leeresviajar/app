@@ -39,35 +39,147 @@ function initMobile() {
 }
 
 // ===================== FRANJA DE ACTIVIDAD =====================
-const ACTIVITY_MESSAGES = [
-  { text: () => `<em>Lucía</em> acaba de llegar a <em>Estambul</em> leyendo a Orhan Pamuk` },
-  { text: () => `<em>3 lectores</em> visitaron <em>Macondo</em> esta semana` },
-  { text: () => `<em>Marcos</em> ha cruzado <em>5 países</em> en sus últimas lecturas` },
-  { text: () => `<em>Hogwarts</em> tiene hoy <em>1.847 viajeros</em> en el mapa` },
-  { text: () => `<em>Elena</em> llegó por primera vez a <em>Praga</em> con Kafka` },
-  { text: () => `<em>Sofía</em> lleva <em>23.000 km</em> leídos este año` },
-  { text: () => `<em>Mordor</em> suma ya <em>2.103 exploradores</em> en la comunidad` },
-  { text: () => `<em>Iker</em> acaba de descubrir <em>Winterfell</em> leyendo a George R.R. Martin` },
-  { text: () => `<em>847 lectores</em> han recorrido juntos más de <em>2,3 millones de km</em>` },
-  { text: () => `<em>Carlos</em> llegó a <em>Dublín</em> — ¡primera llegada registrada desde Murcia!` },
-  { text: () => `<em>Nina</em> ha visitado <em>4 lugares ficticios</em> este mes` },
-  { text: () => `<em>La Comarca</em> fue el destino más visitado de la semana` },
-  { text: () => `<em>Amaia</em> está viajando ahora mismo por el <em>Caribe colombiano</em>` },
-  { text: () => `<em>12 lectores</em> llegaron a <em>Tokio</em> esta semana` },
-  { text: () => `<em>Arrakis</em> acaba de recibir su viajero número <em>1.654</em>` },
-];
+// Cifras reales del mapa, nunca personas: la franja no nombra a nadie ni
+// describe conducta individual (ver CLAUDE.md). Las frases hablan de lo
+// REGISTRADO por la comunidad, no de lo que se está viendo en pantalla —
+// lo dibujado es un subconjunto (ambient = última ruta por persona, y el
+// histórico va recortado a COMMUNITY_CONFIG.maxRoutes).
+//
+// Se calcula sobre las filas CRUDAS de public_community_routes
+// (communityCache.rawHistory), NO sobre aggregateCommunityRoutes(): esa
+// función descuenta las lecturas propias y recorta la lista, y aquí hacen
+// falta totales. Las lecturas propias cuentan: también son rutas recorridas.
+//
+// Mínimo por mensaje: por debajo del umbral la frase se omite (un "3 rutas
+// recorridas por la comunidad" no dice nada). Se giran aquí sin tocar el motor.
+const ACTIVITY_MIN = {
+  routes: 10,       // filas del histórico
+  dests: 8,         // destinos distintos
+  fictional: 3,     // destinos ficticios distintos
+  longestKm: 2000,  // km de la ruta más larga
+  ranking: 2        // llegadas del líder, para los dos rankings
+};
+
+const activityNum = v => v.toLocaleString('es-ES');
+
+// Un solo recorrido de las filas. Agrupa por destino con normalizeName
+// (map.js) y conserva la primera grafía vista como etiqueta, igual que hace
+// aggregateCommunityRoutes con los títulos de libro.
+function activityStats(rows) {
+  const dests = new Map();
+  let longestKm = 0;
+  rows.forEach(row => {
+    const key = normalizeName(row.dest);
+    if (!key) return;
+    let d = dests.get(key);
+    if (!d) { d = { name: row.dest, arrivals: 0, fictional: false }; dests.set(key, d); }
+    d.arrivals++;
+    if (row.fictional) d.fictional = true;
+    if (row.from_lat != null && row.dest_lat != null) {
+      const km = haversineKm(row.from_lat, row.from_lng, row.dest_lat, row.dest_lng);
+      if (km > longestKm) longestKm = km;
+    }
+  });
+  const all = [...dests.values()];
+  // Líder y llegadas del segundo: "el destino con más llegadas" exige liderazgo
+  // ESTRICTO, no solo ser el primero de la lista. Con empate en cabeza el
+  // desempate sería el orden de las filas (fecha desc) y la frase cambiaría de
+  // nombre sola, sin que cambie ningún dato.
+  const rank = list => {
+    const sorted = [...list].sort((a, b) => b.arrivals - a.arrivals);
+    return { leader: sorted[0] || null, second: sorted[1] ? sorted[1].arrivals : 0 };
+  };
+  return {
+    routes: rows.length,
+    dests: all.length,
+    fictional: all.filter(d => d.fictional).length,
+    longestKm,
+    destRank: rank(all),
+    ficRank: rank(all.filter(d => d.fictional))
+  };
+}
+
+// Liderazgo estricto Y mínimo de llegadas. Los dos hacen falta: la separación
+// estricta sola dejaría pasar un líder con una única visita y un segundo a 0.
+function activityLeads(r) {
+  return r.leader && r.leader.arrivals >= ACTIVITY_MIN.ranking && r.leader.arrivals > r.second;
+}
+
+// Devuelve [{ html, fictional }]. fictional marca la TEMÁTICA del mensaje
+// (habla de lugares imaginarios), que es lo que tiñe el punto de naranja.
+function buildActivityMessages() {
+  if (typeof communityVisible !== 'undefined' && !communityVisible) return [];
+  const rows = (typeof communityCache !== 'undefined' && communityCache.rawHistory) || [];
+  if (!rows.length) return [];
+  const s = activityStats(rows);
+  const msgs = [];
+  const add = (ok, html, fictional) => { if (ok) msgs.push({ html, fictional: !!fictional }); };
+
+  add(s.routes >= ACTIVITY_MIN.routes,
+      `<em>${activityNum(s.routes)} rutas</em> recorridas por la comunidad`);
+  add(s.dests >= ACTIVITY_MIN.dests,
+      `<em>${activityNum(s.dests)} destinos</em> alcanzados hasta hoy`);
+  add(s.fictional >= ACTIVITY_MIN.fictional,
+      `<em>${activityNum(s.fictional)} de los destinos</em> no existen fuera de un libro`, true);
+  add(s.longestKm >= ACTIVITY_MIN.longestKm,
+      `La ruta más larga registrada mide <em>${activityNum(s.longestKm)} km</em>`);
+  add(activityLeads(s.destRank),
+      s.destRank.leader && `<em>${s.destRank.leader.name}</em> es el destino con más llegadas`);
+  add(activityLeads(s.ficRank),
+      s.ficRank.leader && `<em>${s.ficRank.leader.name}</em>, el destino ficticio más visitado`, true);
+
+  return msgs;
+}
 
 let activityIndex = 0;
-function startActivityStrip() {
+let activityMessages = [];
+let activityTimer = null;
+let activitySignature = null;
+
+// Pasa al siguiente mensaje del ciclo con el fundido de .activity-msg.
+function rotateActivityMessage() {
   const el = document.getElementById('activity-msg');
-  function showNext() {
-    el.classList.remove('visible');
-    setTimeout(() => {
-      el.innerHTML = ACTIVITY_MESSAGES[activityIndex % ACTIVITY_MESSAGES.length].text();
-      activityIndex++;
-      el.classList.add('visible');
-    }, 600);
-  }
-  showNext();
-  setInterval(showNext, 5000);
+  const dot = document.querySelector('.activity-dot');
+  if (!el) return;
+  el.classList.remove('visible');
+  // El color del punto cambia DENTRO de la espera, en el mismo instante que
+  // el texto: ahí .activity-msg está en opacidad 0, así que el punto no salta
+  // antes de que entre la frase. Su transición de 0.6s acompaña al fundido.
+  setTimeout(() => {
+    const msg = activityMessages[activityIndex % activityMessages.length];
+    if (!msg) return;
+    el.innerHTML = msg.html;
+    if (dot) dot.classList.toggle('fictional', msg.fictional);
+    activityIndex++;
+    el.classList.add('visible');
+  }, 600);
+}
+
+// La llaman el init y drawCommunityRoutes() cada vez que la caché se puebla o
+// cambia. Si los mensajes salen idénticos no reinicia el ciclo: redrawMap()
+// dispara un dibujado en cada alta o edición y la franja no debe saltar al
+// primer mensaje cada vez.
+// Sin mensajes no se deja la franja vacía con el punto latiendo: se oculta
+// entera. La clase va en <body> porque además hay que anular el hueco que
+// #map le reserva al pie (padding-bottom), o quedaría una banda muerta.
+function refreshActivityStrip() {
+  const next = buildActivityMessages();
+  const sig = next.map(m => m.html).join('|');
+  if (sig === activitySignature && (activityTimer || !next.length)) return;
+  activitySignature = sig;
+  activityMessages = next;
+  if (activityTimer) { clearInterval(activityTimer); activityTimer = null; }
+  document.body.classList.toggle('no-activity', next.length === 0);
+  if (!next.length) return;
+  activityIndex = 0;
+  rotateActivityMessage();
+  // Con un solo mensaje no hay rotación: fundirse a sí mismo cada 5s no aporta.
+  if (next.length > 1) activityTimer = setInterval(rotateActivityMessage, 5000);
+}
+
+// La franja arranca oculta y aparece cuando hay datos: al llamarla desde el
+// init la caché de comunidad todavía puede estar vacía (drawCommunityRoutes
+// es async), y leerla ahí daría cero mensajes de forma permanente.
+function startActivityStrip() {
+  refreshActivityStrip();
 }

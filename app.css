@@ -868,7 +868,13 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--teal); flex-shrink: 0;
   animation: pulse-dot 2s ease-in-out infinite;
+  /* Acompaña al fundido del texto (.activity-msg, 0.6s): ui.js cambia la clase
+     con la frase en opacidad 0, y el color entra a la vez que ella. */
+  transition: background 0.6s ease;
 }
+/* Mensajes de temática ficticia. El naranja es SOLO del punto: el <em> del
+   texto se queda en ink y en Instrument Serif en todos los casos. */
+.activity-dot.fictional { background: var(--fiction); }
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(0.7); }
@@ -889,6 +895,11 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
   font-size: 0.65rem; color: var(--line);
   flex-shrink: 0; margin: 0 0.25rem;
 }
+/* Sin franja (capa de comunidad apagada, caché aún sin poblar o ningún mensaje
+   por encima del umbral). Se oculta Y se recupera el hueco que #map le reserva
+   al pie: ocultarla sola dejaba una banda blanca de 38px bajo el mapa. */
+body.no-activity .activity-strip { display: none; }
+body.no-activity #map { padding-bottom: 0; }
 
 /* LEYENDA */
 .map-legend {
@@ -1161,6 +1172,7 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 
   /* overlays sobre el mapa */
   .activity-strip { display: none; }
+  #map { padding-bottom: 0; } /* la franja no está: sin ella el hueco era banda muerta */
   .map-legend { bottom: 76px; }
   .community-toggle { top: 3rem; right: 0.75rem; bottom: auto; } /* bajo la insignia "Mapa lector · 2026" */
   .map-title { top: 0.75rem; right: 0.75rem; }

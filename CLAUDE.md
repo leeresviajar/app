@@ -33,7 +33,7 @@ App web en español: mapa literario donde lectores registran libros ligados a de
 ## Diseño y marca
 
 - Paleta: paper `#faf7f2`, teal `#1d9e75`, forest `#0f6e56`, naranja `#e8913c`, rojo `#e8593c`, mint `#9fd9c0`, ink `#1a1a18`.
-- **Naranja `#e8913c` = SOLO destinos ficticios. Rojo `#e8593c` = lo del usuario (rutas y destinos propios; en un ficticio del usuario manda el naranja).** Nunca intercambiarlos.
+- **Naranja `#e8913c` = SOLO destinos ficticios. Rojo `#e8593c` = lo del usuario (rutas y destinos propios; en un ficticio del usuario manda el naranja).** Nunca intercambiarlos. El punto de la franja de actividad sigue la misma regla: teal por defecto, naranja mientras el mensaje trata de lugares ficticios. Solo cambia de color el punto — el `<em>` del texto se queda en ink y en Instrument Serif siempre.
 - El símbolo **✦ está reservado en exclusiva para destinos ficticios**. Nunca decorativo.
 - Las rutas nunca son ficticias — solo los destinos lo son.
 - Dirección de rediseño (Concepto B "Minimalismo cartográfico"): blanco puro, Inter + Instrument Serif, máximo espacio en blanco, sidebar ultrafino, el mapa como protagonista.
@@ -41,6 +41,7 @@ App web en español: mapa literario donde lectores registran libros ligados a de
 ## Copy y tono
 
 - Todo el copy de cara al usuario en español, tono literario y sobrio, sin lenguaje con género en mensajes de éxito.
+- **La franja de actividad NUNCA habla de personas concretas ni nombra a nadie.** Solo cifras agregadas del mapa (rutas, destinos, km, rankings de destino), calculadas en cliente sobre las filas crudas del histórico de comunidad. Los datos de comunidad son anónimos por construcción — la vista `public_community_routes` no expone `user_id` — y así se quedan: nada de "Lucía ha llegado a…" ni de atribuir conducta. Las frases hablan de lo REGISTRADO, no de lo que se ve en pantalla: lo dibujado es un subconjunto (`ambient` es una ruta por persona y el histórico va recortado a `maxRoutes`), así que ninguna frase puede afirmar "dibujadas sobre el mapa" con la cifra del histórico.
 - El modal de ficticios siempre muestra un mensaje de colocación, nunca queda en silencio. Pero NUNCA cuantifica ni atribuye conducta a otras personas: solo la región curada ("La comunidad suele situarlo en: …"), y si el lugar no está en el catálogo, "Aún no tenemos una ubicación habitual para X". Prohibido "N viajeros lo han colocado" y prohibido "todavía nadie": los `votes` de COMMUNITY_POSITIONS son cifras semilla inventadas, no datos reales.
 
 ## Mapa de funcionalidades

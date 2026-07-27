@@ -197,7 +197,10 @@ const COMMUNITY_CONFIG = {
   windowDays: null        // null = sin filtro de fecha; número = solo últimos N días
 };
 const COMMUNITY_CACHE_TTL = 5 * 60 * 1000;
-let communityCache = { ambient: null, history: null, ts: 0 };
+// rawHistory: las filas del histórico SIN agregar ni recortar. Las consume la
+// franja de actividad (ui.js), que necesita totales — aggregateCommunityRoutes
+// descuenta las lecturas propias y corta en COMMUNITY_CONFIG.maxRoutes.
+let communityCache = { ambient: null, history: null, rawHistory: null, ts: 0 };
 // Clave canónica de nombres de lugar y libro: minúsculas y sin diacríticos.
 // Única definición compartida — PLACE_VISITORS se escribe y se lee con ella.
 const normalizeName = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -210,7 +213,7 @@ let PLACE_ORIGINS = {};
 // posterior — como la del detalle de un destino — no incluya sus filas.
 const FICTIONAL_FROM_DATA = new Set();
 
-function invalidateCommunityCache() { communityCache = { ambient: null, history: null, ts: 0 }; }
+function invalidateCommunityCache() { communityCache = { ambient: null, history: null, rawHistory: null, ts: 0 }; }
 
 async function fetchCommunityRoutes(viewName, rowLimit = COMMUNITY_CONFIG.maxRoutes) {
   let query = supabaseClient.from(viewName).select('*');
@@ -313,6 +316,9 @@ function toggleCommunityLayer() {
   } else {
     map.removeLayer(communityLayer);
     hideDestinationDetail(); // el detalle activo se cierra con la capa
+    // La franja habla de las rutas de comunidad: con la capa apagada se va
+    // con ellas (drawCommunityRoutes ya no vuelve a pasar por aquí).
+    if (typeof refreshActivityStrip === 'function') refreshActivityStrip();
   }
 }
 
@@ -337,9 +343,13 @@ async function drawCommunityRoutes() {
     ]);
     const ambient = aggregateCommunityRoutes(latestRows);
     const history = aggregateCommunityRoutes(historyRows); // la última: deja PLACE_VISITORS con el histórico
-    communityCache = { ambient, history, ts: Date.now() };
+    communityCache = { ambient, history, rawHistory: historyRows, ts: Date.now() };
   }
   renderCommunityRoutes();
+  // La franja se construye aquí, no en el init: hasta este punto la caché
+  // puede estar vacía. Cubre también el refresco al caducar la caché de 5 min
+  // y el invalidateCommunityCache() de addEntry.
+  if (typeof refreshActivityStrip === 'function') refreshActivityStrip();
 }
 
 // Solo redibuja desde la caché: nunca lanza la consulta (moveend/zoomend).
