@@ -235,6 +235,11 @@ const ANCHO_MINI = 156;
 
 let RESULTS = [];   // informe de la última tanda, legible desde consola
 let dibujando = false;
+// Testigo de tanda. Cambiar de conjunto mientras se dibuja NO puede quedarse
+// sin efecto: se veía la rejilla anterior creyendo que era la nueva, que en una
+// herramienta de revisión es el peor fallo posible. Cada tanda toma un número;
+// si otra arranca, la vieja se ve superada y se retira en el siguiente paso.
+let generacion = 0;
 
 // Fracción de píxeles que se apartan del color dominante. Sirve para detectar
 // una lámina en blanco sin mirarla: el fondo (papel o degradado) domina y la
@@ -285,7 +290,7 @@ async function dibujarCombo(modo, formato, periodo) {
 }
 
 async function renderAll() {
-  if (dibujando) return;
+  const mia = ++generacion;   // supera a cualquier tanda en curso
   dibujando = true;
   const estado = document.getElementById('estado');
   const rejilla = document.getElementById('rejilla');
@@ -309,8 +314,10 @@ async function renderAll() {
 
     for (const [formato] of FORMATOS) {
       for (const [periodo] of PERIODOS) {
+        if (mia !== generacion) return;   // otra tanda mandó: esta se retira
         estado.textContent = `Dibujando ${++hechas} de ${TOTAL_LAMINAS}… (${modo} · ${formato} · ${periodo})`;
         const r = await dibujarCombo(modo, formato, periodo);
+        if (mia !== generacion) return;
 
         const celda = document.createElement('div');
         celda.className = 'celda';
@@ -359,7 +366,7 @@ async function renderAll() {
   const conErr = RESULTS.filter(r => r.error).length;
   const vacias = RESULTS.filter(r => !r.error && (r.n === 0 || r.tinta < 0.02)).length;
   estado.innerHTML = `${conjunto.etiqueta}<br>${TOTAL_LAMINAS} láminas · ${conErr} con excepción · ${vacias} vacías o casi`;
-  dibujando = false;
+  dibujando = false;   // solo la tanda vigente llega hasta aquí
 }
 
 async function ampliar(modo, formato, periodo, etiqueta) {
