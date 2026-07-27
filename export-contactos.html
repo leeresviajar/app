@@ -82,7 +82,7 @@
 
 <h1>Hoja de contactos — exportaciones</h1>
 <div class="sub">
-  5 modos × 2 formatos × 3 periodos. Dibujado con el <code>buildExportCanvas()</code> real de
+  4 modos × 2 formatos × 3 periodos. Dibujado con el <code>buildExportCanvas()</code> real de
   <code>export.js</code>, sin copiarlo. Click en cualquiera para verlo a tamaño completo.
   <span class="sonda">· <span class="i">Inter</span> / <span class="s">Instrument Serif</span></span>
 </div>
@@ -236,10 +236,11 @@ async function cargarFuentes() {
 
 // ===================== REJILLA =====================
 const MODOS = [
-  ['stats', 'Stats'], ['books', 'Books'], ['wrapped', 'Wrapped'], ['map', 'Mapa'], ['globe', 'Globo']
+  ['stats', 'Stats'], ['wrapped', 'Wrapped'], ['map', 'Mapa'], ['globe', 'Globo']
 ];
 const FORMATOS = [['story', 'story'], ['feed', 'feed']];
 const PERIODOS = [['total', 'total'], ['year', 'year'], ['month', 'month']];
+const TOTAL_LAMINAS = MODOS.length * FORMATOS.length * PERIODOS.length;
 const ANCHO_MINI = 156;
 
 let RESULTS = [];   // informe de la última tanda, legible desde consola
@@ -319,7 +320,7 @@ async function renderAll() {
 
     for (const [formato] of FORMATOS) {
       for (const [periodo] of PERIODOS) {
-        estado.textContent = `Dibujando ${++hechas} de 30… (${modo} · ${formato} · ${periodo})`;
+        estado.textContent = `Dibujando ${++hechas} de ${TOTAL_LAMINAS}… (${modo} · ${formato} · ${periodo})`;
         const r = await dibujarCombo(modo, formato, periodo);
 
         const celda = document.createElement('div');
@@ -368,7 +369,7 @@ async function renderAll() {
 
   const conErr = RESULTS.filter(r => r.error).length;
   const vacias = RESULTS.filter(r => !r.error && (r.n === 0 || r.tinta < 0.02)).length;
-  estado.innerHTML = `${conjunto.etiqueta}<br>30 láminas · ${conErr} con excepción · ${vacias} vacías o casi`;
+  estado.innerHTML = `${conjunto.etiqueta}<br>${TOTAL_LAMINAS} láminas · ${conErr} con excepción · ${vacias} vacías o casi`;
   dibujando = false;
 }
 

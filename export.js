@@ -22,7 +22,7 @@ function closeExportModal() {
   document.getElementById('export-overlay').classList.remove('visible');
 }
 function syncExportButtons() {
-  ['stats','books','wrapped','map','globe'].forEach(m =>
+  ['stats','wrapped','map','globe'].forEach(m =>
     document.getElementById('em-' + m).classList.toggle('active', m === exportMode));
   ['story','feed'].forEach(f =>
     document.getElementById('ef-' + f).classList.toggle('active', f === exportFormat));
@@ -199,7 +199,7 @@ async function buildExportCanvas() {
   const pioneers = loadDiary().filter(e=>e.pioneer).length;
   const fictional = new Set(exFiltered.filter(e=>e.fictional).map(e=>e.dest.toLowerCase())).size;
 
-  if (exportMode === 'stats' || exportMode === 'books') {
+  if (exportMode === 'stats') {
     // Diseño renovado (mockup aprobado jul 2026): papel liso, Inter + Instrument Serif
     const L = exportFormat === 'story' ? {
       brandY: 190, brandSize: 60, periodoY: 250, kmY: 560, kmSize: 240,
@@ -841,7 +841,7 @@ function downloadExport() {
     return;
   }
   const link = document.createElement('a');
-  const modeLabel = { stats: 'stats', books: 'lecturas', wrapped: 'wrapped', map: 'mapa', globe: 'globo' }[exportMode] || exportMode;
+  const modeLabel = { stats: 'stats', wrapped: 'wrapped', map: 'mapa', globe: 'globo' }[exportMode] || exportMode;
   const fmtLabel = { story: 'historia', feed: 'feed' }[exportFormat] || exportFormat;
   const periodLabel = exportPeriod === 'total' ? 'todo' : String(exportPeriodValue);
   link.download = `leer-es-viajar-${modeLabel}-${fmtLabel}-${periodLabel}.png`;
