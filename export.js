@@ -89,6 +89,13 @@ function exportWrappedSubtitle() {
   if (exportPeriod === 'month' && exportPeriodValue != null) return 'Wrapped · ' + monthLabel(exportPeriodValue);
   return 'Wrapped · todo mi viaje';
 }
+// Rótulo de la lista de títulos de Wrapped. Deriva del periodo: decía "ESTE AÑO
+// LEÍSTE" también en un mes o en el viaje entero.
+function wrappedListLabel() {
+  if (exportPeriod === 'year' && exportPeriodValue != null) return 'ESTE AÑO LEÍSTE';
+  if (exportPeriod === 'month' && exportPeriodValue != null) return 'ESTE MES LEÍSTE';
+  return 'HAS LEÍDO';
+}
 function setExportPeriod(period) {
   exportPeriod = period;
   const sel = document.getElementById('export-period-select');
@@ -128,14 +135,44 @@ function generatePhrase() {
   const firstDest = ents.length ? ents[0].dest : null;
   const lastDest  = ents.length ? ents[ents.length-1].dest : null;
 
-  const phrases = [
-    `Este año viajé ${km.toLocaleString()} km gracias a ${books} libro${books !== 1 ? 's' : ''}, sin moverme de casa.`,
-    `De ${firstDest} a ${lastDest} en ${books} lectura${books !== 1 ? 's' : ''}. ${km.toLocaleString()} km recorridos.`,
-    `${books} libro${books !== 1 ? 's' : ''}, ${dests.length} destino${dests.length !== 1 ? 's' : ''}, ${km.toLocaleString()} km. La lectura es el mejor viaje.`,
-    fictional.length
-      ? `Este año viajé hasta ${fictional[0].dest} y otros ${dests.length - 1} destinos. ${km.toLocaleString()} km en total.`
-      : `${km.toLocaleString()} km recorridos en ${books} libro${books !== 1 ? 's' : ''}. Leer es viajar.`,
-  ].filter(Boolean);
+  // NINGUNA frase afirma un marco temporal. El periodo lo dice el subtítulo
+  // justo encima de la frase en la lámina, así que repetirlo aquí solo abre la
+  // puerta a contradecirlo: "Este año viajé…" bajo un "ESTE MES LEÍSTE".
+  //
+  // Tampoco repiten la fila de cifras que va justo debajo. Las que nombran
+  // lugares sí se quedan: un nombre propio es lo único que la fila no puede
+  // decir. Por eso las de aquí abajo llevan condición de datos y la baraja
+  // puede quedarse corta — nunca vacía, ver el respaldo del final.
+  const kmTxt = km.toLocaleString('es-ES'); // 'es-ES' explícito, como el resto de la lámina
+  const otros = dests.length - 1;
+  const phrases = [];
+
+  // Sin condición: es la que sostiene la baraja cuando no hay nada más.
+  phrases.push(`${kmTxt} km sin moverme de casa, gracias a ${books} libro${books !== 1 ? 's' : ''}.`);
+
+  // Describe un TRAYECTO, así que exige dos destinos distintos en el periodo:
+  // el de la primera lectura y el de la última. Con una sola lectura son el
+  // mismo por definición y salía "De Sevilla a Sevilla"; con varias pasa igual
+  // si se empieza y se acaba en el mismo sitio. Comprobar los dos extremos
+  // cubre los dos casos: si difieren, hay al menos dos destinos distintos.
+  if (firstDest && lastDest && firstDest !== lastDest) {
+    phrases.push(`De ${firstDest} a ${lastDest} en ${books} lectura${books !== 1 ? 's' : ''}.`);
+  }
+
+  // Exige un destino imaginario, que es lo que viene a decir. El caso de uno
+  // solo va aparte por concordancia: "y otros 1 destino" no es español.
+  if (fictional.length) {
+    phrases.push(
+      otros > 1  ? `Un viaje hasta ${fictional[0].dest} y otros ${otros} destinos.`
+      : otros === 1 ? `Un viaje hasta ${fictional[0].dest} y otro destino.`
+      : `Un viaje hasta ${fictional[0].dest}, que no existe fuera de un libro.`);
+  }
+
+  // Respaldo: la baraja no puede quedarse vacía. Hoy la primera no lleva
+  // condición y esto no debería dispararse nunca, pero basta con añadirle una
+  // mañana para que sí — y una lámina sin frase es una lámina sin protagonista.
+  // No lleva cifras ni nombres, así que sirve con cualquier dato o sin ninguno.
+  if (!phrases.length) return 'Leer es viajar.';
 
   return phrases[Math.floor(Math.random() * phrases.length)];
 }
@@ -188,19 +225,6 @@ async function buildExportCanvas() {
     const blockH = blockBottom - blockTop;
     const desiredTop = availTop + (availBottom - availTop - blockH) / 2;
     return desiredTop - blockTop;
-  }
-
-  function drawBrandLogo(cx, cy, size) {
-    ctx.font = `italic ${size}px Georgia, serif`;
-    ctx.textAlign = 'left';
-    const w1 = ctx.measureText('Leer ').width;
-    const w2 = ctx.measureText('es').width;
-    const w3 = ctx.measureText(' viajar').width;
-    let x = cx - (w1 + w2 + w3) / 2;
-    ctx.fillStyle = '#1a1a18'; ctx.fillText('Leer ', x, cy); x += w1;
-    ctx.fillStyle = '#1d9e75'; ctx.fillText('es', x, cy);     x += w2;
-    ctx.fillStyle = '#1a1a18'; ctx.fillText(' viajar', x, cy);
-    ctx.textAlign = 'center';
   }
 
   const exFiltered = getExportEntries();
@@ -308,114 +332,179 @@ async function buildExportCanvas() {
     ctx.fillText('leeresviajar.app', W/2, L.urlY);
 
   } else {
-    // MODO WRAPPED
-    // Fondo del diseño antiguo (vive aquí para mantener Wrapped idéntico)
-    const bg = ctx.createLinearGradient(0, 0, W, H);
-    bg.addColorStop(0,   '#faf8f4');
-    bg.addColorStop(0.5, '#f5f2ec');
-    bg.addColorStop(1,   '#f2eee7');
-    ctx.fillStyle = bg;
+    // ===================== MODO WRAPPED =====================
+    // Mismo sistema visual que stats (papel liso, Inter + Instrument Serif),
+    // pero con OTRA jerarquía: en stats manda la cifra de km; aquí manda la
+    // frase, que la escribe el usuario y puede medir cualquier cosa. Por eso
+    // las Y de todo lo que va debajo se derivan de su alto real en vez de ir
+    // escritas a mano.
+    const L = exportFormat === 'story' ? {
+      brandY: 190, brandSize: 60, periodoY: 250,
+      frasePrimeraY: 430, fraseMax: 76, fraseMin: 40, fraseLH: 1.3,
+      fraseMargen: 130, fraseMaxLineas: 4,
+      gapCifras: 175, statNumSize: 64, statLabelGap: 42,
+      gapFilete: 95, gapRotulo: 80, gapTitulos: 70,
+      bookLH: 64, bookSize: 40, restSize: 34, maxTitulos: 4,
+      // Alto máximo del bloque, deducido de centerOffset y del cierre: con
+      // availTop=40 y availBottom=H-100, un bloque de alto h acaba en
+      // 930+h/2, y el cierre empieza en H-160. Por encima de esto, invade.
+      alturaMax: 1540,
+      taglineY: H - 160, urlY: H - 100
+    } : {
+      brandY: 150, brandSize: 54, periodoY: 205,
+      frasePrimeraY: 350, fraseMax: 64, fraseMin: 34, fraseLH: 1.3,
+      fraseMargen: 120, fraseMaxLineas: 4,
+      gapCifras: 140, statNumSize: 56, statLabelGap: 38,
+      gapFilete: 78, gapRotulo: 66, gapTitulos: 58,
+      bookLH: 52, bookSize: 34, restSize: 29, maxTitulos: 3,
+      alturaMax: 1070,
+      taglineY: H - 120, urlY: H - 75
+    };
+
+    ctx.fillStyle = '#faf7f2';
     ctx.fillRect(0, 0, W, H);
-
-    // Textura: líneas de latitud/longitud fantasma
-    ctx.strokeStyle = 'rgba(29,158,117,0.06)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x <= W; x += W/8) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-    }
-    for (let y = 0; y <= H; y += H/8) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-    }
-
-    // Círculos decorativos
-    ctx.strokeStyle = 'rgba(29,158,117,0.07)';
-    ctx.lineWidth = 1.5;
-    for (const r of [180, 300, 420]) {
-      ctx.beginPath(); ctx.arc(W/2, H*0.42, r, 0, Math.PI*2); ctx.stroke();
-    }
+    ctx.textAlign = 'center';
 
     const phrase = document.getElementById('export-phrase')?.value?.trim() || generatePhrase();
-    ctx.font = 'italic 30px Georgia, serif';
-    const words = phrase.split(' ');
-    const maxLineW = W - 140;
-    let lineArr = [], curLine = '';
-    words.forEach(w => {
-      const test = curLine ? curLine+' '+w : w;
-      if (ctx.measureText(test).width > maxLineW && curLine) {
-        lineArr.push(curLine); curLine = w;
-      } else curLine = test;
-    });
-    if (curLine) lineArr.push(curLine);
-    const lineH = 44;
-    const phraseStartY = 530;
-    const blist = [...new Set(exFiltered.map(e=>e.book))].slice(0,5);
-    const listStartY = phraseStartY + lineArr.length*lineH + 60;
-    const lastContentY = blist.length
-      ? (listStartY + 28 + (blist.length-1)*28)
-      : (phraseStartY + lineArr.length*lineH);
-    const offsetY = centerOffset(55, lastContentY + 20);
+    const allBooks = [...new Set(exFiltered.map(e => e.book))];
 
+    // Pie de cifras, no inventario: km, destinos, países y libros. El desglose
+    // completo (imaginarios incluidos) es cosa de la lámina de stats.
+    const statList = [
+      { val: km,        label: 'km' },
+      { val: places,    label: places === 1 ? 'destino' : 'destinos' },
+      { val: countries, label: countries === 1 ? 'país' : 'países' },
+      { val: books,     label: books === 1 ? 'libro' : 'libros' },
+    ].filter(s => s.val > 0);
+    const colW = Math.min(220, (W - 160) / Math.max(statList.length, 1));
+
+    // Cuerpo ÚNICO para toda la fila, calculado con el número más ancho: una
+    // fila con tamaños distintos parece rota, no ajustada. Con cifras cortas
+    // (viajes de pocos km) nadie encoge y la fila se queda grande.
+    let numSize = L.statNumSize;
+    if (statList.length) {
+      const anchoMax = () => {
+        ctx.font = `700 ${numSize}px 'Inter', sans-serif`;
+        return Math.max(...statList.map(s => ctx.measureText(s.val.toLocaleString('es-ES')).width));
+      };
+      while (numSize > 26 && anchoMax() > colW - 16) numSize -= 2;
+    }
+
+    function partirFrase(size) {
+      ctx.font = `italic ${size}px 'Instrument Serif', serif`;
+      const maxW = W - 2 * L.fraseMargen;
+      const lineas = []; let cur = '';
+      phrase.split(/\s+/).forEach(p => {
+        const t = cur ? cur + ' ' + p : p;
+        if (ctx.measureText(t).width > maxW && cur) { lineas.push(cur); cur = p; }
+        else cur = t;
+      });
+      if (cur) lineas.push(cur);
+      return lineas;
+    }
+
+    // Posiciones de toda la pila para un cuerpo de frase y un nº de títulos.
+    function maquetar(size, nLineas, nTitulos) {
+      const lh = Math.round(size * L.fraseLH);
+      const fraseUltimaY = L.frasePrimeraY + (nLineas - 1) * lh;
+      const numY = fraseUltimaY + L.gapCifras;
+      const labelY = numY + L.statLabelGap;
+      const fileteY = labelY + L.gapFilete;
+      const rotuloY = fileteY + L.gapRotulo;
+      const primerLibroY = rotuloY + L.gapTitulos;
+      const resto = allBooks.length - nTitulos;
+      let fin = labelY;
+      if (nTitulos) {
+        fin = primerLibroY + (nTitulos - 1) * L.bookLH;
+        if (resto > 0) fin += L.bookLH + 10;
+      }
+      return { lh, fraseUltimaY, numY, labelY, fileteY, rotuloY, primerLibroY, resto, fin };
+    }
+
+    const bloqueTop = L.brandY - L.brandSize;
+    const cabe = m => (m.fin + 20) - bloqueTop <= L.alturaMax;
+
+    // Búsqueda del cuerpo de la frase. La frase NUNCA se recorta con puntos
+    // suspensivos, así que lo que cede es todo lo demás, y en este orden:
+    // primero el cuerpo hasta el mínimo, luego la lista de títulos, y solo si
+    // la frase es disparatada (el textarea del modal no tiene tope de
+    // caracteres) se levanta el máximo de 4 líneas y se baja del mínimo.
+    // Lo que no cede nunca es cabe(): la pila no puede invadir el cierre.
+    function buscar(maxLineas, minSize) {
+      for (let nTit = Math.min(L.maxTitulos, allBooks.length); nTit >= 0; nTit--) {
+        for (let size = L.fraseMax; size >= minSize; size -= 2) {
+          const lineas = partirFrase(size);
+          if (lineas.length > maxLineas) continue;
+          const mm = maquetar(size, lineas.length, nTit);
+          if (cabe(mm)) return { size, lineas, m: mm, nTit };
+        }
+      }
+      return null;
+    }
+    const elegido = buscar(L.fraseMaxLineas, L.fraseMin)
+                 || buscar(Infinity, 20)
+                 || (() => { const lineas = partirFrase(20);
+                             return { size: 20, lineas, m: maquetar(20, lineas.length, 0), nTit: 0 }; })();
+    const { size: fraseSize, lineas, m } = elegido;
+    const shown = allBooks.slice(0, elegido.nTit);
+
+    const offsetY = centerOffset(bloqueTop, m.fin + 20);
     ctx.save();
     ctx.translate(0, offsetY);
 
-    drawBrandLogo(W/2, 80, 26);
+    drawBrandSerif(ctx, W, L.brandY, L.brandSize);
 
-    ctx.fillStyle = '#9a948d';
-    ctx.font = '500 12px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(exportWrappedSubtitle().toUpperCase(), W/2, 108);
+    ctx.font = "500 26px 'Inter', sans-serif";
+    ctx.fillStyle = '#9a948d'; ctx.letterSpacing = '4px';
+    ctx.fillText(exportWrappedSubtitle().toUpperCase(), W/2, L.periodoY);
+    ctx.letterSpacing = '0px';
 
+    // La frase, protagonista. Sin filete por encima: encajonarla justo aquí
+    // le quitaría el aire que la hace mandar en la lámina.
+    ctx.font = `italic ${fraseSize}px 'Instrument Serif', serif`;
     ctx.fillStyle = '#1a1a18';
-    ctx.font = 'bold 96px Georgia, serif';
-    ctx.fillText(km.toLocaleString() + ' km', W/2, 270);
+    lineas.forEach((l, i) => ctx.fillText(l, W/2, L.frasePrimeraY + i * m.lh));
 
-    const sg = ctx.createLinearGradient(120,0,W-120,0);
-    sg.addColorStop(0,'transparent'); sg.addColorStop(0.5,'#1d9e75'); sg.addColorStop(1,'transparent');
-    ctx.strokeStyle = sg; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(120,310); ctx.lineTo(W-120,310); ctx.stroke();
-
-    const ws = [
-      {val: places, label: places===1?'destino':'destinos'},
-      {val: countries, label: countries===1?'país':'países'},
-      {val: books, label: books===1?'libro':'libros'},
-    ];
-    const cww = W / ws.length;
-    ws.forEach((s,i) => {
-      const x = cww*i + cww/2;
-      ctx.fillStyle = '#0f6e56';
-      ctx.font = 'bold 52px Georgia, serif';
-      ctx.fillText(String(s.val), x, 400);
-      ctx.fillStyle = '#9a948d';
-      ctx.font = '400 13px Inter, sans-serif';
-      ctx.fillText(s.label.toUpperCase(), x, 428);
-    });
-
-    ctx.fillStyle = '#1a1a18';
-    ctx.font = 'italic 30px Georgia, serif';
-    ctx.textAlign = 'center';
-    lineArr.forEach((l,i) => ctx.fillText(l, W/2, phraseStartY + i*lineH));
-
-    if (blist.length) {
-      ctx.fillStyle = '#b8b2a8';
-      ctx.font = '400 12px Inter, sans-serif';
-      ctx.fillText('ESTE AÑO LEÍSTE', W/2, listStartY);
-      ctx.fillStyle = '#55504a';
-      ctx.font = 'italic 18px Georgia, serif';
-      blist.forEach((b,i) => {
-        const t = b.length>40 ? b.slice(0,38)+'…' : b;
-        ctx.fillText(t, W/2, listStartY+28+i*28);
+    if (statList.length) {
+      const startX = (W - colW * statList.length) / 2;
+      statList.forEach((s, i) => {
+        const cx = startX + colW * i + colW / 2;
+        ctx.font = `700 ${numSize}px 'Inter', sans-serif`; ctx.fillStyle = '#0f6e56';
+        ctx.fillText(s.val.toLocaleString('es-ES'), cx, m.numY);
+        ctx.font = "500 20px 'Inter', sans-serif"; ctx.fillStyle = '#9a948d'; ctx.letterSpacing = '1px';
+        ctx.fillText(s.label.toUpperCase(), cx, m.labelY);
+        ctx.letterSpacing = '0px';
       });
+    }
+
+    if (shown.length) {
+      ctx.strokeStyle = '#ece8e1'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(140, m.fileteY); ctx.lineTo(W - 140, m.fileteY); ctx.stroke();
+
+      ctx.font = "500 24px 'Inter', sans-serif"; ctx.fillStyle = '#9a948d'; ctx.letterSpacing = '3px';
+      ctx.fillText(wrappedListLabel(), W/2, m.rotuloY);
+      ctx.letterSpacing = '0px';
+
+      ctx.font = `italic ${L.bookSize}px 'Instrument Serif', serif`; ctx.fillStyle = '#55504a';
+      shown.forEach((b, i) => {
+        const t = b.length > 42 ? b.slice(0, 40) + '…' : b;
+        ctx.fillText(t, W/2, m.primerLibroY + i * L.bookLH);
+      });
+      if (m.resto > 0) {
+        ctx.font = `italic ${L.restSize}px 'Instrument Serif', serif`; ctx.fillStyle = '#9a948d';
+        ctx.fillText('…y ' + m.resto + ' más', W/2, m.primerLibroY + shown.length * L.bookLH + 10);
+      }
     }
 
     ctx.restore();
 
-    ctx.fillStyle = 'rgba(29,158,117,0.75)';
-    ctx.font = 'italic 14px Georgia, serif';
     ctx.textAlign = 'center';
-    ctx.fillText('"Leer es la forma más barata de viajar."', W/2, H-50);
-    ctx.fillStyle = '#b8b2a8';
-    ctx.font = '11px Inter, sans-serif';
-    ctx.fillText('leeresviajar.app', W/2, H-25);
+    ctx.font = "italic 34px 'Instrument Serif', serif";
+    ctx.fillStyle = 'rgba(29,158,117,0.85)';
+    ctx.fillText('Cada libro, un pasaporte.', W/2, L.taglineY);
+    ctx.font = "400 24px 'Inter', sans-serif"; ctx.fillStyle = '#9a948d';
+    ctx.fillText('leeresviajar.app', W/2, L.urlY);
   }
 
   return canvas;
