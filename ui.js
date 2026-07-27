@@ -111,6 +111,14 @@ function buildActivityMessages() {
   if (typeof communityVisible !== 'undefined' && !communityVisible) return [];
   const rows = (typeof communityCache !== 'undefined' && communityCache.rawHistory) || [];
   if (!rows.length) return [];
+  // Histórico truncado (ver fetchCommunityRoutes): la franja entera se calla.
+  // No vale silenciar solo los totales — los seis mensajes son agregados sobre
+  // el mismo conjunto de filas y ninguno sobrevive a que ese conjunto esté
+  // incompleto: los totales se quedan cortos, el máximo puede coronar una ruta
+  // que no lo es porque la de verdad más larga quedó fuera del corte, y un
+  // líder que depende de dónde cortes no es un líder. Sale por el mismo camino
+  // que cuando no hay mensajes: body.no-activity, sin banda muerta.
+  if (communityCache.truncated) return [];
   const s = activityStats(rows);
   const msgs = [];
   const add = (ok, html, fictional) => { if (ok) msgs.push({ html, fictional: !!fictional }); };

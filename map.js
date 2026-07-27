@@ -193,14 +193,25 @@ const COMMUNITY_CONFIG = {
   // maxRoutes a propósito: con un solo tope, un destino cuya última lectura
   // caía fuera de las N filas más recientes desaparecía de PLACE_VISITORS y
   // su popup se quedaba sin libros. Leer siempre el histórico entero.
-  historyRows: 500,
+  //
+  // Subirlo no encarece el render: lo dibujado lo sigue acotando maxRoutes.
+  // El coste es de payload, y se paga con las filas que existen de verdad,
+  // no con el tope (221 bytes por fila medidos, gzip ~0,22). Lo que arregla
+  // es lo que se degradaba en silencio al pasarse: PLACE_VISITORS, los
+  // rankings de libros, los popups de destino y la franja de actividad.
+  // SEÑAL: hacia las 2.000-3.000 filas reales toca mover la agregación a la
+  // vista de Supabase en vez de seguir subiendo esto — a partir de ahí
+  // bajarse el histórico entero al cliente deja de compensar.
+  historyRows: 5000,
   windowDays: null        // null = sin filtro de fecha; número = solo últimos N días
 };
 const COMMUNITY_CACHE_TTL = 5 * 60 * 1000;
 // rawHistory: las filas del histórico SIN agregar ni recortar. Las consume la
 // franja de actividad (ui.js), que necesita totales — aggregateCommunityRoutes
 // descuenta las lecturas propias y corta en COMMUNITY_CONFIG.maxRoutes.
-let communityCache = { ambient: null, history: null, rawHistory: null, ts: 0 };
+// truncated: la consulta del histórico llegó al límite, así que lo agregado a
+// partir de estas filas es parcial. Quien presente totales debe mirarlo.
+let communityCache = { ambient: null, history: null, rawHistory: null, truncated: false, ts: 0 };
 // Clave canónica de nombres de lugar y libro: minúsculas y sin diacríticos.
 // Única definición compartida — PLACE_VISITORS se escribe y se lee con ella.
 const normalizeName = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -213,9 +224,17 @@ let PLACE_ORIGINS = {};
 // posterior — como la del detalle de un destino — no incluya sus filas.
 const FICTIONAL_FROM_DATA = new Set();
 
-function invalidateCommunityCache() { communityCache = { ambient: null, history: null, rawHistory: null, ts: 0 }; }
+function invalidateCommunityCache() { communityCache = { ambient: null, history: null, rawHistory: null, truncated: false, ts: 0 }; }
 
-async function fetchCommunityRoutes(viewName, rowLimit = COMMUNITY_CONFIG.maxRoutes) {
+// Devuelve { rows, truncated }. truncated = llegaron tantas filas como se
+// pidieron, o sea que la consulta viene cortada y lo agregado a partir de ahí
+// ya no son totales. Avisa además, gratis, de que el ajuste "Max rows" de
+// Supabase (dashboard → Settings → API, fuera de este repo) se ha quedado por
+// debajo de historyRows: en cuanto la beta alcance ese tope salta el warning
+// en vez de degradarse en silencio.
+// warnOnTruncation queda en false para la capa de ambiente: ahí el corte en
+// maxRoutes es deliberado y avisarlo cada 5 minutos volvería ruido el aviso.
+async function fetchCommunityRoutes(viewName, rowLimit = COMMUNITY_CONFIG.maxRoutes, { warnOnTruncation = false } = {}) {
   let query = supabaseClient.from(viewName).select('*');
   if (COMMUNITY_CONFIG.windowDays) {
     const since = new Date(Date.now() - COMMUNITY_CONFIG.windowDays * 86400000).toISOString().slice(0, 10);
@@ -223,8 +242,15 @@ async function fetchCommunityRoutes(viewName, rowLimit = COMMUNITY_CONFIG.maxRou
   }
   query = query.order('date', { ascending: false }).limit(rowLimit);
   const { data, error } = await query;
-  if (error) { console.warn('Error cargando rutas de comunidad:', error); return []; }
-  return data || [];
+  if (error) { console.warn('Error cargando rutas de comunidad:', error); return { rows: [], truncated: false }; }
+  const rows = data || [];
+  const truncated = rows.length >= rowLimit;
+  if (truncated && warnOnTruncation) {
+    console.warn(`[comunidad] histórico TRUNCADO en ${viewName}: se pidieron ${rowLimit} filas y llegaron ${rows.length}. ` +
+                 `Los agregados (PLACE_VISITORS, rankings, franja de actividad) dejan de ser totales. ` +
+                 `Sube COMMUNITY_CONFIG.historyRows, y comprueba el ajuste "Max rows" de la API de Supabase.`);
+  }
+  return { rows, truncated };
 }
 
 // Agrupa las filas por (origen, destino, libro): lecturas iguales suman
@@ -337,13 +363,13 @@ async function drawCommunityRoutes() {
   if (!communityVisible) return;
   const stale = !communityCache.ambient || (Date.now() - communityCache.ts > COMMUNITY_CACHE_TTL);
   if (stale) {
-    const [latestRows, historyRows] = await Promise.all([
+    const [latest, hist] = await Promise.all([
       fetchCommunityRoutes('community_routes_latest_per_user'),
-      fetchCommunityRoutes('public_community_routes', COMMUNITY_CONFIG.historyRows)
+      fetchCommunityRoutes('public_community_routes', COMMUNITY_CONFIG.historyRows, { warnOnTruncation: true })
     ]);
-    const ambient = aggregateCommunityRoutes(latestRows);
-    const history = aggregateCommunityRoutes(historyRows); // la última: deja PLACE_VISITORS con el histórico
-    communityCache = { ambient, history, rawHistory: historyRows, ts: Date.now() };
+    const ambient = aggregateCommunityRoutes(latest.rows);
+    const history = aggregateCommunityRoutes(hist.rows); // la última: deja PLACE_VISITORS con el histórico
+    communityCache = { ambient, history, rawHistory: hist.rows, truncated: hist.truncated, ts: Date.now() };
   }
   renderCommunityRoutes();
   // La franja se construye aquí, no en el init: hasta este punto la caché
