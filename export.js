@@ -327,7 +327,7 @@ async function buildExportCanvas() {
     ctx.textAlign = 'center';
     ctx.font = "italic 34px 'Instrument Serif', serif";
     ctx.fillStyle = 'rgba(29,158,117,0.85)';
-    ctx.fillText('Cada libro, un pasaporte.', W/2, L.taglineY);
+    ctx.fillText('Cada página, un poco más lejos.', W/2, L.taglineY);
     ctx.font = "400 24px 'Inter', sans-serif"; ctx.fillStyle = '#9a948d';
     ctx.fillText('leeresviajar.app', W/2, L.urlY);
 
