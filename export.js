@@ -347,9 +347,10 @@ async function buildExportCanvas() {
       bookLH: 64, bookSize: 40, restSize: 34, maxTitulos: 4,
       // Alto máximo del bloque, deducido de centerOffset y del cierre: con
       // availTop=40 y availBottom=H-100, un bloque de alto h acaba en
-      // 930+h/2, y el cierre empieza en H-160. Por encima de esto, invade.
+      // 930+h/2, así que 1540 lo deja en 1700 y el cierre —ya solo la URL,
+      // en H-100— respira 120px por debajo. Por encima de esto, invade.
       alturaMax: 1540,
-      taglineY: H - 160, urlY: H - 100
+      urlY: H - 100
     } : {
       brandY: 150, brandSize: 54, periodoY: 205,
       frasePrimeraY: 350, fraseMax: 64, fraseMin: 34, fraseLH: 1.3,
@@ -358,7 +359,7 @@ async function buildExportCanvas() {
       gapFilete: 78, gapRotulo: 66, gapTitulos: 58,
       bookLH: 52, bookSize: 34, restSize: 29, maxTitulos: 3,
       alturaMax: 1070,
-      taglineY: H - 120, urlY: H - 75
+      urlY: H - 75
     };
 
     ctx.fillStyle = '#faf7f2';
@@ -500,9 +501,6 @@ async function buildExportCanvas() {
     ctx.restore();
 
     ctx.textAlign = 'center';
-    ctx.font = "italic 34px 'Instrument Serif', serif";
-    ctx.fillStyle = 'rgba(29,158,117,0.85)';
-    ctx.fillText('Cada libro, un pasaporte.', W/2, L.taglineY);
     ctx.font = "400 24px 'Inter', sans-serif"; ctx.fillStyle = '#9a948d';
     ctx.fillText('leeresviajar.app', W/2, L.urlY);
   }
