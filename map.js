@@ -37,8 +37,15 @@ function drawRoute(entry) {
   const line = L.polyline(points, { color: '#e8593c', weight: 2, opacity: 0.7, dashArray: '6 4' }).addTo(map);
   const el = line.getElement();
   if (el) {
-    let offset = 0;
-    const animate = () => { offset -= 1; if (el) el.style.strokeDashoffset = offset; requestAnimationFrame(animate); };
+    const SPEED = 30; // px por segundo
+    let last = null, offset = 0;
+    const animate = (now) => {
+      if (!map.hasLayer(line)) return;
+      if (last !== null) offset -= SPEED * (now - last) / 1000;
+      last = now;
+      el.style.strokeDashoffset = offset;
+      requestAnimationFrame(animate);
+    };
     requestAnimationFrame(animate);
   }
 }
