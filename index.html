@@ -30,6 +30,11 @@ body {
   overflow: hidden;
 }
 
+/* Pantallas bajas (iPhone SE y similares): recuperar aire vertical */
+@media (max-height: 700px) {
+  body { padding: 2rem 1.25rem; }
+}
+
 /* Fondo de rutas (igual que la landing) */
 .bg-routes {
   position: fixed; inset: 0;
