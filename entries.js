@@ -81,8 +81,10 @@ function syncDepRows() {
   if (lastVal) { const c = currentEntry(); lastVal.textContent = c ? c.dest : ''; }
   const homeVal = document.getElementById('origin-name');
   if (homeVal) homeVal.textContent = origin ? origin.name : '';
+  // Nunca se esconde: era el único camino a setOrigin() y ocultarlo con el
+  // origen ya puesto dejaba la casa imposible de cambiar desde la interfaz.
   const define = document.getElementById('dep-home-define');
-  if (define) define.style.display = origin ? 'none' : '';
+  if (define) { define.style.display = ''; define.textContent = origin ? 'cambiar' : 'definir'; }
 }
 
 function setEditPanel(open) {
@@ -107,7 +109,30 @@ function toggleOriginEdit(forceOpen) {
   const wrap = document.getElementById('origin-input-wrap');
   const open = (forceOpen === undefined) ? !wrap.classList.contains('visible') : !!forceOpen;
   wrap.classList.toggle('visible', open);
-  if (open) setTimeout(() => document.getElementById('origin-input').focus(), 60);
+  if (open) setTimeout(() => {
+    const i = document.getElementById('origin-input');
+    if (!i) return;
+    i.focus();
+    // Precargado (cambiar una casa ya puesta): se selecciona entero para
+    // editar en vez de reescribir. Vacío (definir la primera) no cambia nada.
+    if (i.value) i.select();
+  }, 60);
+}
+
+// Abre el input de casa con el nombre actual dentro. Dos caminos llegan aquí:
+// el atajo de ratón del afford y la segunda pulsación sobre la fila Casa.
+function abrirEdicionOrigen() {
+  const inp = document.getElementById('origin-input');
+  if (inp && origin) inp.value = origin.name;
+  toggleOriginEdit(true);
+}
+
+// Atajo de ratón y toque de #dep-home-define. stopPropagation porque el span
+// vive dentro del <button> de la fila: sin él, el click dispararía también
+// setDep('home') y se pisarían.
+function editOrigin(ev) {
+  if (ev) ev.stopPropagation();
+  abrirEdicionOrigen();
 }
 
 async function setOrigin() {
@@ -123,8 +148,22 @@ async function setOrigin() {
     origin = { name: val, lat: geo.lat, lng: geo.lng };
     document.getElementById('origin-input-wrap').classList.remove('visible');
     document.getElementById('origin-input').value = '';
-    addOriginMarker();
-    updateOriginNarrative();
+    // redrawMap() en vez de addOriginMarker(): esta última añadía un marcador
+    // sin retirar el anterior ni guardar referencia. Definir por primera vez
+    // salía bien porque el mapa estaba vacío, pero CAMBIAR dejaba dos casas a
+    // la vez. redrawMap limpia markersLayer y vuelve a pintar el origen.
+    //
+    // Detrás va el refresco completo, porque de la casa cuelga más que el
+    // mapa: la meta-línea, la fila de Casa (via syncDepRows, que llama
+    // updateOriginNarrative), las stats y el diario — resolveEntries() arranca
+    // su cadena en `origin`, así que los km de la primera entrada 'last'
+    // pueden cambiar. Las entradas 'home' NO se mueven: su origen está
+    // congelado a propósito y resolveEntries no se toca.
+    //
+    // PENDIENTE (tras el 1 ago 2026): esta secuencia está copiada a mano aquí
+    // y en addEntry, removeEntry, saveEditEntry y storage.js. Extraerla a una
+    // función con nombre.
+    redrawMap(); updateList(); updateStats(); renderDiary(); updateOriginNarrative();
     map.setView([origin.lat, origin.lng], 4);
     saveState();
   } finally {
@@ -158,15 +197,24 @@ function addOriginMarker() {
 
 // ===================== DEPARTURE =====================
 function setDep(mode) {
+  // Se lee ANTES de reasignar `departure`: lo que interesa es si la fila Casa
+  // ya estaba seleccionada delante del usuario, no cómo va a quedar.
+  const homeRow = document.getElementById('dep-home');
+  const homeYaActiva = !!(homeRow && homeRow.classList.contains('active'));
+
   departure = mode;
   const wrap = document.getElementById('dep-other-wrap');
   wrap.style.display = mode === 'other' ? 'block' : 'none';
   if (mode === 'other') {
     setTimeout(() => document.getElementById('dep-other-input').focus(), 60);
   }
-  // Casa sin coordenadas todavía: se despliega el input en vez de dejar la
-  // fila elegida pero vacía.
-  if (mode === 'home' && !origin) toggleOriginEdit(true);
+  // Casa sin coordenadas todavía: se despliega el input a la primera, en vez
+  // de dejar la fila elegida pero vacía.
+  // Con casa ya definida hace falta una SEGUNDA pulsación sobre una fila Casa
+  // que ya estaba activa. Ese es el camino de teclado para cambiarla: la fila
+  // es un <button> real y el afford de al lado es solo un <span>, al que no
+  // se puede llegar tabulando sin anidar un foco dentro de un botón.
+  if (mode === 'home' && (!origin || homeYaActiva)) abrirEdicionOrigen();
   else if (mode !== 'home') toggleOriginEdit(false);
   // La meta-línea sigue al modo elegido: es donde se lee el resultado.
   updateOriginNarrative();

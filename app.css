@@ -251,7 +251,10 @@ input[type="date"] { width: auto; padding: 0.3rem 0.5rem; font-size: 0.78rem; ma
 .dep-row-val { flex: 1; text-align: right; color: var(--muted); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* El subrayado va en el texto, no en la caja: si fuera borde, el flex lo
    estiraría de lado a lado. */
-.dep-row-define { flex: 1; text-align: right; font-size: 0.78rem; color: var(--teal); text-decoration: underline; text-underline-offset: 2px; }
+/* flex: 0 0 auto, NO flex: 1. Ahora convive con .dep-row-val —antes solo se
+   veía uno de los dos— y con los dos a flex:1 se repartían el ancho a medias
+   y la fila salía descuadrada. Encogido al texto, el nombre se queda el resto. */
+.dep-row-define { flex: 0 0 auto; margin-left: 0.5rem; text-align: right; font-size: 0.78rem; color: var(--teal); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .dep-check { width: 16px; height: 16px; flex-shrink: 0; color: var(--teal); opacity: 0; margin-left: 0.35rem; }
 .dep-row.active .dep-check { opacity: 1; }
 .dep-other-wrap { padding-left: 1.6rem; margin-bottom: 0.7rem; animation: depSlide 0.22s ease; }

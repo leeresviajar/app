@@ -102,7 +102,9 @@
         <!-- id heredado: storage.js escribe aquí el nombre del origen en tres
              sitios. Conservarlo evita tocar ese archivo. -->
         <span class="dep-row-val" id="origin-name"></span>
-        <span class="dep-row-define" id="dep-home-define">definir</span>
+        <!-- Atajo de ratón y toque. El camino de teclado es pulsar dos veces
+             la propia fila (ver setDep), porque este span no es focusable. -->
+        <span class="dep-row-define" id="dep-home-define" onclick="editOrigin(event)">definir</span>
         <svg class="dep-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
       </button>
       <!-- Justo debajo de Casa: el input pertenece a esa fila, no al panel. -->
